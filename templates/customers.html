@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networkat · Customers</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        :root {
+            --azure-blue: #0078d4;
+            --azure-dark: #106ebe;
+            --sidebar-bg: #1e2a41;
+            --sidebar-hover: #2d3a55;
+            --gray-50: #f8f9fa;
+            --gray-100: #f0f2f4;
+            --gray-200: #e1e4e8;
+            --gray-600: #5e6c84;
+            --gray-800: #1e2a41;
+            --success: #107c10;
+            --danger: #d83b01;
+        }
+
+        body {
+            background: var(--gray-50);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .sidebar-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sidebar-header .logo i {
+            font-size: 2rem;
+            color: var(--azure-blue);
+        }
+
+        .sidebar-header .logo span {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .sidebar-header p {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .nav-menu {
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--sidebar-hover);
+            color: white;
+            border-left-color: var(--azure-blue);
+        }
+
+        .nav-item i {
+            width: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            width: calc(100% - 260px);
+        }
+
+        .top-bar {
+            background: white;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .page-title h1 {
+            color: var(--gray-800);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: none;
+            border: 1px solid var(--gray-200);
+            border-radius: 4px;
+            color: var(--gray-600);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--gray-100);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .container {
+            padding: 2rem;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            color: var(--gray-800);
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--azure-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--azure-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #0b5e0b;
+        }
+
+        .customers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .customer-card {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .customer-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            border-color: var(--azure-blue);
+        }
+
+        .card-header {
+            padding: 1.25rem;
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h3 {
+            color: var(--gray-800);
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-header i {
+            color: var(--azure-blue);
+        }
+
+        .badge-id {
+            background: var(--gray-100);
+            color: var(--gray-600);
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.8rem;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            color: var(--gray-600);
+            font-size: 0.95rem;
+        }
+
+        .info-row strong {
+            color: var(--gray-800);
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-online {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .card-footer {
+            padding: 1rem 1.25rem;
+            background: var(--gray-50);
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            border: 1px solid var(--gray-200);
+            color: var(--gray-600);
+        }
+
+        .btn-sm:hover {
+            background: var(--azure-blue);
+            color: white;
+            border-color: var(--azure-blue);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            color: var(--gray-800);
+            font-size: 1.2rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray-600);
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--azure-blue);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+
+        .modal-footer {
+            padding: 1.25rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .token-display {
+            background: #1e2a41;
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 1rem 0;
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid white;
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+
+        .copy-btn:hover {
+            background: white;
+            color: #1e2a41;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="{{ url_for('static', filename='logoW.png') }}" alt="Networkat Logo" style="height: 24px; width: auto; vertical-align: middle;">
+            </div>
+            <p>Management Portal</p>
+        </div>
+        <div class="nav-menu">
+            <a href="/" class="nav-item">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="/customers" class="nav-item active">
+                <i class="fas fa-building"></i> Customers
+            </a>
+            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 1rem 0;"></div>
+            <a href="/logout" class="nav-item">
+                <i class="fas fa-sign-out-alt"></i> Sign out
+            </a>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1>Customers</h1>
+            </div>
+            <div class="user-menu">
+                <span>admin@networkat</span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+        <div class="container">
+            <div class="page-header">
+                <h1>Customer Management</h1>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="showCreateModal(false)">
+                        <i class="fas fa-plus"></i> New Customer
+                    </button>
+                </div>
+            </div>
+            <div class="customers-grid">
+                {% for customer in customers %}
+                <div class="customer-card" onclick="location.href='/customers/{{ customer.id }}'">
+                    <div class="card-header">
+                        <h3>
+                            <i class="fas fa-building"></i>
+                            {{ customer.name }}
+                        </h3>
+                        <span class="badge-id"><i class="fas fa-user"></i> {{ customer.username }}</span>
+                    </div>
+                    <div class="card-footer">
+                        <span class="btn-sm" onclick="event.stopPropagation(); location.href='/customers/{{ customer.id }}'">
+                            View Details <i class="fas fa-arrow-right ms-2"></i>
+                        </span>
+                    </div>
+                </div>
+                {% else %}
+                <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--gray-600);">
+                    <i class="fas fa-building fa-4x mb-3" style="opacity: 0.5;"></i>
+                    <h3>No customers found</h3>
+                    <p>Create your first customer to get started</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+<!-- Create Customer Modal -->
+<div class="modal" id="createModal">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+            <!-- القسم الأول: حساب الدخول -->
+            <h4 style="margin-bottom: 0.5rem; color: var(--gray-700);">Account Credentials</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" id="portalUsername" placeholder="e.g., john_doe" required>
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" id="portalPassword" placeholder="•••••••• (min 6 chars)" required>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 1rem 0;">
+
+            <!-- القسم الثاني: معلومات العملاء والتواصل -->
+            <h4 style="margin-bottom: 0.5rem; color: var(--gray-700);">Client Info</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Client Name *</label>
+                    <input type="text" id="clientName" placeholder="e.g., John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" id="clientCompanyName" placeholder="e.g., Tech Solutions Inc.">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="clientEmail" placeholder="client@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="clientPhone" placeholder="+1234567890">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Country</label>
+                <input type="text" id="clientCountry" placeholder="e.g., Egypt, KSA, USA">
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 1rem 0;">
+
+            <!-- القسم الثالث: إعدادات الاشتراك والشبكة -->
+            <h4 style="margin-bottom: 0.5rem; color: var(--gray-700);">Subscription</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <select id="clientSubscription">
+                        <option value="basic">Basic</option>
+                        <option value="pro">Pro</option>
+                        <option value="enterprise">Enterprise</option>
+                    </select>
+                </div>
+                <!-- <div class="form-group">
+                    <label>Mode</label>
+                    <select id="mode">
+                        <option value="sdwan_full">SD-WAN Full</option>
+                        <option value="sdwan_lite">SD-WAN Lite</option>
+                    </select>
+                </div> -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideCreateModal()">Cancel</button>
+            <button class="btn btn-success" onclick="createCustomer()">Create</button>
+        </div>
+    </div>
+</div>
+
+    <!-- Token Display Modal -->
+    <div class="modal" id="tokenModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Token Generated Successfully</h2>
+                <button class="close-btn" onclick="hideTokenModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem; color: var(--gray-600);">
+                    Save this token. It will not be shown again.
+                </p>
+                <div class="token-display" id="tokenValue">
+                    token-here
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="copyToken()">
+                    <i class="fas fa-copy"></i> Copy Token
+                </button>
+                <button class="btn btn-secondary" onclick="hideTokenModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let currentGenerateToken = false;
+
+    function showCreateModal(generateToken) {
+        currentGenerateToken = generateToken;
+        
+        const titleEl = document.getElementById('modalTitle');
+        if (titleEl) {
+            titleEl.innerText = generateToken ? 'Create Customer + Token' : 'Create New Customer';
+        }
+        
+        // تنظيف الحقول مع التأكد من وجودها (Null Safety)
+        const fieldsToClear = [
+            'portalUsername', 'portalPassword', 'clientName', 
+            'clientCompanyName', 'clientEmail', 'clientPhone', 
+            'clientCountry'
+        ];
+
+        fieldsToClear.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        
+        const modal = document.getElementById('createModal');
+        if (modal) {
+            modal.classList.add('active');
+        } else {
+            console.error("Modal element 'createModal' not found!");
+        }
+    }
+
+    async function createCustomer() {
+        console.log("Create button clicked...");
+
+        // دالة مساعدة لجلب القيمة بأمان
+        const getValue = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        };
+
+        const username = getValue('portalUsername');
+        const password = getValue('portalPassword');
+        const client_name = getValue('clientName');
+        const client_company_name = getValue('clientCompanyName');
+        const client_email = getValue('clientEmail');
+        const client_phone_number = getValue('clientPhone');
+        const client_country = getValue('clientCountry');
+        const subscription = getValue('clientSubscription') || 'basic';
+        const mode = getValue('mode') || 'sdwan_full';
+
+        // Validations
+        if (!username || !password || !client_name || !client_email) {
+            alert('Please fill all required fields: Username, Password, Client Name, and Email.');
+            return;
+        }
+
+        if (password.length < 6) {
+            alert('Password must be at least 6 characters.');
+            return;
+        }
+
+        // إيقاف الزر مؤقتاً لمنع التكرار
+        const createBtn = event ? event.target : null;
+        if (createBtn) createBtn.disabled = true;
+
+        try {
+            const response = await fetch('/customers/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username,
+                    password,
+                    client_name,
+                    client_company_name,
+                    client_email,
+                    client_phone_number,
+                    client_country,
+                    subscription,
+                    mode,
+                    generate_token: currentGenerateToken
+                })
+            });
+
+            const data = await response.json();
+            console.log("Server response:", data);
+
+            if (response.ok && data.success) {
+                hideCreateModal();
+                if (data.token) {
+                    showTokenModal(data.token);
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert('Error: ' + (data.error || data.detail || 'Failed to create customer'));
+            }
+        } catch (error) {
+            console.error("Fetch Exception:", error);
+            alert('Error connecting to server: ' + error.message);
+        } finally {
+            if (createBtn) createBtn.disabled = false;
+        }
+    }
+
+    function hideCreateModal() {
+        const modal = document.getElementById('createModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    function showTokenModal(token) {
+        const tokenValEl = document.getElementById('tokenValue');
+        if (tokenValEl) tokenValEl.innerText = token;
+        
+        const tokenModal = document.getElementById('tokenModal');
+        if (tokenModal) tokenModal.classList.add('active');
+    }
+
+    function hideTokenModal() {
+        const tokenModal = document.getElementById('tokenModal');
+        if (tokenModal) tokenModal.classList.remove('active');
+        location.reload();
+    }
+
+    function copyToken() {
+        const tokenValEl = document.getElementById('tokenValue');
+        if (tokenValEl) {
+            navigator.clipboard.writeText(tokenValEl.innerText).then(() => {
+                alert('Token copied to clipboard!');
+            });
+        }
+    }
+</script>

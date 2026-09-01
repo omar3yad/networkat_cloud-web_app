@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networkat · Client Registration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 700px;
+            padding: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group-full {
+            grid-column: span 2;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group-full {
+                grid-column: span 1;
+            }
+
+            .register-container {
+                padding: 25px 20px;
+                max-width: 100%;
+            }
+        }
+
+        .section-title {
+            grid-column: span 2;
+            color: #1e2a41;
+            font-size: 15px;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            margin-bottom: 0.25rem;
+            padding-bottom: 0.25rem;
+            border-bottom: 1px solid #f0f2f4;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .section-title {
+                grid-column: span 1;
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .logo i {
+            font-size: 48px;
+            color: #0078d4;
+        }
+
+        .logo h1 {
+            color: #1e2a41;
+            font-size: 24px;
+            margin-top: 10px;
+        }
+
+        .logo p {
+            color: #5e6c84;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            color: #1e2a41;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            text-transform: capitalize;
+            letter-spacing: 0.5px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.2s;
+            background-color: #fafbfc;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #0078d4;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #106ebe;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            color: #5e6c84;
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: #0078d4;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+    </style>
+    {% if recaptcha_site_key %}
+    <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
+    {% endif %}
+</head>
+
+<body>
+    <div class="register-container">
+        <div class="logo">
+            <i class="fas fa-cloud"></i>
+            <h1>Networkat</h1>
+            <p>Create New Client Account</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{% if category == 'success' %}success{% else %}error{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" id="registerForm">
+            <div class="form-grid">
+                <!-- Section 1: Credentials -->
+                <div class="section-title">
+                    <i class="fas fa-key"></i> Account Credentials
+                </div>
+
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" name="username" placeholder="Choose a username" value="{{ request.form.get('username', '') }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" id="password" name="password" placeholder="Minimum 6 characters"
+                        value="{{ request.form.get('password', '') }}" minlength="6" required>
+                </div>
+
+                <div class="form-group-full">
+                    <label>Confirm Password *</label>
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Repeat your password"
+                        value="{{ request.form.get('confirm_password', '') }}" required>
+                </div>
+
+                <!-- Section 2: Client Info -->
+                <div class="section-title">
+                    <i class="fas fa-user-tie"></i> Client Info
+                </div>
+
+                <div class="form-group">
+                    <label>Client Name *</label>
+                    <input type="text" name="client_name" placeholder="e.g., John Doe" value="{{ request.form.get('client_name', '') }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Company Name</label>
+                    <input type="text" name="client_company_name" placeholder="e.g., Tech Solutions Inc." value="{{ request.form.get('client_company_name', '') }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" name="client_email" placeholder="client@example.com" value="{{ request.form.get('client_email', '') }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" name="client_phone_number" placeholder="e.g., +1234567890" value="{{ request.form.get('client_phone_number', '') }}">
+                </div>
+
+                <div class="form-group-full">
+                    <label>Country</label>
+                    <select name="client_country" id="client_country" style="cursor: pointer;">
+                        <option value="" disabled {% if not request.form.get('client_country') %}selected{% endif %}>Select your country</option>
+                        <option value="Egypt" {% if request.form.get('client_country') == 'Egypt' %}selected{% endif %}>Egypt (مصر)</option>
+                        <option value="Saudi Arabia" {% if request.form.get('client_country') == 'Saudi Arabia' %}selected{% endif %}>Saudi Arabia (المملكة العربية السعودية)</option>
+                        <option value="UAE" {% if request.form.get('client_country') == 'UAE' %}selected{% endif %}>United Arab Emirates (الإمارات العربية المتحدة)</option>
+                        <option value="Kuwait" {% if request.form.get('client_country') == 'Kuwait' %}selected{% endif %}>Kuwait (الكويت)</option>
+                        <option value="Qatar" {% if request.form.get('client_country') == 'Qatar' %}selected{% endif %}>Qatar (قطر)</option>
+                        <option value="Oman" {% if request.form.get('client_country') == 'Oman' %}selected{% endif %}>Oman (عمان)</option>
+                        <option value="Bahrain" {% if request.form.get('client_country') == 'Bahrain' %}selected{% endif %}>Bahrain (البحرين)</option>
+                        <option value="Jordan" {% if request.form.get('client_country') == 'Jordan' %}selected{% endif %}>Jordan (الأردن)</option>
+                        <option value="Lebanon" {% if request.form.get('client_country') == 'Lebanon' %}selected{% endif %}>Lebanon (لبنان)</option>
+                        <option value="Iraq" {% if request.form.get('client_country') == 'Iraq' %}selected{% endif %}>Iraq (العراق)</option>
+                        <option value="Morocco" {% if request.form.get('client_country') == 'Morocco' %}selected{% endif %}>Morocco (المغرب)</option>
+                        <option value="Algeria" {% if request.form.get('client_country') == 'Algeria' %}selected{% endif %}>Algeria (الجزائر)</option>
+                        <option value="Tunisia" {% if request.form.get('client_country') == 'Tunisia' %}selected{% endif %}>Tunisia (تونس)</option>
+                        <option value="Libya" {% if request.form.get('client_country') == 'Libya' %}selected{% endif %}>Libya (ليبيا)</option>
+                        <option value="Yemen" {% if request.form.get('client_country') == 'Yemen' %}selected{% endif %}>Yemen (اليمن)</option>
+                        <option value="Sudan" {% if request.form.get('client_country') == 'Sudan' %}selected{% endif %}>Sudan (السودان)</option>
+                        <option value="USA" {% if request.form.get('client_country') == 'USA' %}selected{% endif %}>United States (الولايات المتحدة الأمريكية)</option>
+                        <option value="UK" {% if request.form.get('client_country') == 'UK' %}selected{% endif %}>United Kingdom (المملكة المتحدة)</option>
+                        <option value="Canada" {% if request.form.get('client_country') == 'Canada' %}selected{% endif %}>Canada (كندا)</option>
+                        <option value="Other" {% if request.form.get('client_country') == 'Other' %}selected{% endif %}>Other (أخرى)</option>
+                    </select>
+                </div>
+
+                <!-- Section 3: Subscription -->
+                <div class="section-title">
+                    <i class="fas fa-credit-card"></i> Subscription Plan
+                </div>
+
+                <div class="form-group-full">
+                    <select name="subscription" style="cursor: pointer;">
+                        <option value="basic" {% if request.form.get('subscription') == 'basic' or not request.form.get('subscription') %}selected{% endif %}>Basic Plan</option>
+                        <option value="pro" {% if request.form.get('subscription') == 'pro' %}selected{% endif %}>Pro Plan</option>
+                        <option value="enterprise" {% if request.form.get('subscription') == 'enterprise' %}selected{% endif %}>Enterprise Plan</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit">Create Account</button>
+        </form>
+
+        <div class="footer">
+            Already have an account? <a href="{{ url_for('client.login') }}">Sign In</a>
+            <div style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
+                © 2026 Networkat · All rights reserved
+            </div>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        // التحقق من تطابق كلمتي المرور في المتصفح وتوليد توكن reCAPTCHA قبل إرسال الفورم
+        document.getElementById('registerForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const pwd = document.getElementById('password').value;
+            const confirmPwd = document.getElementById('confirm_password').value;
+ 
+            if (pwd !== confirmPwd) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            const siteKey = "{{ recaptcha_site_key or '' }}";
+            if (siteKey) {
+                grecaptcha.ready(function() {
+                    grecaptcha.execute(siteKey, {action: 'register'}).then(function(token) {
+                        // Add the token to the form
+                        const tokenInput = document.createElement('input');
+                        tokenInput.type = 'hidden';
+                        tokenInput.name = 'g-recaptcha-response';
+                        tokenInput.value = token;
+                        
+                        const form = document.getElementById('registerForm');
+                        form.appendChild(tokenInput);
+                        
+                        // Submit the form programmatically
+                        form.submit();
+                    });
+                });
+            } else {
+                // Submit directly if reCAPTCHA is not configured
+                document.getElementById('registerForm').submit();
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,2375 @@
+{% extends "client_base.html" %}
+
+{% block title %}Web Filter · {{ peer_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --nk-bg: #f8fafc;
+        --nk-surface-bg: #f8fafc;
+        --nk-card-bg: #ffffff;
+        --nk-navy: #0f172a;
+        --nk-blue-primary: #0284c7;
+        --nk-blue-hover: #0369a1;
+        --nk-cyan-accent: #38bdf8;
+        --nk-border: #e2e8f0;
+        --nk-text-main: #0f172a;
+        --nk-text-muted: #64748b;
+        --nk-radius-lg: 16px;
+        --nk-radius-md: 12px;
+        --nk-radius-sm: 8px;
+        --nk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+        --nk-shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+        --nk-shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);
+        --nk-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --warning-color: #f59e0b;
+    }
+
+    /* Floating Bulk Actions Bar */
+    .bulk-floating-bar {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: #ffffff;
+        border: 1px solid var(--nk-border);
+        border-radius: 100px;
+        padding: 8px 20px;
+        box-shadow: var(--nk-shadow-lg);
+        z-index: 1001;
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .bulk-floating-bar.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .bulk-bar-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .selected-count-badge {
+        color: var(--nk-text-muted);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .bulk-actions-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .bulk-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        color: #294453;
+        padding: 8px 14px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border-radius: 50px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: var(--nk-transition);
+    }
+
+    .bulk-btn:hover {
+        background: #f1f5f9;
+        color: var(--nk-blue-primary);
+    }
+
+    .btn-bulk-enable {
+        background: #f0fdf4;
+        color: #10b981;
+        border-color: #dcfce7;
+    }
+
+    .btn-bulk-enable:hover {
+        background: #10b981;
+        color: #ffffff;
+        border-color: #10b981;
+    }
+
+    .btn-bulk-disable {
+        background: #fffbeb;
+        color: #d97706;
+        border-color: #fef3c7;
+    }
+
+    .btn-bulk-disable:hover {
+        background: #d97706;
+        color: #ffffff;
+        border-color: #d97706;
+    }
+
+    .btn-bulk-delete {
+        background: #fef2f2;
+        color: #ef4444;
+        border-color: #fee2e2;
+    }
+
+    .btn-bulk-delete:hover {
+        background: #ef4444;
+        color: #ffffff;
+        border-color: #ef4444;
+    }
+
+    /* Floating Save / Reorder Bar */
+    .floating-save-bar {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ffffff;
+        border: 1px solid var(--nk-border);
+        border-radius: 100px;
+        padding: 8px 12px 8px 20px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        z-index: 1000;
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateX(-50%) translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .save-bar-text {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .save-bar-text i {
+        color: var(--nk-blue-primary);
+    }
+
+    .btn-apply {
+        background: var(--nk-blue-primary);
+        color: #ffffff;
+        border: none;
+        padding: 8px 18px;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: var(--nk-transition);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-apply:hover {
+        background: var(--nk-blue-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-cancel {
+        background: transparent;
+        border: none;
+        color: var(--nk-text-muted);
+        padding: 8px 14px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border-radius: 50px;
+        transition: var(--nk-transition);
+    }
+
+    .btn-cancel:hover {
+        background: #f1f5f9;
+        color: var(--nk-text-main);
+    }
+
+    /* Container */
+    .filter-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        min-height: 80vh;
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--nk-blue-primary);
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        transition: var(--nk-transition);
+    }
+
+    .back-link:hover {
+        color: var(--nk-blue-hover);
+        transform: translateX(-3px);
+    }
+
+    /* Header */
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .title-area h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--nk-text-main);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .title-area p {
+        color: var(--nk-text-muted);
+        margin-top: 0.25rem;
+        font-size: 0.95rem;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .badge-online {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: var(--nk-blue-primary);
+    }
+
+    .badge-offline {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: var(--danger-color);
+    }
+
+    /* Offline Status Banner */
+    .status-banner {
+        background: #fffbeb;
+        border: 1px solid #fef3c7;
+        color: #b45309;
+        padding: 1rem 1.25rem;
+        border-radius: var(--nk-radius-md);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    /* Gateway Tabs */
+    .gateway-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--nk-border);
+        margin-bottom: 1.5rem;
+        gap: 0.5rem;
+    }
+
+    .tab-item {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--nk-text-muted);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--nk-transition);
+        user-select: none;
+    }
+
+    .tab-item:hover {
+        color: var(--nk-blue-primary);
+    }
+
+    .tab-item.active {
+        color: var(--nk-blue-primary);
+        border-bottom-color: var(--nk-blue-primary);
+    }
+
+    /* Control bar */
+    .control-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .control-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .btn-action {
+        padding: 0.55rem 1.15rem;
+        border-radius: var(--nk-radius-sm);
+        font-weight: 600;
+        font-size: 0.88rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--nk-transition);
+        border: 1px solid transparent;
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: var(--nk-blue-primary);
+        color: #ffffff;
+    }
+
+    .btn-primary:hover {
+        background: var(--nk-blue-hover);
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    }
+
+    .search-box {
+        position: relative;
+        min-width: 260px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 0.55rem 1rem 0.55rem 2.25rem;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-sm);
+        font-size: 0.88rem;
+        background: #ffffff;
+        color: var(--nk-text-main);
+        outline: none;
+        transition: var(--nk-transition);
+    }
+
+    .search-box input:focus {
+        border-color: var(--nk-blue-primary);
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--nk-text-muted);
+        font-size: 0.85rem;
+    }
+
+    /* Table Container */
+    .table-card {
+        background: var(--nk-card-bg);
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-lg);
+        box-shadow: var(--nk-shadow-sm);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .rules-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+
+    .rules-table th {
+        background: #f8fafc;
+        color: var(--nk-text-muted);
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--nk-border);
+        white-space: nowrap;
+    }
+
+    .rules-table td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid var(--nk-border);
+        color: var(--nk-text-main);
+        font-size: 0.88rem;
+        vertical-align: middle;
+    }
+
+    .rules-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .rules-table tbody tr.sortable-ghost {
+        opacity: 0.4;
+        background: #e0f2fe;
+    }
+
+    .drag-handle {
+        cursor: grab;
+        color: #94a3b8;
+        font-size: 0.95rem;
+        padding: 4px;
+        transition: var(--nk-transition);
+    }
+
+    .drag-handle:hover {
+        color: var(--nk-blue-primary);
+    }
+
+    /* Badges & Chips */
+    .badge-alias {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #f1f5f9;
+        color: #0284c7;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: monospace;
+        border: 1px solid #e2e8f0;
+    }
+
+    .badge-domain {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #fef3c7;
+        color: #b45309;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: monospace;
+        border: 1px solid #fde68a;
+    }
+
+    .badge-all {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .badge-ip {
+        background: #f8fafc;
+        color: #334155;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 0.8rem;
+        border: 1px solid #e2e8f0;
+    }
+
+    .domains-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        max-width: 420px;
+    }
+
+    /* Action buttons in row */
+    .cell-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .btn-icon-action {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--nk-text-muted);
+        cursor: pointer;
+        transition: var(--nk-transition);
+        font-size: 0.85rem;
+    }
+
+    .btn-icon-action:hover {
+        background: #f1f5f9;
+        color: var(--nk-blue-primary);
+    }
+
+    .btn-icon-action.btn-delete:hover {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+
+    /* Toggle switch */
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 38px;
+        height: 22px;
+    }
+
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: .3s cubic-bezier(0.16, 1, 0.3, 1);
+        border-radius: 34px;
+    }
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s cubic-bezier(0.16, 1, 0.3, 1);
+        border-radius: 50%;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+
+    input:checked + .slider {
+        background-color: var(--nk-blue-primary);
+    }
+
+    input:checked + .slider:before {
+        transform: translateX(16px);
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        gap: 1rem;
+        color: var(--nk-text-muted);
+    }
+
+    .spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid rgba(2, 132, 199, 0.15);
+        border-top-color: var(--nk-blue-primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Modals */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(4px);
+        z-index: 2000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-card {
+        background: #ffffff;
+        border-radius: var(--nk-radius-lg);
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+        width: 100%;
+        max-width: 620px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes modalIn {
+        from { transform: scale(0.96); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header {
+        padding: 1.25rem 1.75rem;
+        border-bottom: 1px solid var(--nk-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h2 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--nk-text-main);
+    }
+
+    .modal-close {
+        background: transparent;
+        border: none;
+        font-size: 1.5rem;
+        line-height: 1;
+        cursor: pointer;
+        color: var(--nk-text-muted);
+        transition: var(--nk-transition);
+    }
+
+    .modal-close:hover {
+        color: var(--nk-text-main);
+    }
+
+    .modal-body {
+        padding: 1.75rem;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        padding: 1rem 1.75rem;
+        border-top: 1px solid var(--nk-border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background: #f8fafc;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .form-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--nk-text-main);
+    }
+
+    .form-group input[type="text"],
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.55rem 0.85rem;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-sm);
+        font-size: 0.88rem;
+        color: var(--nk-text-main);
+        background: #ffffff;
+        outline: none;
+        transition: var(--nk-transition);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        border-color: var(--nk-blue-primary);
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+    }
+
+    .form-hint {
+        font-size: 0.78rem;
+        color: var(--nk-text-muted);
+        margin-top: 2px;
+    }
+
+    /* Custom Input Dropdown Wrapper & Trigger Buttons (Identical to Firewall) */
+    .input-dropdown-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .input-dropdown-wrapper input {
+        padding-right: 2.5rem !important;
+    }
+
+    .input-dropdown-wrapper .address-multi-btn {
+        position: absolute;
+        right: 0.65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--nk-blue-primary);
+        font-weight: 800;
+        font-size: 0.75rem;
+        cursor: pointer;
+        z-index: 10;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        border-radius: 50%;
+        transition: var(--nk-transition);
+        border: 1px solid var(--nk-border);
+        user-select: none;
+    }
+
+    .input-dropdown-wrapper .address-multi-btn:hover {
+        background: var(--nk-blue-primary);
+        color: #ffffff;
+        border-color: var(--nk-blue-primary);
+    }
+
+    .input-dropdown-wrapper .address-multi-btn.disabled {
+        color: #94a3b8 !important;
+        background: #f8fafc !important;
+        border-color: #e2e8f0 !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        opacity: 0.6 !important;
+    }
+
+    .input-dropdown-wrapper .alias-trigger-btn {
+        position: absolute;
+        left: 0.65rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--nk-blue-primary);
+        font-weight: 800;
+        font-size: 0.85rem;
+        cursor: pointer;
+        z-index: 10;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        line-height: 1px;
+        user-select: none;
+        text-align: center;
+        border-radius: 50%;
+        padding-bottom: 3px;
+        background: #f1f5f9;
+        justify-content: center;
+        transition: var(--nk-transition);
+        border: 1px solid var(--nk-border);
+    }
+
+    .input-dropdown-wrapper .alias-trigger-btn:hover {
+        background: var(--nk-blue-primary);
+        color: #ffffff;
+        border-color: var(--nk-blue-primary);
+    }
+
+    /* Custom Autocomplete Dropdown Styling (Matching Firewall & Screenshot) */
+    .custom-autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        max-height: 220px;
+        overflow-y: auto;
+        background: #ffffff;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-sm);
+        box-shadow: var(--nk-shadow-lg);
+        z-index: 1000;
+        margin-top: 4px;
+    }
+
+    .custom-autocomplete-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: var(--nk-transition);
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        text-align: left;
+    }
+
+    .custom-autocomplete-item:last-child {
+        border-bottom: none;
+    }
+
+    .custom-autocomplete-item:hover {
+        background-color: #f8fafc;
+    }
+
+    .custom-autocomplete-item .alias-title {
+        font-weight: 700;
+        color: var(--nk-blue-primary);
+        font-size: 0.85rem;
+    }
+
+    .custom-autocomplete-item .alias-desc {
+        font-size: 0.75rem;
+        color: var(--nk-text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        display: block;
+    }
+
+    /* Domains Checkbox selector */
+    .domains-selection-box {
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-sm);
+        max-height: 180px;
+        overflow-y: auto;
+        padding: 6px;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .domain-choice-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        background: #ffffff;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        user-select: none;
+        transition: var(--nk-transition);
+    }
+
+    .domain-choice-item:hover {
+        border-color: var(--nk-blue-primary);
+        background: #f0f9ff;
+    }
+
+    .domain-choice-item input[type="checkbox"] {
+        accent-color: var(--nk-blue-primary);
+        width: 16px;
+        height: 16px;
+    }
+
+    /* Address / Domain Entry Row in Alias Modal */
+    .alias-entry-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .alias-entry-row input {
+        flex: 1;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-sm);
+        font-size: 0.85rem;
+    }
+
+    .btn-remove-row {
+        background: #fef2f2;
+        color: #ef4444;
+        border: 1px solid #fee2e2;
+        border-radius: 6px;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--nk-transition);
+    }
+
+    .btn-remove-row:hover {
+        background: #ef4444;
+        color: #ffffff;
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="filter-container">
+    <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Peer Details
+    </a>
+
+    <div class="header-section">
+        <div class="title-area">
+            <h1><i class="fas fa-filter" style="color: var(--nk-blue-primary);"></i> Web Filter · {{ peer_name }}</h1>
+            <!-- <p>Block external domains and websites using AdGuard DNS filtering engine.</p> -->
+        </div>
+        <div>
+            {% if is_online %}
+            <span class="badge-status badge-online">
+                <i class="fas fa-circle"></i> Connected
+            </span>
+            {% else %}
+            <span class="badge-status badge-offline">
+                <i class="fas fa-circle"></i> Offline
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Offline Status Banner -->
+    <div class="status-banner" id="banner-offline" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>This peer is currently offline. Web filter rules cannot be modified until the device reconnects.</span>
+    </div>
+
+    <!-- Floating Bulk Actions Bar -->
+    <div class="bulk-floating-bar" id="bulk-action-bar">
+        <div class="bulk-bar-content">
+            <span class="selected-count-badge" id="selected-rules-count">0 selected</span>
+            <div class="bulk-actions-group">
+                <button class="bulk-btn btn-bulk-enable" onclick="applyBulkAction('enable')">
+                    <i class="fas fa-check"></i> Enable
+                </button>
+                <button class="bulk-btn btn-bulk-disable" onclick="applyBulkAction('disable')">
+                    <i class="fas fa-ban"></i> Disable
+                </button>
+                <button class="bulk-btn btn-bulk-delete" onclick="applyBulkAction('delete')">
+                    <i class="fas fa-trash-alt"></i> Delete
+                </button>
+                <button class="bulk-btn" onclick="deselectAllRules()">
+                    <i class="fas fa-times"></i> Deselect
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gateway Tabs -->
+    <div class="gateway-tabs">
+        <div class="tab-item active" id="tab-rules" onclick="switchTab('rules')">
+            <i class="fas fa-filter"></i> Web Filter Rules
+        </div>
+        <div class="tab-item" id="tab-lists" onclick="switchTab('lists')">
+            <i class="fas fa-globe"></i> Domain Aliases
+        </div>
+    </div>
+
+    <!-- Web Filter Rules Tab Content -->
+    <div id="rules-tab-content">
+        <!-- Reorder Warning Banner -->
+        <div id="banner-reorder" class="floating-save-bar" style="display: none;">
+            <span class="save-bar-text">
+                <i class="fas fa-arrows-rotate fa-spin"></i>
+                Unsaved rule order
+            </span>
+            <div style="width: 1px; height: 20px; background: var(--nk-border);"></div>
+            <button class="btn-cancel" onclick="fetchWebFilterRules()">Discard</button>
+            <button class="btn-apply" onclick="submitReorder()">Apply order</button>
+        </div>
+
+        <div class="control-bar">
+            <div class="control-actions">
+                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddRuleModal()">
+                    <i class="fas fa-plus"></i> Add Rule
+                </button>
+                <button class="btn-action" id="refresh-rules-btn" onclick="fetchWebFilterRules(true)"
+                    style="background: #f1f5f9; color: #334155; border: 1px solid var(--nk-border);">
+                    <i class="fas fa-sync-alt" id="refresh-icon"></i> Refresh
+                </button>
+            </div>
+
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-rules-input" placeholder="Search rules by comment or alias..."
+                    onkeyup="filterRulesTable()">
+            </div>
+        </div>
+
+        <!-- Rules Table Container -->
+        <div class="table-card">
+            <div id="loading-rules-view" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Loading web filter rules...</p>
+            </div>
+
+            <table class="rules-table" id="rules-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th style="width: 40px; text-align: center;">
+                            <input type="checkbox" id="select-all-rules" onclick="toggleSelectAllRules(this)">
+                        </th>
+                        <th style="width: 30px; text-align: center;"></th>
+                        <th style="width: 60px; text-align: center;">Order</th>
+                        <th style="width: 220px;">Source (Clients)</th>
+                        <th>Blocked Domains</th>
+                        <th>Comment</th>
+                        <th style="width: 100px; text-align: center;">Enabled</th>
+                        <th style="width: 110px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="rules-tbody">
+                    <!-- Dynamic rendering -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Domain Aliases Tab Content -->
+    <div id="lists-tab-content" style="display: none;">
+        <div class="control-bar">
+            <div class="control-actions">
+                <button class="btn-action btn-primary" id="add-alias-btn" onclick="openAddDomainAliasModal()">
+                    <i class="fas fa-plus"></i> Add Domain Alias
+                </button>
+            </div>
+
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-aliases-input" placeholder="Search domain aliases..."
+                    onkeyup="filterAliasesTable()">
+            </div>
+        </div>
+
+        <!-- Aliases Table Container -->
+        <div class="table-card">
+            <div id="loading-aliases-view" class="loading-overlay">
+                <div class="spinner"></div>
+                <p>Loading domain aliases...</p>
+            </div>
+
+            <table class="rules-table" id="aliases-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th style="width: 200px;">Name</th>
+                        <th style="width: 90px; text-align: center;">Domains</th>
+                        <th>Domain Patterns</th>
+                        <th>Comment</th>
+                        <th style="width: 140px;">Created</th>
+                        <th style="width: 100px; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="aliases-tbody">
+                    <!-- Dynamic rendering -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Web Filter Rule Modal -->
+<div class="modal-overlay" id="ruleModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2 id="ruleModalTitle">Add Web Filter Rule</h2>
+            <button class="modal-close" onclick="closeRuleModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="ruleForm" onsubmit="submitRuleForm(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Comment</label>
+                        <input type="text" id="ruleComment" placeholder="e.g. Block Social Media during work hours" maxlength="200">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Source Address</label>
+                        <div class="input-dropdown-wrapper">
+                            <div class="alias-trigger-btn" onclick="toggleAliasList(event, 'ruleSrc')">@</div>
+                            <input type="text" id="ruleSrc" placeholder="197.62.85.152/24, 192.168.1.1/24"
+                                autocomplete="off" style="padding-left: 2.25rem !important; padding-right: 2.5rem !important;">
+                            <div class="address-multi-btn disabled" onclick="openMultiAddressModal('ruleSrc')"
+                                title="Add multiple addresses"><i class="fas fa-plus"></i></div>
+                            <div class="custom-autocomplete-dropdown" id="ruleSrc-dropdown" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Blocked Domains (What to Block) *</label>
+                        <div id="domains-choice-container" class="domains-selection-box">
+                            <!-- Populated dynamically with web_domain aliases -->
+                        </div>
+                        <span class="form-hint">Select at least one Domain Alias to block.</span>
+                    </div>
+                </div>
+
+                <div class="form-row" id="rule-order-row" style="align-items: center;">
+                    <div class="form-group" style="flex: 1.5;">
+                        <label>Order</label>
+                        <div style="display: flex; gap: 1.25rem; margin-top: 0.35rem; align-items: center; height: 38px;">
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
+                                <input type="radio" name="ruleOrderRadio" value="bottom" checked onchange="toggleCustomOrderField()">
+                                Bottom
+                            </label>
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
+                                <input type="radio" name="ruleOrderRadio" value="first" onchange="toggleCustomOrderField()">
+                                First
+                            </label>
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
+                                <input type="radio" name="ruleOrderRadio" value="custom" onchange="toggleCustomOrderField()">
+                                Custom...
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="custom-order-group" style="flex: 1; display: none;">
+                        <label>Place Before</label>
+                        <input type="number" id="ruleOrderCustomInput" placeholder="e.g. 2" min="1">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-action" onclick="closeRuleModal()">Cancel</button>
+            <button class="btn-action btn-primary" type="submit" form="ruleForm" id="btn-submit-rule">Save Rule</button>
+        </div>
+    </div>
+</div>
+
+<!-- Multi-Address Helper Modal (Identical to Firewall) -->
+<div class="modal-overlay" id="multiAddressModal" style="z-index: 2100;">
+    <div class="modal-card" style="max-width: 550px;">
+        <div class="modal-header">
+            <h2 id="multiAddressModalTitle">Source Addresses</h2>
+            <button class="modal-close" onclick="closeMultiAddressModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height: 50vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; position: sticky; top: -24px; background: white; padding: 13px 0 10px 0;">
+                <h3 style="font-size: 0.8rem; font-weight: 700; color: var(--nk-text-muted); text-transform: capitalize; letter-spacing: 0.5px;">
+                    Addresses / Subnets
+                </h3>
+                <button type="button" class="btn-action" onclick="addMultiAddressRow()"
+                    style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                    <i class="fas fa-plus"></i> Add Address
+                </button>
+            </div>
+            <div id="multi-address-rows-container">
+                <!-- Dynamic address rows -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-action" onclick="closeMultiAddressModal()">Cancel</button>
+            <button class="btn-action btn-primary" onclick="saveMultiAddresses()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Alias Modal (Supports both Normal and Web Domain Aliases) -->
+<div class="modal-overlay" id="aliasModal" style="z-index: 2050;">
+    <div class="modal-card" style="max-width: 650px;">
+        <div class="modal-header">
+            <h2 id="aliasModalTitle">Create Domain Alias</h2>
+            <button class="modal-close" onclick="closeAliasModal()">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+            <form id="aliasForm" onsubmit="submitAliasForm(event)">
+                <input type="hidden" id="aliasActionType" value="add">
+                <input type="hidden" id="aliasEditId" value="">
+                <input type="hidden" id="aliasType" value="web_domain">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name *</label>
+                        <input type="text" id="aliasName" placeholder="e.g. SocialMedia" required maxlength="200"
+                            pattern="^[A-Za-z0-9_-]{1,200}$" title="Alphanumeric, dash, or underscore only. Max 200 chars.">
+                    </div>
+                    <div class="form-group">
+                        <label>Comment</label>
+                        <input type="text" id="aliasComment" placeholder="e.g. Social media platforms" maxlength="200">
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 id="alias-items-header" style="font-size: 0.85rem; font-weight: 700; color: var(--nk-text-main);">Domain Patterns *</h3>
+                        <p id="alias-items-hint" style="font-size: 0.75rem; color: var(--nk-text-muted);">Use <code>*.facebook.com</code> for all subdomains or <code>tiktok.com</code> for exact match.</p>
+                    </div>
+                    <button type="button" class="btn-action" id="btn-add-alias-item" onclick="addAliasItemRow()"
+                        style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: #f1f5f9;">
+                        <i class="fas fa-plus"></i> <span id="btn-add-item-text">Add Domain</span>
+                    </button>
+                </div>
+
+                <div id="alias-items-container">
+                    <!-- Dynamic rows -->
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-action" onclick="closeAliasModal()">Cancel</button>
+            <button class="btn-action btn-primary" type="submit" form="aliasForm" id="btn-submit-alias">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const peerId = "{{ peer_id }}";
+    const isPeerOnline = {{ 'true' if is_online else 'false' }};
+
+    let activeTab = 'rules';
+    let currentRules = [];
+    let cachedAliases = [];
+    let editingRuleId = null;
+    let initialRulesOrder = [];
+    let sortableInstance = null;
+    let isTogglingAlias = false;
+    let activeMultiInputId = "";
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!isPeerOnline) {
+            document.getElementById('banner-offline').style.display = 'flex';
+            document.getElementById('add-rule-btn').disabled = true;
+            document.getElementById('add-alias-btn').disabled = true;
+        }
+
+        // Initialize sortable for drag-and-drop rule reordering
+        const tbody = document.getElementById('rules-tbody');
+        if (tbody && typeof Sortable !== 'undefined') {
+            sortableInstance = new Sortable(tbody, {
+                animation: 150,
+                handle: '.drag-handle',
+                ghostClass: 'sortable-ghost',
+                onEnd: function () {
+                    checkReorderStatus();
+                }
+            });
+        }
+
+        // Initialize autocomplete behaviors on Source input
+        initCustomAutocompletes();
+
+        // Fetch initial data
+        fetchAliases(true).then(() => {
+            fetchWebFilterRules();
+        });
+    });
+
+    function switchTab(tab) {
+        activeTab = tab;
+        const tabRules = document.getElementById('tab-rules');
+        const tabLists = document.getElementById('tab-lists');
+        const rulesContent = document.getElementById('rules-tab-content');
+        const listsContent = document.getElementById('lists-tab-content');
+
+        if (tab === 'rules') {
+            tabRules.classList.add('active');
+            tabLists.classList.remove('active');
+            rulesContent.style.display = 'block';
+            listsContent.style.display = 'none';
+            fetchWebFilterRules();
+        } else {
+            tabRules.classList.remove('active');
+            tabLists.classList.add('active');
+            rulesContent.style.display = 'none';
+            listsContent.style.display = 'block';
+            fetchAliases();
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    // Web Filter Rules Logic
+    // --------------------------------------------------------------------------
+
+    async function fetchWebFilterRules(silent = false) {
+        const loadingView = document.getElementById('loading-rules-view');
+        const rulesTable = document.getElementById('rules-table');
+        const refreshIcon = document.getElementById('refresh-icon');
+
+        if (refreshIcon) refreshIcon.classList.add('fa-spin');
+        if (!silent) {
+            loadingView.style.display = 'flex';
+            rulesTable.style.display = 'none';
+        }
+
+        try {
+            const response = await fetch(`/api/peers/${peerId}/web-filter/rules`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.detail || 'Failed to fetch web filter rules');
+            }
+
+            currentRules = data.rules || [];
+            initialRulesOrder = currentRules.map(r => r.id);
+            document.getElementById('banner-reorder').style.display = 'none';
+
+            renderRulesTable(currentRules);
+        } catch (err) {
+            console.error(err);
+            if (!silent) {
+                document.getElementById('rules-tbody').innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+                            Error loading web filter rules: ${err.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        } finally {
+            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+            if (!silent) {
+                loadingView.style.display = 'none';
+                rulesTable.style.display = 'table';
+            }
+        }
+    }
+
+    function renderRulesTable(rules) {
+        const tbody = document.getElementById('rules-tbody');
+        tbody.innerHTML = '';
+
+        if (!rules || rules.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
+                        <i class="fas fa-filter fa-3x mb-3" style="opacity: 0.35;"></i>
+                        <h3>No Web Filter Rules Configured</h3>
+                        <p style="font-size: 0.85rem; margin-top: 0.25rem;">Create a rule to block domains across your network.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        rules.forEach((rule, idx) => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-rule-id', rule.id);
+
+            // 1. Checkbox
+            const tdCheck = document.createElement('td');
+            tdCheck.style.textAlign = 'center';
+            tdCheck.innerHTML = `<input type="checkbox" class="rule-row-checkbox" data-rule-id="${rule.id}" onchange="onRuleCheckboxChange()">`;
+            tr.appendChild(tdCheck);
+
+            // 2. Drag handle
+            const tdDrag = document.createElement('td');
+            tdDrag.style.textAlign = 'center';
+            tdDrag.innerHTML = `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>`;
+            tr.appendChild(tdDrag);
+
+            // 3. Order
+            const tdOrder = document.createElement('td');
+            tdOrder.style.textAlign = 'center';
+            tdOrder.style.fontWeight = '700';
+            tdOrder.style.color = 'var(--nk-text-muted)';
+            tdOrder.textContent = rule.order || (idx + 1);
+            tr.appendChild(tdOrder);
+
+            // 4. Source
+            const tdSrc = document.createElement('td');
+            if (!rule.src || rule.src.length === 0) {
+                tdSrc.innerHTML = `<span class="badge-all"><i class="fas fa-network-wired"></i> All Network</span>`;
+            } else {
+                const srcBadges = rule.src.map(s => {
+                    if (s.startsWith('@')) {
+                        const aliasName = resolveAliasIdToName(s);
+                        return `<span class="badge-alias" title="${s}">${aliasName}</span>`;
+                    }
+                    return `<span class="badge-ip">${s}</span>`;
+                }).join(' ');
+                tdSrc.innerHTML = srcBadges;
+            }
+            tr.appendChild(tdSrc);
+
+            // 5. Blocked Domains
+            const tdDomains = document.createElement('td');
+            const domainChips = (rule.domains || []).map(d => {
+                const aliasName = resolveAliasIdToName(d);
+                const tooltipText = getDomainAliasTooltip(d);
+                return `<span class="badge-domain" title="${tooltipText}"><i class="fas fa-globe"></i> ${aliasName}</span>`;
+            }).join(' ');
+            tdDomains.innerHTML = `<div class="domains-chip-list">${domainChips}</div>`;
+            tr.appendChild(tdDomains);
+
+            // 6. Comment
+            const tdComment = document.createElement('td');
+            tdComment.style.fontWeight = '500';
+            tdComment.textContent = rule.comment || '-';
+            tr.appendChild(tdComment);
+
+            // 7. Enabled Toggle
+            const tdEnabled = document.createElement('td');
+            tdEnabled.style.textAlign = 'center';
+            const isChecked = rule.enabled ? 'checked' : '';
+            tdEnabled.innerHTML = `
+                <label class="toggle-switch">
+                    <input type="checkbox" ${isChecked} onchange="toggleRuleStatus('${rule.id}', this)">
+                    <span class="slider"></span>
+                </label>
+            `;
+            tr.appendChild(tdEnabled);
+
+            // 8. Actions
+            const tdActions = document.createElement('td');
+            tdActions.className = 'cell-actions';
+            tdActions.innerHTML = `
+                <button class="btn-icon-action" onclick="openEditRuleModal('${rule.id}')" title="Edit rule">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon-action btn-delete" onclick="deleteSingleRule('${rule.id}')" title="Delete rule">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+            tr.appendChild(tdActions);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Toggle Single Rule Status
+    async function toggleRuleStatus(ruleId, checkbox) {
+        const action = checkbox.checked ? 'enable' : 'disable';
+        checkbox.disabled = true;
+
+        try {
+            const resp = await fetch(`/api/peers/${peerId}/web-filter/rules/${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: [ruleId] })
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.message || data.detail || 'Failed to toggle rule');
+            }
+            const rule = currentRules.find(r => r.id === ruleId);
+            if (rule) rule.enabled = checkbox.checked;
+        } catch (err) {
+            alert('Error toggling rule: ' + err.message);
+            checkbox.checked = !checkbox.checked; // Revert
+        } finally {
+            checkbox.disabled = false;
+        }
+    }
+
+    // Delete Single Rule
+    async function deleteSingleRule(ruleId) {
+        if (!confirm('Are you sure you want to delete this web filter rule?')) return;
+
+        try {
+            const resp = await fetch(`/api/peers/${peerId}/web-filter/rules/${ruleId}`, {
+                method: 'DELETE'
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.message || data.detail || 'Failed to delete rule');
+            }
+            fetchWebFilterRules();
+        } catch (err) {
+            alert('Error deleting rule: ' + err.message);
+        }
+    }
+
+    // Reorder rules detection
+    function checkReorderStatus() {
+        const rows = document.querySelectorAll('#rules-tbody tr[data-rule-id]');
+        const currentOrder = Array.from(rows).map(r => r.getAttribute('data-rule-id'));
+        const isChanged = currentOrder.some((id, idx) => id !== initialRulesOrder[idx]);
+
+        const banner = document.getElementById('banner-reorder');
+        banner.style.display = isChanged ? 'flex' : 'none';
+    }
+
+    async function submitReorder() {
+        const rows = document.querySelectorAll('#rules-tbody tr[data-rule-id]');
+        const items = Array.from(rows).map((r, idx) => ({
+            id: r.getAttribute('data-rule-id'),
+            order: idx + 1
+        }));
+
+        try {
+            const resp = await fetch(`/api/peers/${peerId}/web-filter/rules/reorder`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items })
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.message || data.detail || 'Failed to reorder rules');
+            }
+            fetchWebFilterRules();
+        } catch (err) {
+            alert('Error applying rule order: ' + err.message);
+        }
+    }
+
+    // Bulk Actions
+    function toggleSelectAllRules(masterCheckbox) {
+        const checkboxes = document.querySelectorAll('.rule-row-checkbox');
+        checkboxes.forEach(cb => cb.checked = masterCheckbox.checked);
+        onRuleCheckboxChange();
+    }
+
+    function onRuleCheckboxChange() {
+        const checkboxes = document.querySelectorAll('.rule-row-checkbox');
+        const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+        const masterCheckbox = document.getElementById('select-all-rules');
+        if (masterCheckbox) {
+            masterCheckbox.checked = selectedCount === checkboxes.length && checkboxes.length > 0;
+        }
+
+        const floatingBar = document.getElementById('bulk-action-bar');
+        const countBadge = document.getElementById('selected-rules-count');
+        if (floatingBar && countBadge) {
+            countBadge.textContent = `${selectedCount} selected`;
+            if (selectedCount > 0) {
+                floatingBar.style.display = 'block';
+                setTimeout(() => floatingBar.classList.add('show'), 10);
+            } else {
+                floatingBar.classList.remove('show');
+                setTimeout(() => {
+                    if (!floatingBar.classList.contains('show')) floatingBar.style.display = 'none';
+                }, 300);
+            }
+        }
+    }
+
+    function deselectAllRules() {
+        const masterCheckbox = document.getElementById('select-all-rules');
+        if (masterCheckbox) masterCheckbox.checked = false;
+
+        const checkboxes = document.querySelectorAll('.rule-row-checkbox');
+        checkboxes.forEach(cb => cb.checked = false);
+        onRuleCheckboxChange();
+    }
+
+    async function applyBulkAction(action) {
+        const checkboxes = document.querySelectorAll('.rule-row-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-rule-id'));
+        if (ids.length === 0) return;
+
+        let endpoint = `/api/peers/${peerId}/web-filter/rules/remove`;
+        if (action === 'enable') endpoint = `/api/peers/${peerId}/web-filter/rules/enable`;
+        if (action === 'disable') endpoint = `/api/peers/${peerId}/web-filter/rules/disable`;
+
+        if (action === 'delete' && !confirm(`Are you sure you want to delete ${ids.length} selected rule(s)?`)) {
+            return;
+        }
+
+        try {
+            const resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids })
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.message || data.detail || 'Failed to apply bulk action');
+            }
+            deselectAllRules();
+            fetchWebFilterRules();
+        } catch (err) {
+            alert('Bulk action error: ' + err.message);
+        }
+    }
+
+    // Filter rules table
+    function filterRulesTable() {
+        const query = document.getElementById('search-rules-input').value.toLowerCase();
+        const rows = document.querySelectorAll('#rules-tbody tr');
+
+        rows.forEach(row => {
+            if (row.cells.length === 1) return;
+            const src = row.cells[3].textContent.toLowerCase();
+            const domains = row.cells[4].textContent.toLowerCase();
+            const comment = row.cells[5].textContent.toLowerCase();
+
+            if (src.includes(query) || domains.includes(query) || comment.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // --------------------------------------------------------------------------
+    // Rule Modal (Add / Edit)
+    // --------------------------------------------------------------------------
+
+    function openAddRuleModal() {
+        editingRuleId = null;
+        document.getElementById('ruleModalTitle').textContent = 'Add Web Filter Rule';
+        document.getElementById('ruleComment').value = '';
+        document.getElementById('ruleSrc').value = '';
+        updateAddressMultiBtnState('ruleSrc');
+        document.getElementById('rule-order-row').style.display = 'flex';
+        document.querySelector('input[name="ruleOrderRadio"][value="bottom"]').checked = true;
+        toggleCustomOrderField();
+
+        populateDomainChoices([]);
+        document.getElementById('ruleModal').classList.add('active');
+    }
+
+    function openEditRuleModal(ruleId) {
+        const rule = currentRules.find(r => r.id === ruleId);
+        if (!rule) return;
+
+        editingRuleId = ruleId;
+        document.getElementById('ruleModalTitle').textContent = 'Edit Web Filter Rule';
+        document.getElementById('ruleComment').value = rule.comment || '';
+        document.getElementById('ruleSrc').value = (rule.src || []).map(s => resolveAliasIdToName(s)).join(', ');
+        updateAddressMultiBtnState('ruleSrc');
+        document.getElementById('rule-order-row').style.display = 'none'; // Order is kept on PUT
+
+        populateDomainChoices(rule.domains || []);
+        document.getElementById('ruleModal').classList.add('active');
+    }
+
+    function closeRuleModal() {
+        document.getElementById('ruleModal').classList.remove('active');
+        document.querySelectorAll('.custom-autocomplete-dropdown').forEach(d => d.style.display = 'none');
+    }
+
+    function populateDomainChoices(selectedDomains) {
+        const container = document.getElementById('domains-choice-container');
+        container.innerHTML = '';
+
+        const webDomainAliases = cachedAliases.filter(a => a.type === 'web_domain');
+
+        if (webDomainAliases.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 1rem; text-align: center; color: var(--nk-text-muted); font-size: 0.85rem;">
+                    <i class="fas fa-exclamation-circle mb-2" style="color: var(--warning-color);"></i><br>
+                    No Domain Aliases found. Please create a Domain Alias first.
+                    <div style="margin-top: 0.75rem;">
+                        <button type="button" class="btn-action btn-primary" onclick="closeRuleModal(); switchTab('lists'); openAddDomainAliasModal();" style="font-size: 0.8rem; padding: 4px 12px;">
+                            <i class="fas fa-plus"></i> Create Domain Alias
+                        </button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        webDomainAliases.forEach(alias => {
+            const aliasRef = `@alias_${alias.id || alias.slug}`;
+            const isChecked = selectedDomains.includes(aliasRef) || selectedDomains.includes(`@${alias.name}`) || selectedDomains.includes(`@${alias.slug}`);
+            const domainCount = (alias.list || []).length;
+
+            const item = document.createElement('label');
+            item.className = 'domain-choice-item';
+            item.innerHTML = `
+                <input type="checkbox" value="${aliasRef}" ${isChecked ? 'checked' : ''}>
+                <span style="font-weight: 700; color: var(--nk-text-main); font-size: 0.88rem;">@${alias.name || alias.slug}</span>
+                <span style="font-size: 0.78rem; color: var(--nk-text-muted);">(${domainCount} domain${domainCount === 1 ? '' : 's'})</span>
+                ${alias.comment ? `<span style="font-size: 0.78rem; color: var(--nk-text-muted); margin-left: auto;">${alias.comment}</span>` : ''}
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    function toggleCustomOrderField() {
+        const radio = document.querySelector('input[name="ruleOrderRadio"]:checked');
+        const customGroup = document.getElementById('custom-order-group');
+        customGroup.style.display = (radio && radio.value === 'custom') ? 'flex' : 'none';
+    }
+
+    async function submitRuleForm(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit-rule');
+        btn.disabled = true;
+
+        const comment = document.getElementById('ruleComment').value.trim();
+        const srcRaw = document.getElementById('ruleSrc').value.trim();
+
+        // Collect selected domain aliases
+        const checkedBoxes = document.querySelectorAll('#domains-choice-container input[type="checkbox"]:checked');
+        const domains = Array.from(checkedBoxes).map(cb => cb.value);
+
+        if (domains.length === 0) {
+            alert('Please select at least one Domain Alias to block.');
+            btn.disabled = false;
+            return;
+        }
+
+        // Parse sources
+        let src = null;
+        if (srcRaw) {
+            const parts = srcRaw.split(',').map(p => p.trim()).filter(Boolean);
+            src = parts.map(p => {
+                if (p.startsWith('@')) {
+                    return resolveAliasNameToId(p);
+                }
+                return p;
+            });
+        }
+
+        const payload = {
+            comment: comment || null,
+            src: src,
+            domains: domains,
+            enabled: true
+        };
+
+        if (editingRuleId === null) {
+            // New rule order
+            const radioVal = document.querySelector('input[name="ruleOrderRadio"]:checked').value;
+            if (radioVal === 'first') {
+                payload.order = 1;
+            } else if (radioVal === 'custom') {
+                const customOrder = parseInt(document.getElementById('ruleOrderCustomInput').value);
+                if (!isNaN(customOrder) && customOrder > 0) {
+                    payload.order = customOrder;
+                }
+            }
+        }
+
+        try {
+            let url = `/api/peers/${peerId}/web-filter/rules`;
+            let method = 'POST';
+
+            if (editingRuleId !== null) {
+                url = `/api/peers/${peerId}/web-filter/rules/${editingRuleId}`;
+                method = 'PUT';
+            }
+
+            const resp = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.message || data.detail || data.error || 'Failed to save rule');
+            }
+
+            closeRuleModal();
+            fetchWebFilterRules();
+        } catch (err) {
+            alert('Error saving rule: ' + err.message);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    // Autocomplete & Alias Dropdown Logic (Identical to Firewall)
+    // --------------------------------------------------------------------------
+
+    function initCustomAutocompletes() {
+        const input = document.getElementById('ruleSrc');
+        const dropdown = document.getElementById('ruleSrc-dropdown');
+        if (!input || !dropdown) return;
+
+        // Open on focus if typed @
+        input.addEventListener('focus', () => {
+            if (dropdown.style.display === 'block') return;
+            if (isTogglingAlias) return;
+            renderAutocompleteOptions(input, dropdown);
+        });
+
+        // Filter on typing
+        input.addEventListener('input', () => {
+            renderAutocompleteOptions(input, dropdown);
+            updateAddressMultiBtnState('ruleSrc');
+        });
+
+        input.addEventListener('change', () => {
+            updateAddressMultiBtnState('ruleSrc');
+        });
+
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            if (dropdown && !input.contains(e.target) && !dropdown.contains(e.target) && !e.target.classList.contains('alias-trigger-btn')) {
+                dropdown.style.display = 'none';
+            }
+        });
+    }
+
+    function toggleAliasList(event, inputId) {
+        if (event) event.stopPropagation();
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(inputId + '-dropdown');
+        if (!input || !dropdown) return;
+
+        if (dropdown.style.display === 'block') {
+            dropdown.style.display = 'none';
+        } else {
+            isTogglingAlias = true;
+            input.focus();
+            renderAutocompleteOptions(input, dropdown, true); // Force show all
+            setTimeout(() => {
+                isTogglingAlias = false;
+            }, 100);
+        }
+    }
+
+    function renderAutocompleteOptions(input, dropdown, forceShow = false) {
+        const val = input.value.trim();
+
+        // Show ONLY if starts with '@' or forceShow is true
+        if (!val.startsWith('@') && !forceShow) {
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        const filterText = val.toLowerCase();
+        dropdown.innerHTML = '';
+
+        const cleanFilter = filterText.startsWith('@') ? filterText.substring(1) : filterText;
+
+        let count = 0;
+        cachedAliases.forEach(list => {
+            // Only normal aliases can be used as a Source address
+            if (list.type === 'web_domain') return;
+
+            const nameMatch = (list.name || '').toLowerCase().includes(cleanFilter);
+            const slugMatch = (list.slug || '').toLowerCase().includes(cleanFilter);
+            const commentMatch = list.comment && list.comment.toLowerCase().includes(cleanFilter);
+            const isMatch = !filterText || nameMatch || slugMatch || commentMatch || forceShow;
+
+            if (isMatch) {
+                count++;
+                const item = document.createElement('div');
+                item.className = 'custom-autocomplete-item';
+
+                const itemsCount = (list.list || []).length;
+                item.innerHTML = `
+                    <span class="alias-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <span style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span>@${list.name || list.slug}</span>
+                            <span style="font-size: 0.6rem; color: var(--nk-blue-primary); background: #e0f2fe; padding: 1px 4px; border-radius: 4px; font-weight: 700;">${itemsCount}</span>
+                        </span>
+                        <span class="badge-edit-alias" style="font-size: 0.75rem; color:#0284c7; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; transition: var(--nk-transition);" onmouseover="this.style.background='#e0f2fe'; this.style.color='var(--nk-blue-primary)';" onmouseout="this.style.background='transparent'; this.style.color='var(--nk-text-muted)';" title="Edit Alias">
+                            <i class="fas fa-external-link-alt"></i>
+                        </span>
+                    </span>
+                    <span class="alias-desc">${list.comment || ''}</span>
+                `;
+
+                // Handle clicking the edit icon on the right
+                const editBadge = item.querySelector('.badge-edit-alias');
+                if (editBadge) {
+                    editBadge.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropdown.style.display = 'none';
+                        openEditAliasModal(list.id || list.slug);
+                    });
+                }
+
+                // Handle selecting the alias
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    input.value = `@${list.name || list.slug}`;
+                    dropdown.style.display = 'none';
+                    input.dispatchEvent(new Event('change'));
+                });
+
+                dropdown.appendChild(item);
+            }
+        });
+
+        if (count > 0) {
+            dropdown.style.display = 'block';
+        } else {
+            dropdown.style.display = 'none';
+        }
+    }
+
+    function updateAddressMultiBtnState(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const val = input.value.trim();
+        const wrapper = input.closest('.input-dropdown-wrapper');
+        if (!wrapper) return;
+        const plusBtn = wrapper.querySelector('.address-multi-btn');
+        if (!plusBtn) return;
+
+        if (val === "" || val.startsWith('@')) {
+            plusBtn.classList.add('disabled');
+        } else {
+            plusBtn.classList.remove('disabled');
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    // Multi-Address Helper Dialog Logic (Matching Firewall)
+    // --------------------------------------------------------------------------
+
+    function openMultiAddressModal(inputId) {
+        if (!isPeerOnline) return;
+        activeMultiInputId = inputId;
+
+        document.getElementById('multiAddressModalTitle').textContent = 'Source Addresses';
+        const container = document.getElementById('multi-address-rows-container');
+        container.innerHTML = '';
+
+        const originalVal = document.getElementById(inputId).value.trim();
+        if (originalVal && !originalVal.startsWith('@')) {
+            const parts = originalVal.split(',').map(p => p.trim()).filter(Boolean);
+            parts.forEach(part => {
+                addMultiAddressRow(part);
+            });
+        }
+        // Always append a blank/empty row
+        addMultiAddressRow();
+
+        document.getElementById('multiAddressModal').classList.add('active');
+    }
+
+    function closeMultiAddressModal() {
+        document.getElementById('multiAddressModal').classList.remove('active');
+    }
+
+    function addMultiAddressRow(address = '') {
+        const container = document.getElementById('multi-address-rows-container');
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'multi-address-row';
+        rowDiv.style.display = 'flex';
+        rowDiv.style.gap = '0.75rem';
+        rowDiv.style.marginBottom = '0.75rem';
+        rowDiv.style.alignItems = 'center';
+
+        rowDiv.innerHTML = `
+            <div style="flex: 1;">
+                <input type="text" placeholder="IP Address or CIDR (e.g. 192.168.10.5, 10.0.0.0/24)" class="multi-addr-input" required value="${address}" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;">
+            </div>
+            <button type="button" class="btn-remove-row" onclick="removeMultiAddressRow(this)">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(rowDiv);
+    }
+
+    function removeMultiAddressRow(button) {
+        const row = button.closest('.multi-address-row');
+        if (row) row.remove();
+    }
+
+    function saveMultiAddresses() {
+        const inputs = document.querySelectorAll('#multi-address-rows-container .multi-addr-input');
+        const addresses = [];
+        inputs.forEach(input => {
+            const val = input.value.trim();
+            if (val) addresses.push(val);
+        });
+
+        const targetInput = document.getElementById(activeMultiInputId);
+        if (targetInput) {
+            targetInput.value = addresses.join(', ');
+            targetInput.dispatchEvent(new Event('change'));
+        }
+
+        closeMultiAddressModal();
+    }
+
+    // --------------------------------------------------------------------------
+    // Domain Aliases Logic
+    // --------------------------------------------------------------------------
+
+    async function fetchAliases(silent = false) {
+        const loadingView = document.getElementById('loading-aliases-view');
+        const table = document.getElementById('aliases-table');
+
+        if (!silent) {
+            loadingView.style.display = 'flex';
+            table.style.display = 'none';
+        }
+
+        try {
+            const resp = await fetch(`/api/peers/${peerId}/aliases`);
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.error || data.detail || 'Failed to fetch aliases');
+            }
+
+            cachedAliases = data.lists || [];
+            cachedAliases.forEach(a => {
+                if (!a.slug && a.id) a.slug = a.id;
+            });
+
+            renderAliasesTable(cachedAliases.filter(a => a.type === 'web_domain'));
+        } catch (err) {
+            console.error(err);
+            if (!silent) {
+                document.getElementById('aliases-tbody').innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+                            Error loading aliases: ${err.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        } finally {
+            if (!silent) {
+                loadingView.style.display = 'none';
+                table.style.display = 'table';
+            }
+        }
+    }
+
+    function renderAliasesTable(aliases) {
+        const tbody = document.getElementById('aliases-tbody');
+        tbody.innerHTML = '';
+
+        if (!aliases || aliases.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
+                        <i class="fas fa-globe fa-3x mb-3" style="opacity: 0.35;"></i>
+                        <h3>No Domain Aliases Configured</h3>
+                        <p style="font-size: 0.85rem; margin-top: 0.25rem;">Create a domain alias (e.g. SocialMedia, Gambling) to use in your web filter rules.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        aliases.forEach(alias => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-alias-id', alias.id || alias.slug);
+
+            // Name
+            const tdName = document.createElement('td');
+            tdName.innerHTML = `<strong>@${alias.name || alias.slug}</strong>`;
+            tr.appendChild(tdName);
+
+            // Domain count
+            const tdCount = document.createElement('td');
+            tdCount.style.textAlign = 'center';
+            tdCount.innerHTML = `<span class="badge-all">${(alias.list || []).length}</span>`;
+            tr.appendChild(tdCount);
+
+            // Domains preview
+            const tdDomains = document.createElement('td');
+            const previewItems = (alias.list || []).slice(0, 5).map(item => {
+                const dom = item.domain || item.address || item.hostname || '';
+                return `<span class="badge-domain">${dom}</span>`;
+            }).join(' ');
+            const moreCount = (alias.list || []).length - 5;
+            tdDomains.innerHTML = `<div class="domains-chip-list">${previewItems}${moreCount > 0 ? ` <span class="badge-all">+${moreCount} more</span>` : ''}</div>`;
+            tr.appendChild(tdDomains);
+
+            // Comment
+            const tdComment = document.createElement('td');
+            tdComment.textContent = alias.comment || '-';
+            tr.appendChild(tdComment);
+
+            // Created
+            const tdCreated = document.createElement('td');
+            tdCreated.style.fontSize = '0.8rem';
+            tdCreated.style.color = 'var(--nk-text-muted)';
+            tdCreated.textContent = alias.created ? alias.created.split('T')[0] : '-';
+            tr.appendChild(tdCreated);
+
+            // Actions
+            const tdActions = document.createElement('td');
+            tdActions.className = 'cell-actions';
+            tdActions.innerHTML = `
+                <button class="btn-icon-action" onclick="openEditAliasModal('${alias.id || alias.slug}')" title="Edit alias">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon-action btn-delete" onclick="deleteAlias('${alias.id || alias.slug}')" title="Delete alias">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
+            tr.appendChild(tdActions);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filterAliasesTable() {
+        const query = document.getElementById('search-aliases-input').value.toLowerCase();
+        const rows = document.querySelectorAll('#aliases-tbody tr');
+
+        rows.forEach(row => {
+            if (row.cells.length === 1) return;
+            const name = row.cells[0].textContent.toLowerCase();
+            const domains = row.cells[2].textContent.toLowerCase();
+            const comment = row.cells[3].textContent.toLowerCase();
+
+            if (name.includes(query) || domains.includes(query) || comment.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // --------------------------------------------------------------------------
+    // Alias Modal (Add / Edit for both Normal and Web Domain Aliases)
+    // --------------------------------------------------------------------------
+
+    function openAddDomainAliasModal() {
+        document.getElementById('aliasActionType').value = 'add';
+        document.getElementById('aliasEditId').value = '';
+        document.getElementById('aliasType').value = 'web_domain';
+        document.getElementById('aliasModalTitle').textContent = 'Create Domain Alias';
+        document.getElementById('aliasName').value = '';
+        document.getElementById('aliasComment').value = '';
+
+        document.getElementById('alias-items-header').textContent = 'Domain Patterns *';
+        document.getElementById('alias-items-hint').innerHTML = 'Use <code>*.facebook.com</code> for all subdomains or <code>tiktok.com</code> for exact match.';
+        document.getElementById('btn-add-item-text').textContent = 'Add Domain';
+
+        const container = document.getElementById('alias-items-container');
+        container.innerHTML = '';
+        addAliasItemRow('web_domain');
+
+        document.getElementById('aliasModal').classList.add('active');
+    }
+
+    function openEditAliasModal(aliasId) {
+        const alias = cachedAliases.find(a => (a.id || a.slug) === aliasId || a.name === aliasId);
+        if (!alias) return;
+
+        const isWebDomain = alias.type === 'web_domain';
+        document.getElementById('aliasActionType').value = 'edit';
+        document.getElementById('aliasEditId').value = alias.id || alias.slug;
+        document.getElementById('aliasType').value = alias.type || 'normal';
+        document.getElementById('aliasModalTitle').textContent = isWebDomain ? 'Edit Domain Alias' : 'Edit Alias';
+        document.getElementById('aliasName').value = alias.name || alias.slug;
+        document.getElementById('aliasComment').value = alias.comment || '';
+
+        document.getElementById('alias-items-header').textContent = isWebDomain ? 'Domain Patterns *' : 'Addresses / Subnets *';
+        document.getElementById('alias-items-hint').innerHTML = isWebDomain 
+            ? 'Use <code>*.facebook.com</code> for all subdomains or <code>tiktok.com</code> for exact match.'
+            : 'Enter IP address, CIDR subnet, or local hostname (e.g. <code>192.168.1.10</code>, <code>10.0.0.0/24</code>).';
+        document.getElementById('btn-add-item-text').textContent = isWebDomain ? 'Add Domain' : 'Add Address';
+
+        const container = document.getElementById('alias-items-container');
+        container.innerHTML = '';
+
+        if (alias.list && alias.list.length > 0) {
+            alias.list.forEach(item => {
+                const val = item.domain || item.address || item.hostname || '';
+                addAliasItemRow(alias.type, val, item.comment || '');
+            });
+        } else {
+            addAliasItemRow(alias.type);
+        }
+
+        document.getElementById('aliasModal').classList.add('active');
+    }
+
+    function closeAliasModal() {
+        document.getElementById('aliasModal').classList.remove('active');
+    }
+
+    function addAliasItemRow(type = 'web_domain', val = '', commentVal = '') {
+        const isWebDomain = type === 'web_domain';
+        const placeholder = isWebDomain ? 'e.g. *.facebook.com or tiktok.com' : 'e.g. 192.168.1.10 or 10.0.0.0/24';
+
+        const container = document.getElementById('alias-items-container');
+        const row = document.createElement('div');
+        row.className = 'alias-entry-row';
+        row.innerHTML = `
+            <input type="text" placeholder="${placeholder}" value="${val}" required class="alias-val-input" style="flex: 1.5;">
+            <input type="text" placeholder="Comment (optional)" value="${commentVal}" class="alias-comment-input" style="flex: 1;">
+            <button type="button" class="btn-remove-row" onclick="removeAliasItemRow(this)" title="Remove item">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(row);
+    }
+
+    function removeAliasItemRow(btn) {
+        const container = document.getElementById('alias-items-container');
+        if (container.children.length <= 1) {
+            alert('An alias must contain at least one item.');
+            return;
+        }
+        btn.closest('.alias-entry-row').remove();
+    }
+
+    async function submitAliasForm(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit-alias');
+        btn.disabled = true;
+
+        const actionType = document.getElementById('aliasActionType').value;
+        const aliasId = document.getElementById('aliasEditId').value;
+        const aliasType = document.getElementById('aliasType').value;
+        const name = document.getElementById('aliasName').value.trim();
+        const comment = document.getElementById('aliasComment').value.trim();
+
+        const rows = document.querySelectorAll('#alias-items-container .alias-entry-row');
+        const list = [];
+        rows.forEach(r => {
+            const itemVal = r.querySelector('.alias-val-input').value.trim();
+            const cmt = r.querySelector('.alias-comment-input').value.trim();
+            if (itemVal) {
+                if (aliasType === 'web_domain') {
+                    list.push({ domain: itemVal, comment: cmt || null });
+                } else {
+                    // Check if IPv4/CIDR vs hostname
+                    const ipv4Regex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]|[1-2][0-9]|3[0-2]))?$/;
+                    if (ipv4Regex.test(itemVal)) {
+                        list.push({ address: itemVal, comment: cmt || null });
+                    } else {
+                        list.push({ hostname: itemVal, comment: cmt || null });
+                    }
+                }
+            }
+        });
+
+        if (list.length === 0) {
+            alert('Please add at least one entry.');
+            btn.disabled = false;
+            return;
+        }
+
+        try {
+            if (actionType === 'add') {
+                const payload = {
+                    name: name,
+                    type: aliasType,
+                    comment: comment || null,
+                    list: list
+                };
+                const resp = await fetch(`/api/peers/${peerId}/aliases`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.message || data.detail || 'Failed to create alias');
+                }
+            } else {
+                // Update properties via PATCH and list via PUT
+                const patchPayload = { name: name, comment: comment || '' };
+                const putPayload = { list: list };
+
+                const patchResp = await fetch(`/api/peers/${peerId}/aliases/${aliasId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patchPayload)
+                });
+                if (!patchResp.ok) {
+                    const d = await patchResp.json();
+                    throw new Error(d.message || d.detail || 'Failed to update alias properties');
+                }
+
+                const putResp = await fetch(`/api/peers/${peerId}/aliases/${aliasId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(putPayload)
+                });
+                if (!putResp.ok) {
+                    const d = await putResp.json();
+                    throw new Error(d.message || d.detail || 'Failed to update alias items');
+                }
+            }
+
+            closeAliasModal();
+            fetchAliases().then(() => {
+                fetchWebFilterRules(true);
+            });
+        } catch (err) {
+            alert('Error saving alias: ' + err.message);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function deleteAlias(aliasId) {
+        if (!confirm('Are you sure you want to delete this alias?')) return;
+
+        try {
+            const resp = await fetch(`/api/peers/${peerId}/aliases/${aliasId}`, {
+                method: 'DELETE'
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                throw new Error(data.message || data.detail || 'Failed to delete alias');
+            }
+            fetchAliases().then(() => {
+                fetchWebFilterRules(true);
+            });
+        } catch (err) {
+            alert('Error deleting alias: ' + err.message);
+        }
+    }
+
+    // --------------------------------------------------------------------------
+    // Autocomplete & Helpers
+    // --------------------------------------------------------------------------
+
+    function resolveAliasIdToName(aliasRef) {
+        if (!aliasRef) return '';
+        if (aliasRef.startsWith('@')) {
+            let id = aliasRef.substring(1);
+            if (id.startsWith('alias_')) id = id.substring(6);
+            const found = cachedAliases.find(a => (a.id || a.slug) === id || a.name === id || a.slug === id);
+            if (found) return `@${found.name || found.slug}`;
+        }
+        return aliasRef;
+    }
+
+    function resolveAliasNameToId(aliasRef) {
+        if (!aliasRef) return '';
+        if (aliasRef.startsWith('@')) {
+            let name = aliasRef.substring(1);
+            if (name.startsWith('alias_')) return aliasRef; // Already @alias_<id>
+            const found = cachedAliases.find(a => a.name === name || a.slug === name || (a.id || a.slug) === name);
+            if (found) return `@alias_${found.id || found.slug}`;
+        }
+        return aliasRef;
+    }
+
+    function getDomainAliasTooltip(aliasRef) {
+        let id = aliasRef.startsWith('@') ? aliasRef.substring(1) : aliasRef;
+        if (id.startsWith('alias_')) id = id.substring(6);
+
+        const found = cachedAliases.find(a => (a.id || a.slug) === id || a.name === id);
+        if (found && found.list) {
+            const domains = found.list.map(i => i.domain || i.address || i.hostname).filter(Boolean);
+            return domains.join(', ');
+        }
+        return aliasRef;
+    }
+</script>
+{% endblock %}

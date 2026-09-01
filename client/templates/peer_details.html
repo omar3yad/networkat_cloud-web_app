@@ -1,0 +1,375 @@
+{% extends "client_base.html" %}
+
+{% block title %}Peer Details · {{ peer_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --nk-bg: #f8fafc;
+        --nk-card-bg: #ffffff;
+        --nk-border: #e2e8f0;
+        --nk-text-main: #0f172a;
+        --nk-text-muted: #64748b;
+        --nk-blue-primary: #0284c7;
+        --nk-blue-hover: #0369a1;
+        --success-color: #10b981;
+        --danger-color: #ef4444;
+        --nk-radius-lg: 16px;
+        --nk-radius-md: 12px;
+        --nk-radius-sm: 8px;
+        --nk-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .details-container {
+        padding: 2rem;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--nk-blue-primary);
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        transition: var(--nk-transition);
+    }
+
+    .back-link:hover {
+        color: var(--nk-blue-hover);
+        transform: translateX(-3px);
+    }
+
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .title-area h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--nk-text-main);
+    }
+
+    .title-area p {
+        color: var(--nk-text-muted);
+        margin-top: 0.25rem;
+        font-size: 0.95rem;
+    }
+
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .badge-online {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: var(--success-color);
+    }
+
+    .badge-offline {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: var(--danger-color);
+    }
+
+    /* Grid Layout */
+    .details-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+    }
+
+    @media (max-width: 992px) {
+        .details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Cards */
+    .details-card {
+        background: var(--nk-card-bg);
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-lg);
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04);
+        padding: 1.75rem;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--nk-text-main);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        border-bottom: 1px solid var(--nk-border);
+        padding-bottom: 0.75rem;
+    }
+
+    .info-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .info-label {
+        font-weight: 600;
+        color: var(--nk-text-muted);
+        font-size: 0.95rem;
+    }
+
+    .info-value {
+        font-weight: 700;
+        color: var(--nk-text-main);
+        font-size: 0.95rem;
+    }
+
+    /* Quick Actions */
+    .actions-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .action-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        border-radius: var(--nk-radius-md);
+        border: 1px solid var(--nk-border);
+        text-decoration: none;
+        color: var(--nk-text-main);
+        font-weight: 700;
+        background: #f8fafc;
+        transition: var(--nk-transition);
+        text-align: center;
+    }
+
+    .action-card i {
+        font-size: 1.5rem;
+        color: var(--nk-blue-primary);
+    }
+
+    .action-card:hover {
+        border-color: var(--nk-blue-primary);
+        background: rgba(2, 132, 199, 0.03);
+        transform: translateY(-2px);
+    }
+
+    .action-card.disabled {
+        opacity: 0.55;
+        cursor: not-allowed !important;
+    }
+
+    .action-card.disabled:hover {
+        transform: none !important;
+        border-color: var(--nk-border) !important;
+        background: #f8fafc !important;
+    }
+
+    /* Placeholder metrics */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .metric-panel {
+        background: #f8fafc;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-md);
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(2, 132, 199, 0.1);
+        color: var(--nk-blue-primary);
+        font-size: 1.25rem;
+    }
+
+    .metric-data {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .metric-val {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--nk-text-main);
+    }
+
+    .metric-lbl {
+        font-size: 0.8rem;
+        color: var(--nk-text-muted);
+        font-weight: 600;
+    }
+
+    /* Graph placeholder */
+    .graph-placeholder {
+        border: 2px dashed var(--nk-border);
+        border-radius: var(--nk-radius-md);
+        height: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        color: var(--nk-text-muted);
+        gap: 0.5rem;
+        background: #fafafa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="details-container">
+    <a href="{{ url_for('client.peers_page') }}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Peers List
+    </a>
+
+    <div class="header-section">
+        <div class="title-area">
+            <h1>{{ peer_name }}</h1>
+            <!-- <p>NetBird Peer ID: <code>{{ peer_id }}</code></p> -->
+        </div>
+        <div>
+            {% if is_online %}
+            <span class="badge-status badge-online">
+                <i class="fas fa-circle"></i> Connected
+            </span>
+            {% else %}
+            <span class="badge-status badge-offline">
+                <i class="fas fa-circle"></i> Offline
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="details-grid">
+        <!-- Sidebar properties info -->
+        <div class="details-card">
+            <h3 class="card-title">
+                <i class="fas fa-info-circle"></i> Peer Info
+            </h3>
+            <div class="info-list">
+                <div class="info-item">
+                    <span class="info-label">Public IP</span>
+                    <span class="info-value"><code>{{ peer_public_ip }}</code></span>
+                </div>
+                <!-- <div class="info-item">
+                    <span class="info-label">Operating System</span>
+                    <span class="info-value">{{ peer_os }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Daemon Version</span>
+                    <span class="info-value">{{ peer_version }}</span>
+                </div> -->
+                <div class="info-item">
+                    <span class="info-label">Last Synchronization</span>
+                    <span class="info-value">{{ peer_last_seen }}</span>
+                </div>
+            </div>
+
+            <h3 class="card-title" style="margin-top: 2rem;">
+                <i class="fas fa-sliders-h"></i> Management
+            </h3>
+            <div class="actions-grid">
+                {% if is_online %}
+                <a href="{{ url_for('client.peer_firewall', peer_id=peer_id) }}" class="action-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Firewall Rules</span>
+                </a>
+                <a href="{{ url_for('client.peer_web_filter', peer_id=peer_id) }}" class="action-card">
+                    <i class="fas fa-filter"></i>
+                    <span>Web Filter</span>
+                </a>
+                {% else %}
+                <a href="javascript:void(0)" class="action-card disabled" title="This peer is offline. Firewall rules are only accessible when the peer is online.">
+                    <i class="fas fa-shield-alt" style="color: var(--nk-text-muted);"></i>
+                    <span style="color: var(--nk-text-muted);">Firewall Rules</span>
+                </a>
+                <a href="javascript:void(0)" class="action-card disabled" title="This peer is offline. Web Filter is only accessible when the peer is online.">
+                    <i class="fas fa-filter" style="color: var(--nk-text-muted);"></i>
+                    <span style="color: var(--nk-text-muted);">Web Filter</span>
+                </a>
+                {% endif %}
+                <a href="{{ url_for('client.peer_aliases', peer_id=peer_id) }}" class="action-card">
+                    <i class="fas fa-list"></i>
+                    <span>Aliases</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Main details area / charts placeholder -->
+        <div class="details-card">
+            <h3 class="card-title">
+                <i class="fas fa-chart-line"></i> Performance & Metrics
+            </h3>
+            <div class="metrics-grid">
+                <div class="metric-panel">
+                    <div class="metric-icon">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <div class="metric-data">
+                        <span class="metric-val">12.4 Mbps</span>
+                        <span class="metric-lbl">Current Download</span>
+                    </div>
+                </div>
+                <div class="metric-panel">
+                    <div class="metric-icon">
+                        <i class="fas fa-heartbeat"></i>
+                    </div>
+                    <div class="metric-data">
+                        <span class="metric-val">14 ms</span>
+                        <span class="metric-lbl">Avg Latency</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="graph-placeholder">
+                <i class="fas fa-chart-area fa-3x" style="opacity: 0.3;"></i>
+                <span style="font-weight: 700;">Realtime Bandwidth Usage</span>
+                <span style="font-size: 0.8rem; opacity: 0.7;">Graph integration will be populated in subsequent sprints.</span>
+            </div>
+
+            <h3 class="card-title" style="margin-top: 2rem;">
+                <i class="fas fa-list-ul"></i> System Events
+            </h3>
+            <div class="graph-placeholder" style="height: 140px; border-style: dotted;">
+                <i class="fas fa-file-alt fa-2x" style="opacity: 0.3;"></i>
+                <span style="font-size: 0.85rem;">No recent log events reported from agent.</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

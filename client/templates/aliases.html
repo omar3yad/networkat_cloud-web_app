@@ -1,0 +1,1483 @@
+{% extends "client_base.html" %}
+
+{% block title %}Aliases (Address Lists){% endblock %}
+
+{% block extra_head %}
+<style>
+    .aliases-container {
+        padding: 2.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .page-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .page-header h1 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.75px;
+        color: var(--nk-navy);
+    }
+
+    .page-header p {
+        color: var(--nk-text-muted);
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .card {
+        background: #ffffff;
+        border-radius: var(--nk-radius-lg);
+        border: 1px solid var(--nk-border);
+        box-shadow: var(--nk-shadow-sm);
+        padding: 1.75rem 2rem;
+    }
+
+    .card-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--nk-text-muted);
+        text-transform: capitalize;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.75rem;
+    }
+
+    /* Selector styling */
+    .peer-selector-wrapper {
+        position: relative;
+        max-width: 450px;
+        width: 100%;
+    }
+
+    .peer-selector-wrapper select {
+        width: 100%;
+        padding: 0.85rem 1.25rem;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-md);
+        font-family: inherit;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--nk-navy);
+        outline: none;
+        background-color: #fafbfc;
+        transition: var(--nk-transition);
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+    }
+
+    .peer-selector-wrapper select:focus {
+        border-color: var(--nk-blue-primary);
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        background-color: #ffffff;
+    }
+
+    .peer-selector-wrapper::after {
+        content: '\f078';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        right: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--nk-text-muted);
+        pointer-events: none;
+        font-size: 0.85rem;
+    }
+
+    /* Control Panel Header Row */
+    .control-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background-color: #f8fafc;
+        padding-top: 0.75rem;
+        padding-bottom: 1rem;
+    }
+
+    .control-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    .btn-action {
+        background: #ffffff;
+        border: 1px solid var(--nk-border);
+        color: var(--nk-text-main);
+        padding: 0.6rem 1.2rem;
+        border-radius: var(--nk-radius-sm);
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--nk-transition);
+    }
+
+    .btn-action:hover:not(:disabled) {
+        background: #90d1f2;
+        border-color: #90d1f2;
+        color: #ffffff;
+    }
+
+    .btn-action:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn-action.btn-primary {
+        background: var(--nk-blue-primary);
+        color: #ffffff;
+        border-color: var(--nk-blue-primary);
+    }
+
+    .btn-action.btn-primary:hover:not(:disabled) {
+        background: #90d1f2;
+        border-color: #90d1f2;
+        color: #ffffff;
+    }
+
+    .search-box {
+        position: relative;
+        max-width: 300px;
+        width: 100%;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--nk-text-muted);
+        font-size: 0.88rem;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 0.6rem 1rem 0.6rem 2.25rem;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-sm);
+        font-size: 0.9rem;
+        font-family: inherit;
+        outline: none;
+        transition: var(--nk-transition);
+    }
+
+    .search-box input:focus {
+        border-color: var(--nk-blue-primary);
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+
+    .search-filter-container {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    .alias-type-filters {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .type-filter-chip {
+        background: #ffffff;
+        border: 1px solid var(--nk-border);
+        color: var(--nk-text-muted);
+        padding: 2px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--nk-transition);
+        user-select: none;
+    }
+
+    .type-filter-chip:hover {
+        background: #f1f5f9;
+        color: var(--nk-text-main);
+    }
+
+    .type-filter-chip.active[data-filter="all"] {
+        background: var(--nk-blue-primary);
+        color: #ffffff;
+        border-color: var(--nk-blue-primary);
+    }
+
+    .type-filter-chip.active[data-filter="normal"] {
+        background: #334155;
+        color: #ffffff;
+        border-color: #334155;
+    }
+
+    .type-filter-chip.active[data-filter="web_domain"] {
+        background: #d97706;
+        color: #ffffff;
+        border-color: #d97706;
+    }
+
+    /* Status/Offline Banner */
+    .status-banner {
+        background-color: #fee2e2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        padding: 1rem 1.5rem;
+        border-radius: var(--nk-radius-md);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .status-banner i {
+        font-size: 1.2rem;
+    }
+
+    /* Table styling */
+    .table-card {
+        background: #ffffff;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-md);
+        box-shadow: var(--nk-shadow-sm);
+    }
+
+    .rules-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        text-align: left;
+        font-size: 0.9rem;
+    }
+
+    .rules-table th {
+        background: #f8fafc;
+        padding: 1rem 1.25rem;
+        font-weight: 700;
+        color: var(--nk-text-muted);
+        border-bottom: 1px solid var(--nk-border);
+        text-transform: capitalize;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        position: sticky;
+        top: 60px;
+        z-index: 90;
+    }
+
+    .rules-table th:first-child {
+        border-top-left-radius: var(--nk-radius-md);
+    }
+
+    .rules-table th:last-child {
+        border-top-right-radius: var(--nk-radius-md);
+    }
+
+    .rules-table td {
+        padding: 1.25rem;
+        border-bottom: 1px solid var(--nk-border);
+        color: var(--nk-text-main);
+        vertical-align: middle;
+    }
+
+    .rules-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .rules-table tbody tr:last-child td:first-child {
+        border-bottom-left-radius: var(--nk-radius-md);
+    }
+
+    .rules-table tbody tr:last-child td:last-child {
+        border-bottom-right-radius: var(--nk-radius-md);
+    }
+
+    .rules-table tbody tr:hover {
+        background-color: #fafbfc;
+    }
+
+    /* Lists Table CSS Grid Styling */
+    #lists-table {
+        display: block !important;
+    }
+
+    #lists-table thead,
+    #lists-table tbody {
+        display: block;
+    }
+
+    #lists-table tr {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 3fr 1.5fr 1.5fr 120px;
+        align-items: center;
+    }
+
+    #lists-table th,
+    #lists-table td {
+        padding: 0.75rem 1.25rem;
+        border-bottom: none;
+    }
+
+    #lists-table tbody tr {
+        border-bottom: 1px solid var(--nk-border);
+        padding: 0.5rem 0;
+        grid-template-areas:
+            "comment comment comment comment comment comment"
+            "name items addresses created updated actions";
+    }
+
+    #lists-table td[colspan] {
+        grid-column: 1 / -1;
+        text-align: center;
+        width: 100%;
+    }
+
+    .alias-comment-cell {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        grid-area: comment;
+        font-size: 0.88rem;
+        color: #64748b;
+        font-weight: 700;
+        padding: 0.25rem 1.25rem 0 1.25rem !important;
+        text-align: left;
+    }
+
+    .cell-name {
+        grid-area: name;
+    }
+
+    .cell-items {
+        grid-area: items;
+    }
+
+    .cell-addresses {
+        grid-area: addresses;
+    }
+
+    .cell-created {
+        grid-area: created;
+    }
+
+    .cell-updated {
+        grid-area: updated;
+    }
+
+    .cell-actions {
+        grid-area: actions;
+    }
+
+    /* Badges */
+    .badge-ip {
+        background: #f1f5f9;
+        color: var(--nk-text-main);
+        padding: 0.35rem 0.65rem;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 0.8rem;
+        font-weight: 600;
+        display: inline-block;
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+    }
+
+    .badge-any {
+        color: var(--nk-text-muted);
+        font-style: italic;
+        font-size: 0.85rem;
+    }
+
+    /* Delete/Edit Action Buttons */
+    .btn-delete {
+        background: none;
+        border: none;
+        color: var(--nk-text-muted);
+        cursor: pointer;
+        padding: 0.35rem;
+        border-radius: 6px;
+        transition: var(--nk-transition);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .btn-delete:hover:not(:disabled) {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+
+    .btn-delete.btn-edit-action:hover:not(:disabled) {
+        background: #e0f2fe;
+        color: var(--nk-blue-primary);
+    }
+
+    .btn-delete:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Modals styling */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        opacity: 1;
+    }
+
+    .modal-card {
+        background: #ffffff;
+        width: 92%;
+        max-width: 650px;
+        border-radius: var(--nk-radius-lg);
+        box-shadow: var(--nk-shadow-md);
+        border: 1px solid var(--nk-border);
+        overflow: hidden;
+        transform: translateY(20px);
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-overlay.active .modal-card {
+        transform: translateY(0);
+    }
+
+    .modal-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--nk-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h2 {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--nk-navy);
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.25rem;
+        color: var(--nk-text-muted);
+        cursor: pointer;
+        transition: var(--nk-transition);
+    }
+
+    .modal-close:hover {
+        color: var(--nk-text-main);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--nk-text-muted);
+        margin-bottom: 0.5rem;
+        text-transform: capitalize;
+        letter-spacing: 0.5px;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--nk-border);
+        border-radius: var(--nk-radius-sm);
+        font-family: inherit;
+        font-size: 0.9rem;
+        outline: none;
+        transition: var(--nk-transition);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        border-color: var(--nk-blue-primary);
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    }
+
+    .form-group input:disabled {
+        background-color: #f1f5f9;
+        color: var(--nk-text-muted);
+        cursor: not-allowed;
+    }
+
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        background: #f8fafc;
+        border-top: 1px solid var(--nk-border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 5rem 2rem;
+        color: var(--nk-text-muted);
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(2, 132, 199, 0.15);
+        border-top-color: var(--nk-blue-primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 1rem;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    #address-rows-container {
+        max-height: 250px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="aliases-container">
+    <a href="{{ url_for('client.peer_details', peer_id=selected_peer_id) }}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Peer Details
+    </a>
+    <div class="page-header">
+        <h1>Aliases</h1>
+        <!-- <p>Manage IP/Subnet Address Lists across your SD-WAN .</p> -->
+    </div>
+
+    <!-- Peer Selection Card -->
+    <div class="card">
+        <h3 class="card-title">Select Peer</h3>
+        <div class="peer-selector-wrapper">
+            <select id="peer-selector" onchange="onPeerChange()">
+                {% if peers %}
+                {% set ns = namespace(selected=false) %}
+                {% for p in peers %}
+                {% set is_selected = "" %}
+                {% if selected_peer_id %}
+                {% if p.id == selected_peer_id %}
+                {% set is_selected = "selected" %}
+                {% endif %}
+                {% else %}
+                {% if p.connected and not ns.selected %}
+                {% set is_selected = "selected" %}
+                {% set ns.selected = true %}
+                {% endif %}
+                {% endif %}
+                <option value="{{ p.id }}" data-connected="{{ 'true' if p.connected else 'false' }}" {{ is_selected }}
+                    {% if not p.connected %}disabled style="color: #94a3b8;" {% endif %}>
+                    {{ p.name }} ({{ p.ip }}){% if not p.connected %} (Offline){% endif %}
+                </option>
+                {% endfor %}
+                {% else %}
+                <option value="" disabled selected>No devices found</option>
+                {% endif %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Offline Banner -->
+    <div class="status-banner" id="banner-offline" style="display: none;">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>This peer is offline.</span>
+    </div>
+
+    <!-- Aliases Workspace -->
+    <div id="aliases-workspace" style="display: none;">
+        <!-- Control Bar -->
+        <div class="control-bar">
+            <div class="control-actions">
+                <button class="btn-action btn-primary" id="add-list-btn" onclick="openAddListModal()">
+                    <i class="fas fa-plus"></i> Add alias
+                </button>
+                <button class="btn-action" id="resolver-settings-btn" onclick="openResolverConfigModal()">
+                    <i class="fas fa-cog"></i> Resolver Settings
+                </button>
+            </div>
+            <div class="search-filter-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-lists-input" placeholder="Search lists by name..."
+                        onkeyup="filterListsTable()">
+                </div>
+                <div class="alias-type-filters">
+                    <button type="button" class="type-filter-chip active" data-filter="all" onclick="setTypeFilter('all')">all</button>
+                    <button type="button" class="type-filter-chip" data-filter="normal" onclick="setTypeFilter('normal')">Normal</button>
+                    <button type="button" class="type-filter-chip" data-filter="web_domain" onclick="setTypeFilter('web_domain')">Web domain</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aliases Table Card -->
+        <div class="table-card">
+            <div id="loading-lists-view" class="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+                <p>Loading address lists...</p>
+            </div>
+
+            <table class="rules-table" id="lists-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Count</th>
+                        <th>Items</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                        <th style="width: 120px; text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="lists-tbody">
+                    <!-- Loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Alias Modal -->
+<div class="modal-overlay" id="listModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2 id="listModalTitle">Create alias</h2>
+            <button class="modal-close" onclick="closeListModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="listForm" onsubmit="submitAddressList(event)">
+                <input type="hidden" id="listActionType" value="add">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name *</label>
+                        <input type="text" id="listSlug" placeholder="e.g. Sales Department" required maxlength="200"
+                            title="Alias Name. Max 200 characters.">
+                    </div>
+                    <div class="form-group">
+                        <label>Comment</label>
+                        <input type="text" id="listComment" placeholder="e.g. Sales Department" maxlength="200">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="max-width: 320px;">
+                        <label>Type *</label>
+                        <select id="listType" onchange="onListTypeChange()" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;">
+                            <option value="normal">Normal (IP / Hostname)</option>
+                            <option value="web_domain">Web Domain (for filtering)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div
+                    style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;position: sticky;top: -28px;background: white;padding: 12px 0 13px 0;">
+                    <h3
+                        style="font-size: 0.8rem; font-weight: 700; color: var(--nk-text-muted); text-transform: capitalize; letter-spacing: 0.5px;">
+                        Items
+                    </h3>
+                    <button type="button" class="btn-action" onclick="addAddressRow()"
+                        style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+
+                <div id="address-rows-container">
+                    <!-- Dynamic rows inserted here -->
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-action" onclick="closeListModal()">Cancel</button>
+            <button class="btn-action btn-primary" type="submit" form="listForm" id="btn-submit-list">Save
+                Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Resolver Configuration Modal -->
+<div class="modal-overlay" id="resolverModal">
+    <div class="modal-card" style="max-width: 550px;">
+        <div class="modal-header">
+            <h2>DNS Forwarding</h2>
+            <button class="modal-close" onclick="closeResolverModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size: 0.85rem; color: var(--nk-text-muted); margin-bottom: 1.25rem; line-height: 1.4;">
+                Forward DNS queries for specific domains or zones to designated upstream resolvers, instead of the
+                default resolver.
+            </p>
+            <div
+                style="display: flex;justify-content: end;margin-bottom: 0.75rem;position: sticky;padding: 10px 50px 10px 0;top: -26px;z-index: 10;background: #ffffff;">
+                <button type="button" class="btn-action" onclick="addLocalDnsRow()"
+                    style="padding: 0.5rem 1rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--nk-border); background: transparent; border-radius: var(--nk-radius-sm); cursor: pointer; color: var(--nk-text-main); font-weight: 500;">
+                    <i class="fas fa-plus"></i> Add Forwarding Rule
+                </button>
+            </div>
+            <form id="resolverForm" onsubmit="submitResolverConfig(event)">
+                <div id="local-dns-rows-container" style="margin-bottom: 0.75rem;">
+                    <!-- Rows will be injected here dynamically -->
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-action" onclick="closeResolverModal()">Cancel</button>
+            <button class="btn-action btn-primary" type="submit" form="resolverForm" id="btn-submit-resolver">Save
+                Settings</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPeerId = "";
+    let isPeerOnline = false;
+    let cachedAddressLists = [];
+    let originalSlug = "";
+    let cachedResolverConfig = null;
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Initialize with first peer if exists
+        const selector = document.getElementById("peer-selector");
+        if (selector && selector.value) {
+            // If the default selected option is disabled (offline), try to select the first online one
+            const selectedOption = selector.options[selector.selectedIndex];
+            if (selectedOption && selectedOption.disabled) {
+                for (let i = 0; i < selector.options.length; i++) {
+                    if (!selector.options[i].disabled) {
+                        selector.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            onPeerChange();
+        }
+    });
+
+    function onPeerChange() {
+        const selector = document.getElementById("peer-selector");
+        if (!selector || !selector.value) {
+            document.getElementById("aliases-workspace").style.display = "none";
+            return;
+        }
+
+        currentPeerId = selector.value;
+        const selectedOption = selector.options[selector.selectedIndex];
+        isPeerOnline = selectedOption.getAttribute("data-connected") === "true";
+
+        // Update Offline Banner
+        const offlineBanner = document.getElementById("banner-offline");
+        const addBtn = document.getElementById("add-list-btn");
+        const syncBtn = document.getElementById("sync-lists-btn");
+        const resolverBtn = document.getElementById("resolver-settings-btn");
+
+        cachedResolverConfig = null;
+
+        if (!isPeerOnline) {
+            offlineBanner.style.display = "flex";
+            if (addBtn) addBtn.disabled = true;
+            if (syncBtn) syncBtn.disabled = true;
+            if (resolverBtn) resolverBtn.disabled = true;
+        } else {
+            offlineBanner.style.display = "none";
+            if (addBtn) addBtn.disabled = false;
+            if (syncBtn) syncBtn.disabled = false;
+            if (resolverBtn) resolverBtn.disabled = false;
+        }
+
+        document.getElementById("aliases-workspace").style.display = "block";
+        fetchAddressLists();
+        fetchResolverConfig();
+    }
+
+    // Fetch Address Lists/Aliases from backend
+    async function fetchAddressLists(silent = false) {
+        const loadingView = document.getElementById('loading-lists-view');
+        const listsTable = document.getElementById('lists-table');
+
+        if (!silent) {
+            loadingView.style.display = 'flex';
+            listsTable.style.display = 'none';
+        }
+
+        try {
+            const response = await fetch(`/api/peers/${currentPeerId}/aliases`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.detail || 'Failed to fetch address lists');
+            }
+
+            cachedAddressLists = data.lists || [];
+            cachedAddressLists.forEach(l => {
+                if (!l.slug && l.id) {
+                    l.slug = l.id;
+                }
+            });
+            renderAddressListsTable(cachedAddressLists);
+        } catch (err) {
+            console.error(err);
+            if (!silent) {
+                document.getElementById('lists-tbody').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+                            Error loading address lists: ${err.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        } finally {
+            if (!silent) {
+                loadingView.style.display = 'none';
+                listsTable.style.display = 'table';
+            }
+        }
+    }
+
+    // Render Aliases Table
+    function renderAddressListsTable(lists) {
+        const tbody = document.getElementById('lists-tbody');
+        tbody.innerHTML = '';
+
+        if (lists.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
+                        <i class="fas fa-list fa-3x mb-3" style="opacity: 0.35;"></i>
+                        <h3>No Aliases Configured</h3>
+                        <p style="font-size: 0.85rem; margin-top: 0.25rem;">Create an alias to begin.</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        lists.forEach(list => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-list-slug', list.slug);
+            tr.setAttribute('data-list-type', list.type || 'normal');
+
+            // Comment (above the row)
+            const tdComment = document.createElement('td');
+            tdComment.className = 'alias-comment-cell';
+            tdComment.innerHTML = `<span style="opacity: 0.9;">${list.comment || ''}</span>`;
+            tr.appendChild(tdComment);
+
+            // Name/Slug
+            const tdSlug = document.createElement('td');
+            tdSlug.className = 'cell-name';
+            tdSlug.style.fontWeight = '700';
+            const isWebDomainType = list.type === 'web_domain';
+            const typeBadgeStyle = isWebDomainType
+                ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;'
+                : 'background: #334155; color: #f8fafc; border: 1px solid #475569;';
+            const typeBadgeLabel = isWebDomainType ? 'Web domain' : 'Normal';
+            tdSlug.innerHTML = `${list.name || list.slug} <span class="badge-ip" style="margin-left: 6px; font-size: 0.7rem; font-weight: 600; ${typeBadgeStyle}">${typeBadgeLabel}</span>`;
+            tr.appendChild(tdSlug);
+
+            // Items count column
+            const tdItems = document.createElement('td');
+            tdItems.className = 'cell-items';
+            const items = list.list || [];
+            tdItems.innerHTML = `<span onclick="openEditListModal('${list.slug}')" style="font-weight: 700; color: var(--nk-blue-primary); background: #e0f2fe; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;" title="Click to Edit Alias">${items.length}</span>`;
+            tr.appendChild(tdItems);
+
+            // Addresses Preview
+            const tdAddresses = document.createElement('td');
+            tdAddresses.className = 'cell-addresses';
+            const maxPreview = 2;
+            const previewHtml = items.slice(0, maxPreview).map(item => {
+                const val = item.hostname || item.domain || item.address;
+                const isDomain = !!item.domain;
+                const commentText = item.comment ? item.comment : '';
+                const resolvedText = item.resolved_addresses && item.resolved_addresses.length > 0
+                    ? `Resolved IPs: ${item.resolved_addresses.join(', ')}`
+                    : 'unresolved';
+
+                const hoverTitle = commentText && resolvedText
+                    ? `${commentText}\n${resolvedText}`
+                    : (commentText || resolvedText);
+
+                if (item.hostname || item.domain) {
+                    const colorStyle = isDomain
+                        ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;'
+                        : 'background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;';
+                    return `<span class="badge-ip" title="${hoverTitle}" style="margin: 2px; ${colorStyle}">${val}</span>`;
+                }
+                return `<span class="badge-ip" title="${commentText}" style="margin: 2px;">${item.address}</span>`;
+            }).join(' ');
+
+            const remaining = items.length - maxPreview;
+            const moreHtml = remaining > 0 ? `<span class="badge-any" style="font-size: 0.8rem; margin-left: 6px;">+${remaining} more</span>` : '';
+
+            tdAddresses.innerHTML = `<div style="display: flex; flex-wrap: wrap; align-items: center;">${previewHtml}${moreHtml}</div>`;
+            tr.appendChild(tdAddresses);
+
+            // Created
+            const tdCreated = document.createElement('td');
+            tdCreated.className = 'cell-created';
+            tdCreated.style.color = 'var(--nk-text-muted)';
+            tdCreated.style.fontSize = '0.85rem';
+            tdCreated.textContent = list.created ? new Date(list.created).toLocaleString('en-GB') : '-';
+            tr.appendChild(tdCreated);
+
+            // Updated
+            const tdUpdated = document.createElement('td');
+            tdUpdated.className = 'cell-updated';
+            tdUpdated.style.color = 'var(--nk-text-muted)';
+            tdUpdated.style.fontSize = '0.85rem';
+            tdUpdated.textContent = list.updated ? new Date(list.updated).toLocaleString('en-GB') : '-';
+            tr.appendChild(tdUpdated);
+
+            // Actions Column
+            const tdActions = document.createElement('td');
+            tdActions.className = 'cell-actions';
+            tdActions.style.textAlign = 'center';
+            const disabledAttr = !isPeerOnline ? 'disabled' : '';
+
+            const selector = document.getElementById("peer-selector");
+            const selectedOption = selector ? selector.options[selector.selectedIndex] : null;
+            const peerName = selectedOption ? selectedOption.text.split('(')[0].trim() : 'Edge Device';
+
+            tdActions.innerHTML = `
+                <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                    <a href="/peers/${currentPeerId}/filtering?name=${encodeURIComponent(peerName)}&scope=alias&alias=${list.slug}" class="btn-delete btn-edit-action" title="DNS Filter" style="display: flex; align-items: center; justify-content: center; text-decoration: none;">
+                        <i class="fas fa-filter"></i>
+                    </a>
+                    <button class="btn-delete btn-edit-action" onclick="openEditListModal('${list.slug}')" ${disabledAttr} title="Edit alias">
+                        <i class="far fa-edit"></i>
+                    </button>
+                    <button class="btn-delete" onclick="deleteAddressList('${list.slug}')" ${disabledAttr} title="Delete alias">
+                        <i class="far fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
+            tr.appendChild(tdActions);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Open Add Alias Modal
+    function openAddListModal() {
+        if (!isPeerOnline) return;
+        document.getElementById('listModalTitle').textContent = 'Add alias';
+        document.getElementById('listActionType').value = 'add';
+        document.getElementById('btn-submit-list').textContent = 'Add alias';
+        document.getElementById('listSlug').value = '';
+        document.getElementById('listSlug').disabled = false;
+        document.getElementById('listComment').value = '';
+        document.getElementById('listType').value = 'normal';
+        document.getElementById('listType').disabled = false;
+        document.getElementById('address-rows-container').innerHTML = '';
+        addAddressRow();
+        document.getElementById('listModal').classList.add('active');
+    }
+
+    // Open Edit Alias Modal
+    function openEditListModal(slug) {
+        if (!isPeerOnline) return;
+        const listObj = cachedAddressLists.find(l => l.slug === slug);
+        if (!listObj) return;
+
+        const isNewAgent = cachedAddressLists.length > 0 && cachedAddressLists.some(l => l.id !== undefined);
+
+        document.getElementById('listModalTitle').textContent = 'Edit Alias';
+        document.getElementById('listActionType').value = 'edit';
+        document.getElementById('btn-submit-list').textContent = 'Save Changes';
+        originalSlug = slug;
+        document.getElementById('listSlug').value = listObj.name || slug;
+        document.getElementById('listSlug').disabled = !isNewAgent; // Disabled for old agents that don't support renaming
+        document.getElementById('listComment').value = listObj.comment || '';
+        // type is immutable after creation - show it, but disabled
+        document.getElementById('listType').value = listObj.type || 'normal';
+        document.getElementById('listType').disabled = true;
+
+        const container = document.getElementById('address-rows-container');
+        container.innerHTML = '';
+
+        if (listObj.list && listObj.list.length > 0) {
+            listObj.list.forEach(item => {
+                const val = item.address || item.hostname || item.domain || '';
+                addAddressRow(val, item.comment || '');
+            });
+        } else {
+            addAddressRow();
+        }
+
+        document.getElementById('listModal').classList.add('active');
+    }
+
+    // Reflect selected type in the address-row placeholder
+    function onListTypeChange() {
+        const type = document.getElementById('listType').value;
+        const placeholder = type === 'web_domain'
+            ? 'Domain or pattern (e.g. facebook.com, *.doubleclick.net)'
+            : 'IP Address, CIDR or Hostname (e.g. 192.168.10.5, server.local)';
+        document.querySelectorAll('#address-rows-container .addr-input').forEach(input => {
+            input.placeholder = placeholder;
+        });
+    }
+
+    function addAddressRow(address = '', comment = '') {
+        const safeComment = comment || '';
+        const typeSelect = document.getElementById('listType');
+        const currentType = typeSelect ? typeSelect.value : 'normal';
+        const placeholder = currentType === 'web_domain'
+            ? 'Domain or pattern (e.g. facebook.com, *.doubleclick.net)'
+            : 'IP Address, CIDR or Hostname (e.g. 192.168.10.5, server.local)';
+        const container = document.getElementById('address-rows-container');
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'address-row';
+        rowDiv.style.display = 'flex';
+        rowDiv.style.gap = '0.75rem';
+        rowDiv.style.marginBottom = '0.75rem';
+        rowDiv.style.alignItems = 'center';
+
+        rowDiv.innerHTML = `
+            <div style="flex: 1;">
+                <input type="text" placeholder="${placeholder}" class="addr-input" required value="${address}" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;">
+            </div>
+            <div style="flex: 1;">
+                <input type="text" placeholder="Comment (e.g. Dev Server)" class="addr-comment" value="${safeComment}" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;" maxlength="200">
+            </div>
+            <button type="button" class="btn-delete" onclick="removeAddressRow(this)" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; height: 38px; width: 38px;">
+                <i class="far fa-trash-alt"></i>
+            </button>
+        `;
+        container.appendChild(rowDiv);
+    }
+
+    function removeAddressRow(button) {
+        const row = button.closest('.address-row');
+        if (row) row.remove();
+    }
+
+    function closeListModal() {
+        document.getElementById('listModal').classList.remove('active');
+    }
+
+    // Submit Alias to backend
+    async function submitAddressList(e) {
+        e.preventDefault();
+        const btnSubmit = document.getElementById('btn-submit-list');
+        btnSubmit.disabled = true;
+
+        const actionType = document.getElementById('listActionType').value;
+        const slug = document.getElementById('listSlug').value.trim();
+        const comment = document.getElementById('listComment').value.trim();
+        const listType = document.getElementById('listType').value;
+
+        const addrInputs = document.querySelectorAll('#address-rows-container .addr-input');
+        const commentInputs = document.querySelectorAll('#address-rows-container .addr-comment');
+
+        const entries = [];
+        for (let i = 0; i < addrInputs.length; i++) {
+            const val = addrInputs[i].value.trim();
+            const addrComment = commentInputs[i].value.trim() || null;
+            if (val) {
+                if (listType === 'web_domain') {
+                    entries.push({
+                        domain: val,
+                        comment: addrComment
+                    });
+                } else {
+                    const ipv4Pattern = /^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([0-9]|[1-2][0-9]|3[0-2]))?$/;
+                    if (ipv4Pattern.test(val)) {
+                        entries.push({
+                            address: val,
+                            comment: addrComment
+                        });
+                    } else {
+                        entries.push({
+                            hostname: val,
+                            comment: addrComment
+                        });
+                    }
+                }
+            }
+        }
+
+        if (entries.length === 0) {
+            alert("Please add at least one address, subnet or hostname.");
+            btnSubmit.disabled = false;
+            return;
+        }
+
+        const isNewAgent = cachedAddressLists.length > 0 && cachedAddressLists.some(l => l.id !== undefined);
+
+        if (actionType === 'edit') {
+            if (isNewAgent) {
+                try {
+                    // 1. Update name/comment via PATCH
+                    const patchResp = await fetch(`/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: slug, comment: comment })
+                    });
+                    if (!patchResp.ok) {
+                        const data = await patchResp.json();
+                        throw new Error(data.message || data.error || data.detail || 'Failed to update alias properties');
+                    }
+
+                    // 2. Update address list via PUT
+                    const putResp = await fetch(`/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ list: entries })
+                    });
+                    if (!putResp.ok) {
+                        const data = await putResp.json();
+                        throw new Error(data.message || data.error || data.detail || 'Failed to update alias address list');
+                    }
+
+                    closeListModal();
+                    fetchAddressLists();
+                } catch (err) {
+                    alert(`Error: ${err.message}`);
+                } finally {
+                    btnSubmit.disabled = false;
+                }
+            } else {
+                // Backward compatibility: Old Agent PUT structure (must keep originalSlug to pass path vs body validation)
+                const payload = {
+                    slug: originalSlug,
+                    comment: comment,
+                    list: entries
+                };
+                try {
+                    const response = await fetch(`/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.message || data.error || data.detail || 'Failed to update alias');
+                    }
+                    closeListModal();
+                    fetchAddressLists();
+                } catch (err) {
+                    alert(`Error: ${err.message}`);
+                } finally {
+                    btnSubmit.disabled = false;
+                }
+            }
+            return;
+        }
+
+        // POST /aliases (add list) - Send both name and slug to support both old and new agent schemas
+        const payload = {
+            name: slug,
+            slug: slug,
+            comment: comment,
+            type: listType,
+            list: entries
+        };
+
+        try {
+            const response = await fetch(`/api/peers/${currentPeerId}/aliases`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || data.error || data.detail || 'Failed to save alias');
+            }
+
+            closeListModal();
+            fetchAddressLists();
+        } catch (err) {
+            alert(`Error: ${err.message}`);
+        } finally {
+            btnSubmit.disabled = false;
+        }
+    }
+
+    // Delete Alias
+    async function deleteAddressList(slug) {
+        const listObj = cachedAddressLists.find(l => l.slug === slug);
+        const displayName = listObj ? (listObj.name || slug) : slug;
+        if (!confirm(`Are you sure you want to delete the alias "${displayName}" permanently?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/peers/${currentPeerId}/aliases/${slug}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || data.error || data.detail || 'Failed to delete alias');
+            }
+
+            fetchAddressLists();
+        } catch (err) {
+            alert(`Delete Error: ${err.message}`);
+        }
+    }
+
+    // Sync address lists to  config
+    async function syncAddressLists() {
+        const btnSync = document.getElementById('sync-lists-btn');
+        if (btnSync) btnSync.disabled = true;
+
+        try {
+            const response = await fetch(`/api/peers/${currentPeerId}/aliases/sync`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || data.error || data.detail || 'Failed to synchronize address lists');
+            }
+
+            alert(`Sync Success: ${data.message || 'Address lists synchronized successfully.'}`);
+            fetchAddressLists();
+        } catch (err) {
+            alert(`Sync Error: ${err.message}`);
+        } finally {
+            if (btnSync) btnSync.disabled = false;
+        }
+    }
+
+    // Resolver Configuration Settings
+    let originalUpstreams = [];
+
+    async function fetchResolverConfig() {
+        try {
+            const response = await fetch(`/api/peers/${currentPeerId}/resolver-config`);
+            const data = await response.json();
+            if (response.ok) {
+                cachedResolverConfig = data;
+            }
+        } catch (err) {
+            console.error("Failed to fetch resolver config:", err);
+        }
+    }
+
+    function openResolverConfigModal() {
+        if (!isPeerOnline) return;
+
+        if (cachedResolverConfig) {
+            populateResolverModal();
+        } else {
+            const resolverBtn = document.getElementById("resolver-settings-btn");
+            const originalContent = resolverBtn.innerHTML;
+            resolverBtn.disabled = true;
+            resolverBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Loading...`;
+
+            fetchResolverConfig().then(() => {
+                resolverBtn.disabled = false;
+                resolverBtn.innerHTML = originalContent;
+                populateResolverModal();
+            });
+        }
+    }
+
+    function addLocalDnsRow(domain = '', dnsIp = '') {
+        const container = document.getElementById('local-dns-rows-container');
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'local-dns-row';
+        rowDiv.style.display = 'flex';
+        rowDiv.style.gap = '0.75rem';
+        rowDiv.style.marginBottom = '0.75rem';
+        rowDiv.style.alignItems = 'center';
+
+        rowDiv.innerHTML = `
+            <div style="flex: 1;">
+                <input type="text" placeholder="Domain / Zone (e.g. company.local)" class="local-domain-input" required value="${domain}" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;">
+            </div>
+            <div style="flex: 1;">
+                <input type="text" placeholder="Resolver IP (e.g. 192.168.2.34)" class="local-dns-input" required value="${dnsIp}" pattern="^([0-9]{1,3}\\.){3}[0-9]{1,3}$" title="Must be a valid IPv4 address" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;">
+            </div>
+            <button type="button" class="btn-delete" onclick="removeLocalDnsRow(this)" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; height: 38px; width: 38px;">
+                <i class="far fa-trash-alt"></i>
+            </button>
+        `;
+        container.appendChild(rowDiv);
+    }
+
+    function removeLocalDnsRow(button) {
+        button.closest('.local-dns-row').remove();
+    }
+
+    function populateResolverModal() {
+        const container = document.getElementById('local-dns-rows-container');
+        container.innerHTML = '';
+        originalUpstreams = [];
+
+        const upstreams = (cachedResolverConfig && cachedResolverConfig.upstream_dns) || [];
+        let hasLocalDns = false;
+
+        upstreams.forEach(upstream => {
+            const match = upstream.match(/^\[\/([a-zA-Z0-9._-]+)\/\](.+)$/);
+            if (match) {
+                const domain = match[1];
+                const ip = match[2];
+                addLocalDnsRow(domain, ip);
+                hasLocalDns = true;
+            } else {
+                originalUpstreams.push(upstream);
+            }
+        });
+
+        if (!hasLocalDns) {
+            addLocalDnsRow();
+        }
+
+        document.getElementById('resolverModal').classList.add('active');
+    }
+
+    function closeResolverModal() {
+        document.getElementById('resolverModal').classList.remove('active');
+    }
+
+    async function submitResolverConfig(e) {
+        e.preventDefault();
+        const btnSubmit = document.getElementById('btn-submit-resolver');
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`;
+
+        const domainInputs = document.querySelectorAll('#local-dns-rows-container .local-domain-input');
+        const dnsInputs = document.querySelectorAll('#local-dns-rows-container .local-dns-input');
+
+        const localUpstreams = [];
+        for (let i = 0; i < domainInputs.length; i++) {
+            const domain = domainInputs[i].value.trim();
+            const dnsIp = dnsInputs[i].value.trim();
+            if (domain && dnsIp) {
+                localUpstreams.push(`[/${domain}/]${dnsIp}`);
+            }
+        }
+
+        const finalUpstreams = [...originalUpstreams, ...localUpstreams];
+
+        const payload = {
+            upstream_dns: finalUpstreams,
+            bootstrap_dns: (cachedResolverConfig && cachedResolverConfig.bootstrap_dns) || ["9.9.9.9"],
+            all_servers: (cachedResolverConfig && cachedResolverConfig.all_servers) || false,
+            fastest_addr: (cachedResolverConfig && cachedResolverConfig.fastest_addr) || false
+        };
+
+        try {
+            const response = await fetch(`/api/peers/${currentPeerId}/resolver-config`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || data.error || 'Failed to save resolver config');
+            }
+
+            alert("Resolver settings saved and applied successfully!");
+            await fetchResolverConfig();
+            closeResolverModal();
+        } catch (err) {
+            alert(`Error saving config: ${err.message}`);
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = "Save Settings";
+        }
+    }
+
+    let currentTypeFilter = 'all';
+
+    function setTypeFilter(type) {
+        currentTypeFilter = type;
+        document.querySelectorAll('.type-filter-chip').forEach(btn => {
+            if (btn.getAttribute('data-filter') === type) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        filterListsTable();
+    }
+
+    // Filter table rows based on input and type filter
+    function filterListsTable() {
+        const searchVal = document.getElementById('search-lists-input').value.toLowerCase();
+        const rows = document.querySelectorAll('#lists-tbody tr');
+
+        rows.forEach(row => {
+            if (row.cells.length === 1) return; // Skip empty row colspan
+            const slugText = row.cells[0].textContent.toLowerCase();
+            const commentCell = row.cells[1] ? row.cells[1].textContent.toLowerCase() : '';
+            const rowType = row.getAttribute('data-list-type') || 'normal';
+
+            const matchesSearch = slugText.includes(searchVal) || commentCell.includes(searchVal);
+            const matchesType = (currentTypeFilter === 'all') || (rowType === currentTypeFilter);
+
+            if (matchesSearch && matchesType) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

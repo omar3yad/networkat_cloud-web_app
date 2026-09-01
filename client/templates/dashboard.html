@@ -1,0 +1,396 @@
+{% extends "client_base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dashboard-container {
+        padding: 2.5rem;
+        max-width: 1400px;
+        margin: 0 auto;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .welcome-header {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .welcome-header h1 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.75px;
+        color: var(--nk-navy);
+    }
+
+    .welcome-header p {
+        color: var(--nk-text-muted);
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .stat-card {
+        background: #ffffff;
+        border-radius: var(--nk-radius-lg);
+        border: 1px solid var(--nk-border);
+        padding: 1.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: var(--nk-shadow-sm);
+        transition: var(--nk-transition);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--nk-shadow-md);
+        border-color: var(--nk-blue-primary);
+    }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        z-index: 2;
+    }
+
+    .stat-title {
+        color: var(--nk-text-muted);
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: capitalize;
+        letter-spacing: 1px;
+    }
+
+    .stat-value {
+        color: var(--nk-navy);
+        font-size: 2.2rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        color: var(--nk-border);
+        opacity: 0.5;
+        transition: var(--nk-transition);
+        z-index: 1;
+    }
+
+    .stat-card:hover .stat-icon {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+
+    .stat-card.total-devices:hover .stat-icon {
+        color: var(--nk-blue-primary);
+    }
+
+    .stat-card.online-devices:hover .stat-icon {
+        color: #107c10;
+    }
+
+    .stat-card.offline-devices:hover .stat-icon {
+        color: #dc3545;
+    }
+
+    /* Cards */
+    .card {
+        background: #ffffff;
+        border-radius: var(--nk-radius-lg);
+        border: 1px solid var(--nk-border);
+        box-shadow: var(--nk-shadow-sm);
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--nk-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #fafbfc;
+    }
+
+    .card-header h3 {
+        color: var(--nk-navy);
+        font-size: 1.15rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .card-header h3 i {
+        color: var(--nk-blue-primary);
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        text-align: left;
+        padding: 1.25rem 2rem;
+        background: #fafbfc;
+        color: var(--nk-text-muted);
+        font-weight: 700;
+        font-size: 0.8rem;
+        text-transform: capitalize;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--nk-border);
+    }
+
+    td {
+        padding: 1.25rem 2rem;
+        border-bottom: 1px solid var(--nk-border);
+        color: var(--nk-text-main);
+        vertical-align: middle;
+        font-weight: 500;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:hover td {
+        background-color: #f8fafc;
+    }
+
+    /* Key Token Container */
+    .token-container {
+        display: inline-flex;
+        align-items: center;
+        background-color: #f1f5f9;
+        border: 1px solid var(--nk-border);
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.95rem;
+        color: #334155;
+    }
+
+    .token-value {
+        margin-right: 16px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .copy-btn {
+        background: none;
+        border: none;
+        color: var(--nk-text-muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 6px;
+        transition: var(--nk-transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .copy-btn:hover {
+        background-color: #e2e8f0;
+        color: var(--nk-blue-primary);
+    }
+
+    .copy-btn.copied {
+        color: #107c10 !important;
+    }
+
+    .badge {
+        padding: 0.35rem 0.85rem;
+        border-radius: 100px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .badge-active {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-inactive {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-container {
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Welcome Header -->
+    <div class="welcome-header">
+        <h1>Welcome, {{ customer_name }}</h1>
+        <!-- <p>Manage and monitor your SD-WAN nodes and network rules from your central dashboard.</p> -->
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="stat-card total-devices">
+            <div class="stat-info">
+                <span class="stat-title">Total Devices</span>
+                <span class="stat-value" id="total-edges-val">{{ total_edges }}</span>
+            </div>
+            <i class="fas fa-desktop stat-icon"></i>
+        </div>
+        <div class="stat-card online-devices">
+            <div class="stat-info">
+                <span class="stat-title">Online Devices</span>
+                <span class="stat-value" id="online-edges-val" style="color: #107c10;">0</span>
+            </div>
+            <i class="fas fa-wifi stat-icon"></i>
+        </div>
+        <div class="stat-card offline-devices">
+            <div class="stat-info">
+                <span class="stat-title">Offline Devices</span>
+                <span class="stat-value" id="offline-edges-val" style="color: #dc3545;">{{ total_edges }}</span>
+            </div>
+            <i class="fas fa-ban stat-icon"></i>
+        </div>
+    </div>
+
+    <!-- Customer Setup Keys -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-key"></i> My Setup Keys</h3>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Setup Key</th>
+                        <th>Status</th>
+                        <th>Used Times</th>
+                        <th>Usage Limit</th>
+                        <th>Remaining Uses</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody id="setup-keys-table-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 3rem; color: var(--nk-text-muted);">
+                            <i class="fas fa-circle-notch fa-spin"></i> Loading setup keys...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fetch and populate setup keys
+    function fetchSetupKeys() {
+        fetch('/api/customer/setup-keys')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('setup-keys-table-body');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+
+                if (data.tokens && data.tokens.length > 0) {
+                    data.tokens.forEach(tokenObj => {
+                        const statusClass = tokenObj.is_active ? 'badge-active' : 'badge-inactive';
+                        const statusText = tokenObj.is_active ? 'Active' : 'Inactive';
+                        
+                        const limitText = tokenObj.usage_limit === 0 ? 'Unlimited' : tokenObj.usage_limit;
+                        const remainingText = tokenObj.remaining_uses === null ? 'Unlimited' : tokenObj.remaining_uses;
+
+                        const row = `
+                            <tr>
+                                <td>
+                                    <div class="token-container">
+                                        <span class="token-value">${tokenObj.token}</span>
+                                        <button class="copy-btn" onclick="copySetupKey('${tokenObj.token}', this)" title="Copy setup key">
+                                            <i class="far fa-copy"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td><span class="badge ${statusClass}">${statusText}</span></td>
+                                <td>${tokenObj.used_times}</td>
+                                <td>${limitText}</td>
+                                <td>${remainingText}</td>
+                                <td>${tokenObj.created_at}</td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 3rem; color: var(--nk-text-muted);">No setup keys found.</td></tr>`;
+                }
+            }).catch(err => console.error(err));
+    }
+
+    function copySetupKey(token, buttonElement) {
+        navigator.clipboard.writeText(token).then(() => {
+            const icon = buttonElement.querySelector('i');
+            icon.className = 'fas fa-check';
+            buttonElement.classList.add('copied');
+            setTimeout(() => {
+                icon.className = 'far fa-copy';
+                buttonElement.classList.remove('copied');
+            }, 2000);
+        });
+    }
+
+    // Dynamic stats updates
+    async function fetchDashboardStats() {
+        try {
+            const response = await fetch('/api/peers/status');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.summary) {
+                    const totalEl = document.getElementById('total-edges-val');
+                    const onlineEl = document.getElementById('online-edges-val');
+                    const offlineEl = document.getElementById('offline-edges-val');
+
+                    if (totalEl) totalEl.innerText = data.summary.total;
+                    if (onlineEl) onlineEl.innerText = data.summary.online;
+                    if (offlineEl) offlineEl.innerText = data.summary.offline;
+                }
+            }
+        } catch (err) {
+            console.error("Error polling dashboard stats:", err);
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        fetchSetupKeys();
+        fetchDashboardStats();
+        // Poll stats every 30 seconds
+        setInterval(fetchDashboardStats, 30000);
+    });
+</script>
+{% endblock %}

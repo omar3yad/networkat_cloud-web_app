@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networkat · {% block title %}SD-WAN{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+                    .back-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                color: var(--nk-blue-primary);
+                text-decoration: none;
+                font-weight: 600;
+                margin-bottom: 1.5rem;
+                transition: var(--nk-transition);
+            }
+        :root {
+            /* General styling variables */
+            --sb-navy-dark: #0f172a;
+            --sb-navy-light: #1e293b;
+            --sb-accent-blue: #0284c7;
+            --sb-accent-hover: #0369a1;
+            --sb-border-glass: rgba(255, 255, 255, 0.08);
+            --sb-text-muted: #94a3b8;
+            --sb-text-light: #f8fafc;
+            
+            --nk-bg: #f8fafc;
+            --nk-surface-bg: #f8fafc;
+            --nk-card-bg: #ffffff;
+            --nk-navy: #0f172a;
+            --nk-blue-primary: #0284c7;
+            --nk-border: #e2e8f0;
+            --nk-text-main: #0f172a;
+            --nk-text-muted: #64748b;
+            --nk-radius-lg: 16px;
+            --nk-radius-md: 12px;
+            --nk-radius-sm: 8px;
+            --nk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --nk-shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+            --nk-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--nk-surface-bg);
+            color: var(--nk-text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Layout Container */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        /* Sidebar Container */
+        .sidebar {
+            width: 318px;
+            background: linear-gradient(180deg, var(--sb-navy-dark) 0%, #090d16 100%);
+            border-right: 1px solid var(--sb-border-glass);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Sidebar Brand */
+        .sidebar-brand {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--sb-border-glass);
+        }
+
+        .brand-logo {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .brand-name {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--sb-text-light);
+            letter-spacing: -0.5px;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar-nav {
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: var(--sb-text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            border-radius: 10px;
+            transition: var(--nk-transition);
+        }
+
+        .nav-item:hover {
+            color: var(--sb-text-light);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item.active {
+            color: var(--sb-text-light);
+            background-color: var(--sb-accent-blue);
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+        }
+
+        .nav-icon {
+            font-size: 1.4rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Sidebar Footer Details */
+        .sidebar-footer {
+            padding: 20px 16px;
+            border-top: 1px solid var(--sb-border-glass);
+            background-color: rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            font-size: 2.2rem;
+            color: var(--sb-text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--sb-text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: var(--sb-text-muted);
+            font-weight: 500;
+        }
+
+        .signout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            transition: var(--nk-transition);
+        }
+
+        .signout-btn:hover {
+            background-color: #ef4444;
+            color: #ffffff;
+            border-color: #ef4444;
+        }
+
+        /* Main Content wrapper */
+        .main-container-wrapper {
+            flex-grow: 1;
+            margin-left: 318px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Mobile Top Bar (Hidden on desktop) */
+        .mobile-navbar {
+            display: none;
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--nk-border);
+            padding: 12px 20px;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 900;
+        }
+
+        .mobile-menu-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            color: var(--nk-navy);
+            cursor: pointer;
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-container-wrapper {
+                margin-left: 0;
+            }
+
+            .mobile-navbar {
+                display: flex;
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: rgba(15, 23, 42, 0.5);
+                backdrop-filter: blur(4px);
+                z-index: 999;
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .back-link {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                color: var(--nk-blue-primary);
+                text-decoration: none;
+                font-weight: 600;
+                margin-bottom: 1.5rem;
+                transition: var(--nk-transition);
+            }
+
+            .back-link:hover {
+                color: var(--sb-accent-hover);
+                transform: translateX(-3px);
+            }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <!-- Overlay for closing sidebar on mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="app-sidebar">
+            <div class="sidebar-brand">
+                <img src="{{ url_for('static', filename='logoW.png') }}"alt="Networkat Logo"style="height: 34px; width: auto; vertical-align: middle;">
+                            <!-- <span class="brand-name">Networkat</span> -->
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('client.dashboard') }}" class="nav-item {% if request.endpoint == 'client.dashboard' %}active{% endif %}">
+                    <i class="fas fa-chart-line nav-icon"></i>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a href="{{ url_for('client.peers_page') }}" class="nav-item {% if request.endpoint == 'client.peers_page' or 'peer_' in request.endpoint or 'filtering' in request.endpoint or 'firewall' in request.endpoint %}active{% endif %}">
+                    <i class="fas fa-desktop nav-icon"></i>
+                    <span class="nav-label">Peer Devices</span>
+                </a>
+                <a href="{{ url_for('client.aliases_page') }}" class="nav-item {% if request.endpoint == 'client.aliases_page' %}active{% endif %}">
+                    <i class="fas fa-list nav-icon"></i>
+                    <span class="nav-label">Aliases</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">{{ customer_name if customer_name else 'Administrator' }}</span>
+                        <span class="user-role">Client Group</span>
+                    </div>
+                </div>
+                <a href="{{ url_for('client.logout') }}" class="signout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sign Out</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-container-wrapper">
+            <!-- Mobile Navigation Bar -->
+            <nav class="mobile-navbar">
+                <button class="mobile-menu-btn" onclick="toggleMobileSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="mobile-brand" style="display: flex; align-items: center; gap: 8px;">
+                    <img src="{{ url_for('static', filename='networkat.png') }}" alt="Networkat Logo" style="height: 30px;">
+                    <span style="font-weight: 800; font-size: 1.1rem; color: var(--nk-navy);">Networkat</span>
+                </div>
+                <div style="width: 24px;"></div> <!-- placeholder to balance flex center -->
+            </nav>
+
+            <!-- Page Content Block -->
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <script>
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('app-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            } else {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+            }
+        }
+    </script>
+</body>
+
+</html>

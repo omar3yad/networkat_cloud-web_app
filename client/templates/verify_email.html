@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networkat · Email Verification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .verify-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .logo i {
+            font-size: 48px;
+            color: #0078d4;
+        }
+
+        .logo h1 {
+            color: #1e2a41;
+            font-size: 24px;
+            margin-top: 10px;
+        }
+
+        .logo p {
+            color: #5e6c84;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .verify-instructions {
+            color: #5e6c84;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .email-highlight {
+            color: #1e2a41;
+            font-weight: 600;
+            display: block;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            color: #1e2a41;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        input.code-input {
+            width: 100%;
+            max-width: 250px;
+            padding: 12px;
+            border: 2px solid #e1e4e8;
+            border-radius: 8px;
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 6px;
+            transition: all 0.2s;
+            background-color: #fafbfc;
+        }
+
+        input.code-input:focus {
+            outline: none;
+            border-color: #0078d4;
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(0, 120, 212, 0.15);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            color: #e9f5ff;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .footer {
+            margin-top: 30px;
+            color: #5e6c84;
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: #0078d4;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .resend-btn {
+            display: inline-block;
+            background: none;
+            border: none;
+            color: #0078d4;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0;
+            margin-top: 15px;
+            transition: color 0.2s;
+        }
+
+        .resend-btn:hover {
+            color: #106ebe;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="verify-container">
+        <div class="logo">
+            <i class="fas fa-envelope-open-text"></i>
+            <h1>Verify Your Email</h1>
+            <p>Confirm account registration</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{% if category == 'success' %}success{% else %}error{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="verify-instructions">
+            We sent a 6-digit verification code to:
+            <span class="email-highlight">{{ email }}</span>
+            <!-- Please enter the code below to verify your email and activate your account. -->
+        </div>
+
+        <form method="POST" action="{{ url_for('client.verify_email') }}">
+            <div class="form-group">
+                <label for="code">Verification Code</label>
+                <input type="text" name="code" id="code" class="code-input" placeholder="••••••" maxlength="6" pattern="\d{6}" required autocomplete="one-time-code" autofocus>
+            </div>
+
+            <button type="submit">Verify & Create Account</button>
+        </form>
+
+        <form method="POST" action="{{ url_for('client.resend_code') }}" style="display: inline;">
+            <button type="submit" class="resend-btn">Didn't receive the code? Resend Code</button>
+        </form>
+
+        <div class="footer">
+            Want to start over? <a href="{{ url_for('client.register') }}">Register again</a>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</body>
+
+</html>

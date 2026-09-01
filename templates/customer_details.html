@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networkat · {{ customer.client_name }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        :root {
+            --primary: #0078d4;
+            --primary-dark: #106ebe;
+            --sidebar-bg: #1e2a41;
+            --sidebar-hover: #2d3a55;
+            --gray-50: #f8f9fa;
+            --gray-100: #f0f2f4;
+            --gray-200: #e1e4e8;
+            --gray-600: #5e6c84;
+            --gray-800: #1e2a41;
+            --success: #107c10;
+            --warning: #d83b01;
+            --danger: #dc3545;
+        }
+
+        body {
+            background: var(--gray-50);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sidebar-header .logo i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        .sidebar-header .logo span {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .sidebar-header p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .nav-menu {
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: var(--sidebar-hover);
+            color: white;
+            border-left-color: var(--primary);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            width: calc(100% - 260px);
+        }
+
+        .top-bar {
+            background: white;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .page-title h1 {
+            color: var(--gray-800);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logout-btn {
+            padding: 0.5rem 1rem;
+            background: none;
+            border: 1px solid var(--gray-200);
+            border-radius: 4px;
+            color: var(--gray-600);
+            text-decoration: none;
+        }
+
+        .container {
+            padding: 2rem;
+        }
+
+        .customer-header {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--gray-200);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .customer-info h2 {
+            color: var(--gray-800);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .customer-info .badge {
+            background: #e6f2fa;
+            color: var(--primary-dark);
+            padding: 0.25rem 1rem;
+            border-radius: 100px;
+            font-size: 0.9rem;
+            display: inline-block;
+        }
+
+        .customer-meta {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--gray-600);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            color: var(--gray-600);
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h3 {
+            color: var(--gray-800);
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--gray-200);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-sm:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+            border: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 1rem 1.5rem;
+            background: var(--gray-50);
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: capitalize;
+        }
+
+        td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-online {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-offline {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+
+
+        .token-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .token-value {
+            font-family: 'Courier New', monospace;
+            background: var(--gray-100);
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            border: 1px solid var(--gray-200);
+            word-break: break-all;
+            max-width: 300px;
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid var(--gray-200);
+            border-radius: 4px;
+            padding: 0.3rem 0.8rem;
+            cursor: pointer;
+            color: var(--gray-600);
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .action-btn {
+            padding: 0.3rem 0.8rem;
+            background: none;
+            border: 1px solid var(--gray-200);
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 0.15rem;
+        }
+
+        .action-btn:hover {
+            background: var(--gray-100);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .name-user-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .name-user-bar h2 {
+            margin: 0;
+        }
+
+        .name-user-bar .badge {
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .modal-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            color: var(--gray-800);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--gray-600);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 4px;
+        }
+
+        .modal-footer {
+            padding: 1.25rem;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-600);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="{{ url_for('static', filename='logoW.png') }}" alt="Networkat Logo"
+                    style="height: 24px; width: auto; vertical-align: middle;">
+            </div>
+            <p> Management Portal</p>
+        </div>
+        <div class="nav-menu">
+            <a href="/" class="nav-item">
+                <i class="fas fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="/customers" class="nav-item active">
+                <i class="fas fa-building"></i> Customers
+            </a>
+            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 1rem 0;"></div>
+            <a href="/logout" class="nav-item">
+                <i class="fas fa-sign-out-alt"></i> Sign out
+            </a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1>Customer Details</h1>
+            </div>
+            <div class="user-menu">
+                <span>admin@networkat</span>
+                <a href="/logout" class="logout-btn">Logout</a>
+            </div>
+        </div>
+
+        <div class="container">
+
+            <!-- Customer Header -->
+            <div class="customer-header">
+                <div class="customer-info">
+
+                    <!-- بداية التعديل هنا: إضافة كلاس name-user-bar وتنظيف الستايل القديم -->
+                    <div class="name-user-bar">
+                        <h2>{{ customer.client_name }}</h2>
+                        <span class="badge">{{ customer.username }}</span>
+                    </div>
+                    <!-- نهاية التعديل -->
+
+                    <div class="customer-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-calendar"></i>
+                            <span>Created: <strong>{{ customer.created_at or 'Unknown' }}</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-danger" onclick="deleteCustomer('{{ customer.user_id }}')">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('edges')">Edges </button>
+                <button class="tab" onclick="showTab('tokens')">Tokens ({{ tokens|length }})</button>
+                <button class="tab" onclick="showTab('users')">Portal Users</button>
+            </div>
+
+            <!-- Edges Tab -->
+            <div id="edges-tab" class="tab-content active">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3><i class="fas fa-desktop"></i> Registered Edge Devices</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Device Name</th>
+                                    <th>IP Address</th>
+                                    <th>OS & Version</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if netbird_peers and netbird_peers|length > 0 %}
+                                {% for peer in netbird_peers %}
+                                <tr class="peer-row" data-peer-id="{{ peer.id }}" data-peer-name="{{ peer.name }}">
+                                    <td>
+                                        <strong style="color: var(--primary);">{{ peer.name }}</strong>
+                                        {% if peer.hostname and peer.hostname != peer.name %}
+                                        <br><small style="color: var(--gray-600);">({{ peer.hostname }})</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <code id="peer-ip-{{ peer.id }}" class="peer-id-code"
+                                            style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace;">
+                                                {{ peer.ip or 'N/A' }}
+                                            </code>
+                                    </td>
+                                    <td id="peer-os-{{ peer.id }}">
+                                        {% if peer.os %}
+                                        <span><i class="fas fa-server"></i> {{ peer.os }}</span>
+                                        {% else %}
+                                        <span style="color: var(--gray-600);">N/A</span>
+                                        {% endif %}
+                                        {% if peer.version %}
+                                        <br><small style="color: var(--gray-600);">v{{ peer.version }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="badge {% if peer.connected %}badge-success{% else %}badge-inactive{% endif %}"
+                                            id="status-badge-{{ peer.id }}" data-last-seen="{{ peer.last_seen or '' }}">
+                                            <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                                            {% if peer.connected %}Connected{% else %}Offline{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="action-btn text-danger"
+                                            onclick="deletePeer('{{ peer.id }}', '{{ peer.name }}')"
+                                            title="Delete Peer">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center"
+                                        style="text-align: center; padding: 3rem; color: var(--gray-600);">
+                                        <i class="fas fa-info-circle mb-2"
+                                            style="font-size: 1.5rem; display: block;"></i>
+                                        No edge devices found for this customer.
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tokens Tab -->
+            <div id="tokens-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-key"></i> Authentication Tokens</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Token</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for token in tokens %}
+                                <tr>
+                                    <td>
+                                        <div class="token-cell">
+                                            <span class="token-value">{{ token.token }}</span>
+                                            <button class="copy-btn" onclick="copyToken('{{ token.token }}')"
+                                                title="Copy token">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="badge {% if token.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                                            {{ 'Active' if token.is_active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ token.created_at or 'Unknown' }}</td>
+                                    <td>
+                                        <button class="action-btn"
+                                            onclick="toggleToken('{{ token.token }}', '{{ token.is_active }}')"
+                                            title="Toggle status">
+                                            <i class="fas fa-toggle-{{ 'on' if token.is_active else 'off' }}"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center" style="padding: 3rem;">
+                                        No tokens found for this customer
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portal Users Tab -->
+            <div id="users-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-users"></i> Portal Users</h3>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <tr>
+                                    <td colspan="5" class="text-center">Loading users...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div class="modal" id="resetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Reset Password</h3>
+                <button class="close-btn" onclick="hideResetModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="newPassword" placeholder="•••••••• (min 6 chars)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="hideResetModal()">Cancel</button>
+                <button class="btn-primary" onclick="resetPassword()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Notification Toast -->
+    <div id="notification" class="notification" style="display: none;">
+        <i class="fas fa-check-circle"></i> <span id="notification-message"></span>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        let currentUserId = null;
+        let currentPolicyId = null;
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'users') {
+                loadUsers();
+            }
+        }
+
+        // --- Edges Status Polling ---
+        function timeAgo(dateString) {
+            if (!dateString) return 'Never';
+            const now = new Date();
+            const past = new Date(dateString);
+            if (isNaN(past.getTime())) return 'Never';
+
+            const msPerMinute = 60 * 1000;
+            const msPerHour = msPerMinute * 60;
+            const msPerDay = msPerHour * 24;
+            const elapsed = now - past;
+
+            if (elapsed < msPerMinute) return 'Just now';
+            else if (elapsed < msPerHour) return Math.round(elapsed / msPerMinute) + 'm ago';
+            else if (elapsed < msPerDay) return Math.round(elapsed / msPerHour) + 'h ago';
+            else return Math.round(elapsed / msPerDay) + 'd ago';
+        }
+
+        async function fetchAndPopulateAdminEdges() {
+            try {
+                const peerRows = document.querySelectorAll('.peer-row');
+                if (!peerRows.length) return;
+
+                // 1. جلب بيانات جميع الأجهزة دفعة واحدة من السيرفر
+                const peersRes = await fetch("{{ url_for('admin.proxy_peers') }}?customer_id={{ customer.user_id }}").catch(() => null);
+                const peersDataList = (peersRes && peersRes.ok) ? await peersRes.json() : [];
+                const peers = Array.isArray(peersDataList) ? peersDataList : (peersDataList ? [peersDataList] : []);
+
+                // 2. فحص الـ Handshake لجميع الأجهزة المتصلة بالتوازي (In Parallel) مع مهلة 2.5 ثوانٍ
+                const handshakePromises = Array.from(peerRows).map(async (row) => {
+                    const peerId = row.getAttribute('data-peer-id');
+                    const peerName = row.getAttribute('data-peer-name');
+                    const statusBadge = document.getElementById(`status-badge-${peerId}`);
+
+                    const peerData = peers.find(p => p.id === peerId || p.name === peerName);
+                    const isConnected = peerData ? (peerData.connected === true) : false;
+                    let lastSeenRaw = (peerData && peerData.last_seen)
+                        ? peerData.last_seen
+                        : (statusBadge ? statusBadge.getAttribute('data-last-seen') : '');
+
+                    let isReachable = false;
+
+                    if (isConnected) {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+                        try {
+                            const hsRes = await fetch(`/api/peers/${peerId}/handshake`, { signal: controller.signal });
+                            clearTimeout(timeoutId);
+                            if (hsRes.ok) {
+                                const hsData = await hsRes.json();
+                                isReachable = (hsData.is_reachable === true);
+                            }
+                        } catch (err) {
+                            isReachable = false;
+                        }
+                    }
+
+                    return { peerId, peerData, isConnected, isReachable, lastSeenRaw };
+                });
+
+                // انتظار رد كافة فحوصات الـ Handshake معاً
+                const handshakeResults = await Promise.all(handshakePromises);
+                const resultsMap = new Map(handshakeResults.map(res => [res.peerId, res]));
+
+                // 3. تحديث عناصر الواجهة (DOM) للجدول
+                for (const row of peerRows) {
+                    const peerId = row.getAttribute('data-peer-id');
+                    const statusBadge = document.getElementById(`status-badge-${peerId}`);
+                    const ipElement = document.getElementById(`peer-ip-${peerId}`);
+                    const osElement = document.getElementById(`peer-os-${peerId}`);
+
+                    const res = resultsMap.get(peerId);
+                    if (!res) continue;
+
+                    const { peerData, isConnected, isReachable, lastSeenRaw } = res;
+
+                    if (peerData) {
+                        if (ipElement && peerData.ip) {
+                            ipElement.innerText = peerData.ip;
+                        }
+
+                        if (osElement) {
+                            let osHtml = peerData.os ? `<span><i class="fas fa-server"></i> ${peerData.os}</span>` : `<span style="color: var(--gray-600);">N/A</span>`;
+                            if (peerData.version) {
+                                osHtml += `<br><small style="color: var(--gray-600);">v${peerData.version}</small>`;
+                            }
+                            osElement.innerHTML = osHtml;
+                        }
+                    }
+
+                    const timeAgoFormatted = timeAgo(lastSeenRaw);
+                    if (statusBadge) {
+                        statusBadge.style.backgroundColor = "";
+                        statusBadge.style.color = "";
+
+                        if (isConnected && isReachable) {
+                            statusBadge.className = "badge badge-success";
+                            statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Connected`;
+                        } else if (isConnected && !isReachable) {
+                            // NetBird شايفه متصل لكن الـ Agent لا يستجيب
+                            statusBadge.className = "badge badge-inactive";
+                            statusBadge.style.backgroundColor = "#fff3cd";
+                            statusBadge.style.color = "#856404";
+                            statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Unstable`;
+                            // statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Unstable (${timeAgoFormatted})`;
+                        } else {
+                            // غير متصل أصلاً
+                            statusBadge.className = "badge badge-inactive";
+                            statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Offline (${timeAgoFormatted})`;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching admin edges status:', error);
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            fetchAndPopulateAdminEdges();
+            // no need to fetch every 5 seconds if there are no peers
+            // setInterval(fetchAndPopulateAdminEdges, 5000);
+        });
+
+        function hideTokenModal() {
+            document.getElementById('tokenModal').classList.remove('active');
+        }
+
+        async function generateToken() {
+            try {
+                const response = await fetch('/customers/{{ customer.id }}/token', { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    hideTokenModal();
+                    showNotification('✅ Token generated successfully');
+                    setTimeout(() => location.reload(), 2000);
+                }
+            } catch (error) {
+                alert('Error generating token');
+            }
+        }
+
+        async function toggleToken(token, currentStatus) {
+            try {
+                const response = await fetch(`/customers/{{ customer.id }}/toggle_token/${token}`, { method: 'POST' });
+                if (response.ok) location.reload();
+            } catch (error) {
+                alert('Error toggling token');
+            }
+        }
+
+        function copyToken(token) {
+            navigator.clipboard.writeText(token).then(() => {
+                showNotification('✅ Token copied to clipboard!');
+            });
+        }
+
+        // --- Portal Users Management ---
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/customers/{{ customer.user_id if customer.user_id else customer.id }}/users');
+                const users = await response.json();
+                const tbody = document.getElementById('users-table-body');
+
+                if (users.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">No portal users found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = users.map(user => `
+    <tr>
+        <td><strong>${user.username}</strong></td>
+        <td>
+            <span class="badge ${user.active ? 'badge-active' : 'badge-inactive'}">
+                ${user.active ? 'Active' : 'Inactive'}
+            </span>
+        </td>
+        <td>${user.created_at || 'Unknown'}</td>
+        <td>${user.last_login || '-'}</td>
+        <td>
+            <button class="action-btn" onclick="showResetModal('${user.id}')" title="Reset Password"><i class="fas fa-key"></i></button>
+            <button class="action-btn" onclick="toggleUser('${user.id}', ${user.active})" title="Toggle Status"><i class="fas fa-toggle-${user.active ? 'on' : 'off'}"></i></button>
+            <button class="action-btn" onclick="deleteUser('${user.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+        </td>
+    </tr>
+`).join('');
+            } catch (error) {
+                document.getElementById('users-table-body').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error loading users</td></tr>';
+            }
+        }
+
+        async function toggleUser(userId, currentStatus) {
+            try {
+                const response = await fetch(`/api/users/${userId}/toggle`, { method: 'POST' });
+                const data = await response.json();
+                if (data.success) loadUsers();
+            } catch (error) {
+                alert('Error toggling user');
+            }
+        }
+
+        function showResetModal(userId) {
+            currentUserId = userId;
+            document.getElementById('resetModal').classList.add('active');
+        }
+
+        function hideResetModal() {
+            document.getElementById('resetModal').classList.remove('active');
+            document.getElementById('newPassword').value = '';
+        }
+
+        async function resetPassword() {
+            const newPassword = document.getElementById('newPassword').value.trim();
+            if (!newPassword || newPassword.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/${currentUserId}/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: newPassword })
+                });
+                if (response.ok) {
+                    hideResetModal();
+                    showNotification('✅ Password reset successfully');
+                } else {
+                    alert('Error resetting password');
+                }
+            } catch (error) {
+                alert('Error resetting password');
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm('Are you sure you want to delete this user?')) return;
+            try {
+                const response = await fetch(`/api/users/${userId}/delete`, { method: 'DELETE' });
+                if (response.ok) {
+                    loadUsers();
+                    showNotification('✅ User deleted');
+                }
+            } catch (error) {
+                alert('Error deleting user');
+            }
+        }
+
+        async function deleteCustomer(customerId) {
+            if (!customerId) {
+                alert('Customer ID is missing.');
+                return;
+            }
+
+            if (!confirm('⚠️ Delete this customer? This will delete all edges, tokens, users, and policies.')) return;
+
+            try {
+                const response = await fetch(`/customers/${customerId}/delete`, { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/customers';
+                } else {
+                    const data = await response.json();
+                    alert('Error: ' + (data.error || 'Failed to delete customer'));
+                }
+            } catch (error) {
+                alert('Error deleting customer');
+            }
+        }
+        // --- Notification Utility ---
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            document.getElementById('notification-message').textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        async function deletePeer(peerId, peerName) {
+            if (!confirm(`⚠️ Are you sure you want to delete peer "${peerName}"?\n\nThis will permanently delete all associated routes first, then delete the peer itself.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/peers/${peerId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showNotification('✅ Peer and its routes deleted successfully');
+                    // إزالة الصف مباشرة من الصفحة بدون إعادة تحميل بالكامل
+                    const row = document.querySelector(`tr[data-peer-id="${peerId}"]`);
+                    if (row) row.remove();
+                } else {
+                    alert('Error deleting peer: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting peer:', error);
+                alert('An error occurred while attempting to delete the peer.');
+            }
+        }
+    </script>
+</body>
+
+</html>
