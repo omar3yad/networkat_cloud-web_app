@@ -7,4 +7,4 @@ class GroupPeer(db.Model):
     group_id = db.Column(db.String(100), primary_key=True)
     peer_id = db.Column(db.String(100), primary_key=True)
     account_id = db.Column(db.Text, nullable=True)
-    adguard_password = db.Column(db.String(255), nullable=False, default="default_password")
+    adguard_password = db.Column(db.String(255), nullable=False, default="adguard-api")

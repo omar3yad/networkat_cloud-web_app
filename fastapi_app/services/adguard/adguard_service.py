@@ -1,17 +1,15 @@
 # /opt/networkat_sdwan/core/web_app/fastapi_app/services/adguard/adguard_service.py
 import os
+import requests
 from typing import Any, Optional
 from fastapi import HTTPException, status
-import requests
 from starlette.concurrency import run_in_threadpool
-
 from fastapi_app.services.netbird.peers import NetBirdPeerService
 
 ADGUARD_USER = os.getenv("ADGUARD_USER", "admin")
 ADGUARD_PASSWORD = os.getenv("ADGUARD_PASSWORD", "adguard-api")
 ADGUARD_PORT = int(os.getenv("ADGUARD_PORT", "29300"))
 ADGUARD_TIMEOUT = 3.0
-
 
 class AdGuardService:
     @classmethod
