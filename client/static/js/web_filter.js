@@ -743,10 +743,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             const srcToProcess = (srcRes && srcRes.normalized) ? srcRes.normalized : srcRaw;
             src = srcToProcess.split(',').map(s => s.trim()).filter(Boolean).map(p => {
                 if (p.startsWith('@')) {
-                    let aName = p.substring(1).trim();
-                    let clean = aName.startsWith('alias_') ? aName.substring(6) : aName;
-                    const matched = cachedAliases.find(a => a.name === clean || a.slug === clean || String(a.id) === String(clean));
-                    return matched ? (matched.id || matched.slug) : p;
+                    return resolveAliasNameToId(p);
                 }
                 return p;
             });
@@ -1570,10 +1567,11 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     function resolveAliasNameToId(aliasRef) {
         if (!aliasRef) return '';
         if (aliasRef.startsWith('@')) {
-            let name = aliasRef.substring(1);
-            if (name.startsWith('alias_')) return aliasRef; // Already @alias_<id>
+            let name = aliasRef.substring(1).trim();
+            if (name.startsWith('alias_')) return `@${name}`; // Already @alias_<id>
             const found = cachedAliases.find(a => a.name === name || a.slug === name || (a.id || a.slug) === name);
-            if (found) return `@alias_${found.id || found.slug}`;
+            if (found) return `@alias_${found.slug || found.id || found.name}`;
+            return `@alias_${name}`;
         }
         return aliasRef;
     }

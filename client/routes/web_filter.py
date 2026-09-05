@@ -197,6 +197,35 @@ def get_peer_web_filter_rules(peer_id):
         return jsonify({"rules": [], "agent_online": False, "error": str(e)}), 200
 
 
+def _sanitize_web_filter_payload(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        return payload
+    
+    # 1. Sanitize 'src'
+    src = payload.get("src")
+    if isinstance(src, list):
+        sanitized_src = []
+        for s in src:
+            if isinstance(s, str) and s.startswith("@") and not s.startswith("@alias_"):
+                sanitized_src.append("@alias_" + s[1:])
+            else:
+                sanitized_src.append(s)
+        payload["src"] = sanitized_src
+    
+    # 2. Sanitize 'domains'
+    domains = payload.get("domains")
+    if isinstance(domains, list):
+        sanitized_domains = []
+        for d in domains:
+            if isinstance(d, str) and d.startswith("@") and not d.startswith("@alias_"):
+                sanitized_domains.append("@alias_" + d[1:])
+            else:
+                sanitized_domains.append(d)
+        payload["domains"] = sanitized_domains
+        
+    return payload
+
+
 @client_bp.route('/api/peers/<peer_id>/web-filter/rules', methods=['POST'])
 @login_required
 def add_peer_web_filter_rule(peer_id):
@@ -212,7 +241,7 @@ def add_peer_web_filter_rule(peer_id):
 
     peer_ip = peer.get("ip")
     agent_url = f"http://{peer_ip}:8765/web-filter/rules"
-    payload = request.get_json() or {}
+    payload = _sanitize_web_filter_payload(request.get_json() or {})
     
     try:
         resp = requests.post(agent_url, json=payload, timeout=15)
@@ -236,7 +265,7 @@ def update_peer_web_filter_rule(peer_id, rule_id):
 
     peer_ip = peer.get("ip")
     agent_url = f"http://{peer_ip}:8765/web-filter/rules/{rule_id}"
-    payload = request.get_json() or {}
+    payload = _sanitize_web_filter_payload(request.get_json() or {})
     
     try:
         resp = requests.put(agent_url, json=payload, timeout=15)
