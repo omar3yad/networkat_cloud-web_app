@@ -105,6 +105,10 @@
                     <i class="fas fa-filter"></i>
                     <span>Web Filter</span>
                 </a>
+                <a href="{{ url_for('client.peer_aliases', peer_id=peer_id) }}" class="action-card">
+                    <i class="fas fa-list"></i>
+                    <span>Aliases</span>
+                </a>
                 {% else %}
                 <a href="javascript:void(0)" class="action-card disabled" title="This peer is offline. Firewall rules are only accessible when the peer is online.">
                     <i class="fas fa-shield-alt" style="color: var(--nk-text-muted);"></i>
@@ -114,11 +118,11 @@
                     <i class="fas fa-filter" style="color: var(--nk-text-muted);"></i>
                     <span style="color: var(--nk-text-muted);">Web Filter</span>
                 </a>
-                {% endif %}
-                <a href="{{ url_for('client.peer_aliases', peer_id=peer_id) }}" class="action-card">
-                    <i class="fas fa-list"></i>
-                    <span>Aliases</span>
+                <a href="javascript:void(0)" class="action-card disabled" title="This peer is offline. Aliases are only accessible when the peer is online.">
+                    <i class="fas fa-list" style="color: var(--nk-text-muted);"></i>
+                    <span style="color: var(--nk-text-muted);">Aliases</span>
                 </a>
+                {% endif %}
             </div>
         </div>
 

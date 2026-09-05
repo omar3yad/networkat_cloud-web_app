@@ -445,157 +445,68 @@ body {
    ========================================================================== */
 #nk-toast-container {
     position: fixed;
-    top: 24px;
-    right: 24px;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 999999;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    max-width: 420px;
-    width: calc(100vw - 48px);
+    align-items: center;
+    gap: 8px;
     pointer-events: none;
 }
 
 .nk-toast {
     pointer-events: auto;
     background: #ffffff;
-    border-radius: 14px;
-    padding: 14px 18px;
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    box-shadow: 0 14px 30px -4px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.06);
+    border-radius: 9999px;
+    padding: 7px 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
     border: 1px solid var(--nk-border);
-    position: relative;
-    overflow: hidden;
-    transform: translateX(120%);
+    transform: translateY(-10px);
     opacity: 0;
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    backdrop-filter: blur(8px);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
 }
 
 .nk-toast.show {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
 }
 
 .nk-toast.hide {
-    transform: translateX(120%);
+    transform: translateY(-6px);
     opacity: 0;
 }
 
-.nk-toast-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
+.nk-toast-icon-i {
+    font-size: 0.95rem;
     flex-shrink: 0;
-}
-
-.nk-toast-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding-top: 2px;
-}
-
-.nk-toast-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--nk-navy);
-    line-height: 1.2;
 }
 
 .nk-toast-msg {
-    font-size: 0.82rem;
-    color: var(--nk-text-muted);
-    font-weight: 500;
-    line-height: 1.35;
-    word-break: break-word;
-}
-
-.nk-toast-close {
-    background: transparent;
-    border: none;
-    color: var(--nk-text-muted);
-    cursor: pointer;
     font-size: 0.85rem;
-    padding: 4px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--nk-transition);
-    flex-shrink: 0;
-}
-
-.nk-toast-close:hover {
+    font-weight: 600;
     color: var(--nk-navy);
-    background: #f1f5f9;
+    white-space: nowrap;
 }
 
-.nk-toast-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    width: 100%;
-    transform-origin: left;
-    animation: toastProgress linear forwards;
-}
-
-@keyframes toastProgress {
-    from { transform: scaleX(1); }
-    to { transform: scaleX(0); }
-}
-
-/* Toast Color Themes */
-.nk-toast.toast-success {
-    border-left: 4px solid #10b981;
-}
-.nk-toast.toast-success .nk-toast-icon {
-    background: #ecfdf5;
+.nk-toast.toast-success .nk-toast-icon-i {
     color: #10b981;
 }
-.nk-toast.toast-success .nk-toast-progress {
-    background: #10b981;
-}
 
-.nk-toast.toast-error {
-    border-left: 4px solid #ef4444;
-}
-.nk-toast.toast-error .nk-toast-icon {
-    background: #fef2f2;
+.nk-toast.toast-error .nk-toast-icon-i {
     color: #ef4444;
 }
-.nk-toast.toast-error .nk-toast-progress {
-    background: #ef4444;
-}
 
-.nk-toast.toast-warning {
-    border-left: 4px solid #f59e0b;
-}
-.nk-toast.toast-warning .nk-toast-icon {
-    background: #fffbeb;
+.nk-toast.toast-warning .nk-toast-icon-i {
     color: #f59e0b;
 }
-.nk-toast.toast-warning .nk-toast-progress {
-    background: #f59e0b;
-}
 
-.nk-toast.toast-info {
-    border-left: 4px solid #0284c7;
-}
-.nk-toast.toast-info .nk-toast-icon {
-    background: #f0f9ff;
+.nk-toast.toast-info .nk-toast-icon-i {
     color: #0284c7;
-}
-.nk-toast.toast-info .nk-toast-progress {
-    background: #0284c7;
 }
 
 /* ==========================================================================

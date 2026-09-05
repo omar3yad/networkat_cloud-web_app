@@ -444,7 +444,11 @@
             }
             await fetchPeersStatus();
 
-            alert('Saved successfully');
+            if (window.showSuccess) {
+                window.showSuccess('Saved');
+            } else {
+                alert('Saved');
+            }
         } catch (error) {
             console.error('Save Error:', error);
             let cleanMessage = error.message;

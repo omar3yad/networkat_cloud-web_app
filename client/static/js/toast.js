@@ -28,7 +28,7 @@
         }
     }
 
-    function showToast(message, type = 'info', duration = 4000) {
+    function showToast(message, type = 'info', duration = 1800) {
         let container = document.getElementById('nk-toast-container');
         if (!container) {
             container = document.createElement('div');
@@ -36,40 +36,28 @@
             document.body.appendChild(container);
         }
 
-        const toast = document.createElement('div');
-        toast.className = `nk-toast toast-${type}`;
+        // Clean up and standardize message
+        let displayMsg = message || 'Saved';
+        const lower = String(displayMsg).trim().toLowerCase();
+        if (lower === 'saved successfully' || lower === 'saved successfully.' || lower === 'saved' || lower === 'success') {
+            displayMsg = 'Saved';
+        }
 
         let iconClass = 'fa-info-circle';
-        let defaultTitle = 'Information';
         if (type === 'success') {
             iconClass = 'fa-check-circle';
-            defaultTitle = 'Success';
         } else if (type === 'error') {
             iconClass = 'fa-exclamation-circle';
-            defaultTitle = 'Error';
         } else if (type === 'warning') {
             iconClass = 'fa-exclamation-triangle';
-            defaultTitle = 'Warning';
         }
 
+        const toast = document.createElement('div');
+        toast.className = `nk-toast toast-${type}`;
         toast.innerHTML = `
-            <div class="nk-toast-icon">
-                <i class="fas ${iconClass}"></i>
-            </div>
-            <div class="nk-toast-content">
-                <span class="nk-toast-title">${defaultTitle}</span>
-                <span class="nk-toast-msg">${message}</span>
-            </div>
-            <button type="button" class="nk-toast-close" title="Close">
-                <i class="fas fa-times"></i>
-            </button>
-            <div class="nk-toast-progress" style="animation-duration: ${duration}ms;"></div>
+            <i class="fas ${iconClass} nk-toast-icon-i"></i>
+            <span class="nk-toast-msg">${displayMsg}</span>
         `;
-
-        const closeBtn = toast.querySelector('.nk-toast-close');
-        if (closeBtn) {
-            closeBtn.onclick = () => dismissToast(toast);
-        }
 
         container.appendChild(toast);
 
@@ -77,23 +65,9 @@
             toast.classList.add('show');
         });
 
-        let autoDismissTimer = setTimeout(() => {
+        setTimeout(() => {
             dismissToast(toast);
         }, duration);
-
-        toast.addEventListener('mouseenter', () => {
-            const prog = toast.querySelector('.nk-toast-progress');
-            if (prog) prog.style.animationPlayState = 'paused';
-            clearTimeout(autoDismissTimer);
-        });
-
-        toast.addEventListener('mouseleave', () => {
-            const prog = toast.querySelector('.nk-toast-progress');
-            if (prog) prog.style.animationPlayState = 'running';
-            autoDismissTimer = setTimeout(() => {
-                dismissToast(toast);
-            }, 1500);
-        });
     }
 
     function dismissToast(toast) {
@@ -102,7 +76,7 @@
         toast.classList.add('hide');
         setTimeout(() => {
             if (toast.parentElement) toast.remove();
-        }, 350);
+        }, 250);
     }
 
     // Global Alert Dialog (Modal format with OK button)

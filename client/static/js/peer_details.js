@@ -218,6 +218,7 @@
                 if (selfPeer) selfPeer.name = newName;
 
                 toggleEditField('name', false);
+                if (window.showSuccess) window.showSuccess('Saved');
             } catch (err) {
                 setFieldInlineError('name', err.message || 'Failed to save');
             } finally {
@@ -306,6 +307,7 @@
                 }
 
                 toggleEditField('network', false);
+                if (window.showSuccess) window.showSuccess('Saved');
             } catch (err) {
                 setFieldInlineError('network', err.message);
             } finally {
