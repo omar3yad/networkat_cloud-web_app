@@ -64,16 +64,6 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
     // Fetch Address Lists/Aliases from backend
     async function fetchAddressLists(silent = false) {
-        const loadingView = document.getElementById('loading-lists-view');
-        const listsTable = document.getElementById('lists-table');
-
-        const isInitialLoad = (lastAliasesSignature === null);
-
-        if (isInitialLoad && !silent) {
-            if (loadingView) loadingView.style.display = 'flex';
-            if (listsTable) listsTable.style.display = 'none';
-        }
-
         try {
             const response = await fetch(`/api/peers/${currentPeerId}/aliases`);
             const data = await response.json();
@@ -95,8 +85,8 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                 renderAddressListsTable(cachedAddressLists);
             }
         } catch (err) {
-            console.error(err);
-            if (isInitialLoad && !silent) {
+            console.error('Error loading address lists:', err);
+            if (lastAliasesSignature === null) {
                 const tbody = document.getElementById('lists-tbody');
                 if (tbody) {
                     tbody.innerHTML = `
@@ -109,9 +99,6 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                     `;
                 }
             }
-        } finally {
-            if (loadingView) loadingView.style.display = 'none';
-            if (listsTable) listsTable.style.display = 'table';
         }
     }
 

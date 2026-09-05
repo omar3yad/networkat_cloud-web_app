@@ -46,17 +46,9 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     let lastWebFilterSignature = null;
 
     async function fetchWebFilterRules(silent = false) {
-        const loadingView = document.getElementById('loading-rules-view');
-        const rulesTable = document.getElementById('rules-table');
         const refreshIcon = document.getElementById('refresh-icon');
 
-        const isInitialLoad = (lastWebFilterSignature === null);
-
         if (!silent && refreshIcon) refreshIcon.classList.add('fa-spin');
-        if (isInitialLoad && !silent) {
-            if (loadingView) loadingView.style.display = 'flex';
-            if (rulesTable) rulesTable.style.display = 'none';
-        }
 
         try {
             const response = await fetch(`/api/peers/${peerId}/web-filter/rules`);
@@ -77,8 +69,8 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                 renderRulesTable(currentRules);
             }
         } catch (err) {
-            console.error(err);
-            if (isInitialLoad && !silent) {
+            console.error('Error loading web filter rules:', err);
+            if (lastWebFilterSignature === null) {
                 const tbody = document.getElementById('rules-tbody');
                 if (tbody) {
                     tbody.innerHTML = `
@@ -93,8 +85,6 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             }
         } finally {
             if (refreshIcon) refreshIcon.classList.remove('fa-spin');
-            if (loadingView) loadingView.style.display = 'none';
-            if (rulesTable) rulesTable.style.display = 'table';
         }
     }
 

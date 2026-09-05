@@ -151,23 +151,11 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
     let lastRenderedSignature = null;
 
     async function fetchRules(forceRefresh = false, silent = false) {
-        const loadingView = document.getElementById('loading-view');
-        const rulesTable = document.getElementById('rules-table');
-        const bannerReorder = document.getElementById('banner-reorder');
         const refreshIcon = document.getElementById('refresh-icon');
 
-        const isInitialLoad = (lastRenderedSignature === null);
-        const isSilent = silent || !isInitialLoad;
-
-        // Spin icon only when manual refresh is requested and not silent
+        // Spin icon ONLY when user clicks manual refresh button
         if (forceRefresh && !silent && refreshIcon) {
             refreshIcon.classList.add('fa-spin');
-        }
-
-        // Only show loading view if initial load and not silent
-        if (isInitialLoad && !silent) {
-            if (loadingView) loadingView.style.display = 'flex';
-            if (rulesTable) rulesTable.style.display = 'none';
         }
 
         try {
@@ -195,12 +183,13 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
             currentRules = data.rules || [];
             initialRulesOrder = currentRules.map(r => r.id).join(',');
             renderRulesTable(currentRules, data.agent_online, { diffOnly: true });
-            if (!isSilent) {
+            if (!silent) {
                 deselectAllRules();
             }
         } catch (err) {
-            console.error(err);
-            if (isInitialLoad && !silent) {
+            console.error('Error fetching firewall rules:', err);
+            // If table has never rendered anything and fetch fails, show error in tbody
+            if (lastRenderedSignature === null) {
                 const tbodyEl = document.getElementById('rules-tbody');
                 if (tbodyEl) {
                     tbodyEl.innerHTML = `
@@ -214,8 +203,6 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
                 }
             }
         } finally {
-            if (loadingView) loadingView.style.display = 'none';
-            if (rulesTable) rulesTable.style.display = 'table';
             if (refreshIcon) refreshIcon.classList.remove('fa-spin');
         }
     }
