@@ -1,0 +1,335 @@
+.dashboard-container {
+    padding: 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.welcome-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.welcome-header h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.75px;
+    color: var(--nk-navy);
+}
+
+.welcome-header p {
+    color: var(--nk-text-muted);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.stat-card {
+    background: #ffffff;
+    border-radius: var(--nk-radius-lg);
+    border: 1px solid var(--nk-border);
+    padding: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--nk-shadow-sm);
+    transition: var(--nk-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--nk-shadow-md);
+    border-color: var(--nk-blue-primary);
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 2;
+}
+
+.stat-title {
+    color: var(--nk-text-muted);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    letter-spacing: 1px;
+}
+
+.stat-value {
+    color: var(--nk-navy);
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    color: var(--nk-border);
+    opacity: 0.5;
+    transition: var(--nk-transition);
+    z-index: 1;
+}
+
+.stat-card:hover .stat-icon {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+
+.stat-card.total-devices:hover .stat-icon {
+    color: var(--nk-blue-primary);
+}
+
+.stat-card.online-devices:hover .stat-icon {
+    color: #107c10;
+}
+
+.stat-card.offline-devices:hover .stat-icon {
+    color: #dc3545;
+}
+
+/* Cards */
+.card {
+    background: #ffffff;
+    border-radius: var(--nk-radius-lg);
+    border: 1px solid var(--nk-border);
+    box-shadow: var(--nk-shadow-sm);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--nk-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fafbfc;
+}
+
+.card-header h3 {
+    color: var(--nk-navy);
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.card-header h3 i {
+    color: var(--nk-blue-primary);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    text-align: left;
+    padding: 1.25rem 2rem;
+    background: #fafbfc;
+    color: var(--nk-text-muted);
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--nk-border);
+}
+
+td {
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--nk-border);
+    color: var(--nk-text-main);
+    vertical-align: middle;
+    font-weight: 500;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* Key Token Container */
+.token-container {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f1f5f9;
+    border: 1px solid var(--nk-border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.95rem;
+    color: #334155;
+}
+
+.token-value {
+    margin-right: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.copy-btn {
+    background: none;
+    border: none;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: var(--nk-transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.copy-btn:hover {
+    background-color: #e2e8f0;
+    color: var(--nk-blue-primary);
+}
+
+.copy-btn.copied {
+    color: #107c10 !important;
+}
+
+.badge {
+    padding: 0.35rem 0.85rem;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.badge-active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Quick Installation Card */
+.install-card {
+    background: #ffffff;
+    border-radius: var(--nk-radius-lg);
+    border: 1px solid var(--nk-border);
+    box-shadow: var(--nk-shadow-sm);
+    overflow: hidden;
+}
+
+.install-card-body {
+    padding: 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.install-desc {
+    color: var(--nk-text-muted);
+    font-size: 0.92rem;
+    font-weight: 500;
+    margin: 0;
+}
+
+.command-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f1f5f9;
+    border: 1px solid var(--nk-border);
+    border-radius: 10px;
+    padding: 0.75rem 1.25rem;
+    gap: 1rem;
+    overflow-x: auto;
+}
+
+.command-text-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #f8fafc;
+    white-space: nowrap;
+}
+
+.command-prompt {
+    color: #38bdf8;
+    user-select: none;
+    font-weight: 800;
+}
+
+.command-text {
+    color: #334155;
+}
+
+.btn-copy-cmd {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #334155;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--nk-transition);
+    white-space: nowrap;
+}
+
+.btn-copy-cmd:hover {
+    background: var(--nk-blue-primary);
+    border-color: var(--nk-blue-primary);
+    color: #ffffff;
+}
+
+.btn-copy-cmd.copied {
+    background: #10b981 !important;
+    border-color: #10b981 !important;
+    color: #ffffff !important;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-container {
+        padding: 1.5rem;
+    }
+
+    .command-box {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .btn-copy-cmd {
+        align-self: flex-end;
+    }
+}
