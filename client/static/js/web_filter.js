@@ -943,12 +943,18 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         });
 
         if (count > 0) {
+            if (isDomainInput) {
+                const footer = document.createElement('div');
+                footer.style.cssText = 'padding: 6px 12px; border-top: 1px solid var(--nk-border); background: #f8fafc; text-align: center;';
+                footer.innerHTML = `<a href="javascript:void(0)" onmousedown="event.preventDefault(); openAddDomainAliasModal();" style="font-size: 0.78rem; color: var(--nk-blue-primary); font-weight: 600; cursor: pointer; text-decoration: none;"><i class="fas fa-plus-circle"></i> Create Domain Alias</a>`;
+                dropdown.appendChild(footer);
+            }
             dropdown.style.display = 'block';
         } else if (isDomainInput && forceShow) {
             dropdown.innerHTML = `
                 <div style="padding: 0.85rem; text-align: center; color: var(--nk-text-muted); font-size: 0.8rem;">
                     No Domain Aliases found.<br>
-                    <a href="/peers/${peerId}/aliases?filter=web_domain" style="color: var(--nk-blue-primary); font-weight: 600; margin-top: 4px; display: inline-block;">+ Create Domain Alias</a>
+                    <a href="javascript:void(0)" onmousedown="event.preventDefault(); openAddDomainAliasModal();" style="color: var(--nk-blue-primary); font-weight: 600; margin-top: 4px; display: inline-block; cursor: pointer;">+ Create Domain Alias</a>
                 </div>
             `;
             dropdown.style.display = 'block';
@@ -1523,12 +1529,20 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             }
 
             closeAliasModal();
-            fetchAliases().then(() => {
-                fetchWebFilterRules(true);
-            });
-            alert('Saved successfully');
+            await fetchAliases();
+            
+            // Auto-select newly created alias in domain input if rule modal is open
+            const domainInp = document.getElementById('ruleDomain');
+            if (domainInp && (!domainInp.value || domainInp.value.startsWith('@'))) {
+                domainInp.value = `@${name}`;
+                domainInp.dispatchEvent(new Event('input'));
+            }
+
+            if (window.showSuccess) window.showSuccess('Saved');
+            else alert('Saved successfully');
         } catch (err) {
-            alert(err.message || 'Failed to save');
+            if (window.showError) window.showError(err.message || 'Failed to save');
+            else alert(err.message || 'Failed to save');
         } finally {
             btn.disabled = false;
         }

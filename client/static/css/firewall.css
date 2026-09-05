@@ -941,6 +941,10 @@
         opacity: 1;
     }
 
+    #listModal, #multiAddressModal, #resolverModal {
+        z-index: 2500;
+    }
+
     .modal-card {
         background: #ffffff;
         width: 92%;
@@ -1338,7 +1342,7 @@
         border-bottom: 1px solid var(--nk-border);
         padding: 0.5rem 0;
         grid-template-areas:
-            ". . . comment comment comment comment comment comment comment comment comment comment"
+            "comment comment comment comment comment comment comment comment comment comment comment comment comment"
             "check drag order interface sources src-port destinations dst-port services action counters enabled actions";
     }
 
@@ -1359,7 +1363,7 @@
         font-size: 0.88rem;
         color: #64748b;
         font-weight: 700;
-        padding: 0.25rem 0.5rem 0 0.5rem !important;
+        padding: 0.25rem 0.75rem 0 0.75rem !important;
         text-align: left;
     }
 

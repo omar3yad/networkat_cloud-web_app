@@ -434,7 +434,8 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         if (!matchesLocalDomain) {
             return {
                 valid: false,
-                error: `Must match a Local Domain Server (${localDomains.join(', ')})`
+                error: `Must match a Local Domain Server`
+                // error: `Must match a Local Domain Server (${localDomains.join(', ')})`
             };
         }
 

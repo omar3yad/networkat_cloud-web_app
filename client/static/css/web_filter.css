@@ -710,6 +710,10 @@
         display: flex;
     }
 
+    #aliasModal {
+        z-index: 2500;
+    }
+
     .modal-card {
         background: #ffffff;
         border-radius: var(--nk-radius-lg);

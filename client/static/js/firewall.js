@@ -289,8 +289,7 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
             // rule comment
             const tdComment = document.createElement('td');
             tdComment.className = 'rule-comment-cell';
-            tdComment.style.margin = '0 0 0 -136px';
-            tdComment.innerHTML = `<span style="opacity: 0.9;margin: 13px;">${rule.rule_name}</span>`;
+            tdComment.innerHTML = `<span style="opacity: 0.9;">${rule.rule_name}</span>`;
             tr.appendChild(tdComment);
 
             // In Interface (LAN / VPN)
@@ -1709,8 +1708,18 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
                     }
 
                     closeListModal();
-                    fetchAddressLists();
-                    alert("Saved successfully");
+                    await fetchAddressLists(true);
+                    if (inlineAliasTargetInputId) {
+                        const targetInput = document.getElementById(inlineAliasTargetInputId);
+                        if (targetInput) {
+                            targetInput.value = `@${slug}`;
+                            targetInput.dispatchEvent(new Event('change'));
+                            targetInput.dispatchEvent(new Event('input'));
+                        }
+                        inlineAliasTargetInputId = null;
+                    }
+                    if (window.showSuccess) window.showSuccess('Saved');
+                    else alert("Saved successfully");
                 } catch (err) {
                     showFriendlyError(err);
                 } finally {
@@ -1734,8 +1743,18 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
                         throw new Error(data.message || data.error || data.detail || 'Failed to save');
                     }
                     closeListModal();
-                    fetchAddressLists();
-                    alert("Saved successfully");
+                    await fetchAddressLists(true);
+                    if (inlineAliasTargetInputId) {
+                        const targetInput = document.getElementById(inlineAliasTargetInputId);
+                        if (targetInput) {
+                            targetInput.value = `@${slug}`;
+                            targetInput.dispatchEvent(new Event('change'));
+                            targetInput.dispatchEvent(new Event('input'));
+                        }
+                        inlineAliasTargetInputId = null;
+                    }
+                    if (window.showSuccess) window.showSuccess('Saved');
+                    else alert("Saved successfully");
                 } catch (err) {
                     showFriendlyError(err);
                 } finally {
@@ -1767,8 +1786,18 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
             }
 
             closeListModal();
-            fetchAddressLists();
-            alert("Saved successfully");
+            await fetchAddressLists(true);
+            if (inlineAliasTargetInputId) {
+                const targetInput = document.getElementById(inlineAliasTargetInputId);
+                if (targetInput) {
+                    targetInput.value = `@${slug}`;
+                    targetInput.dispatchEvent(new Event('change'));
+                    targetInput.dispatchEvent(new Event('input'));
+                }
+                inlineAliasTargetInputId = null;
+            }
+            if (window.showSuccess) window.showSuccess('Saved');
+            else alert("Saved successfully");
         } catch (err) {
             showFriendlyError(err);
         } finally {
@@ -2044,10 +2073,29 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
         });
 
         if (count > 0) {
+            const footer = document.createElement('div');
+            footer.style.cssText = 'padding: 6px 12px; border-top: 1px solid var(--nk-border); background: #f8fafc; text-align: center;';
+            footer.innerHTML = `<a href="javascript:void(0)" onmousedown="event.preventDefault(); openInlineAliasModal('${input.id}');" style="font-size: 0.78rem; color: var(--nk-blue-primary); font-weight: 600; cursor: pointer; text-decoration: none;"><i class="fas fa-plus-circle"></i> Create Alias</a>`;
+            dropdown.appendChild(footer);
+            dropdown.style.display = 'block';
+        } else if (forceShow || val.startsWith('@')) {
+            dropdown.innerHTML = `
+                <div style="padding: 0.85rem; text-align: center; color: var(--nk-text-muted); font-size: 0.8rem;">
+                    No Aliases found.<br>
+                    <a href="javascript:void(0)" onmousedown="event.preventDefault(); openInlineAliasModal('${input.id}');" style="color: var(--nk-blue-primary); font-weight: 600; margin-top: 4px; display: inline-block; cursor: pointer;">+ Create Alias</a>
+                </div>
+            `;
             dropdown.style.display = 'block';
         } else {
             dropdown.style.display = 'none';
         }
+    }
+
+    let inlineAliasTargetInputId = null;
+
+    function openInlineAliasModal(targetInputId = null) {
+        inlineAliasTargetInputId = targetInputId;
+        openAddListModal();
     }
 
     // --- Multi-Address Helper Dialog Logic ---
