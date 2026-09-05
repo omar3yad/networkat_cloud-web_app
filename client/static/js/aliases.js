@@ -117,31 +117,29 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             tdComment.innerHTML = `<span style="opacity: 0.9;">${list.comment || ''}</span>`;
             tr.appendChild(tdComment);
 
-            // Name/Slug with count badge next to it
+            // Name/Slug with count badge positioned top-right
             const tdSlug = document.createElement('td');
             tdSlug.className = 'cell-name';
             tdSlug.style.fontWeight = '700';
             const items = list.list || [];
             tdSlug.innerHTML = `
-                <div style="display: inline-flex; align-items: center; gap: 8px;">
-                    <span>${list.name || list.slug}</span>
-                    <span onclick="openEditListModal('${list.slug}')" style="font-weight: 700; color: var(--nk-blue-primary); background: #e0f2fe; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; cursor: pointer;" title="Click to Edit Alias">${items.length}</span>
+                <div class="alias-name-wrapper">
+                    <span class="alias-name-text">${list.name || list.slug}</span>
+                    <span onclick="openEditListModal('${list.slug}')" class="alias-count-badge" title="Click to Edit Alias">${items.length}</span>
                 </div>
             `;
             tr.appendChild(tdSlug);
 
-            // Type Column
+            // Type Column (Unified Box)
             const tdType = document.createElement('td');
             tdType.className = 'cell-type';
             const isWebDomainType = list.type === 'web_domain';
-            const typeBadgeStyle = isWebDomainType
-                ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;'
-                : 'background: #e6e6e6; color: #334155; border: 1px solid #e6e6e6;';
+            const typeBadgeClass = isWebDomainType ? 'alias-tag alias-tag-domain' : 'alias-tag alias-tag-normal';
             const typeBadgeLabel = isWebDomainType ? 'Web domain' : 'Normal';
-            tdType.innerHTML = `<span class="badge-ip" style="font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; ${typeBadgeStyle}">${typeBadgeLabel}</span>`;
+            tdType.innerHTML = `<span class="${typeBadgeClass}">${typeBadgeLabel}</span>`;
             tr.appendChild(tdType);
 
-            // Addresses Preview
+            // Addresses Preview (Unified Boxes: Normal is Gray, Web Domain is Amber)
             const tdAddresses = document.createElement('td');
             tdAddresses.className = 'cell-addresses';
             const maxPreview = 2;
@@ -157,13 +155,9 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                     ? `${commentText}\n${resolvedText}`
                     : (commentText || resolvedText);
 
-                if (item.hostname || item.domain) {
-                    const colorStyle = isDomain
-                        ? 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;'
-                        : 'background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;';
-                    return `<span class="badge-ip" title="${hoverTitle}" style="margin: 2px; ${colorStyle}">${val}</span>`;
-                }
-                return `<span class="badge-ip" title="${commentText}" style="margin: 2px;">${item.address}</span>`;
+                // Hostnames & IPs in Normal aliases are Gray; only Web domains are Amber
+                const itemTagClass = isDomain ? 'alias-tag alias-tag-domain' : 'alias-tag alias-tag-normal';
+                return `<span class="${itemTagClass}" title="${hoverTitle}" style="margin: 2px;">${val}</span>`;
             }).join(' ');
 
             const remaining = items.length - maxPreview;
@@ -213,6 +207,9 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
             tbody.appendChild(tr);
         });
+
+        // Re-apply active filter and search query immediately after rendering
+        filterListsTable();
     }
 
     // Open Add Alias Modal
@@ -707,9 +704,11 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
                     closeListModal();
                     fetchAddressLists();
-                    alert('Saved successfully');
+                    if (window.showSuccess) window.showSuccess('Saved');
+                    else alert('Saved successfully');
                 } catch (err) {
-                    alert(err.message || 'Failed to save');
+                    if (window.showError) window.showError(err.message || 'Failed to save');
+                    else alert(err.message || 'Failed to save');
                 } finally {
                     btnSubmit.disabled = false;
                 }
@@ -732,9 +731,11 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                     }
                     closeListModal();
                     fetchAddressLists();
-                    alert('Saved successfully');
+                    if (window.showSuccess) window.showSuccess('Saved');
+                    else alert('Saved successfully');
                 } catch (err) {
-                    alert(err.message || 'Failed to save');
+                    if (window.showError) window.showError(err.message || 'Failed to save');
+                    else alert(err.message || 'Failed to save');
                 } finally {
                     btnSubmit.disabled = false;
                 }
@@ -761,9 +762,11 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                 }
                 closeListModal();
                 fetchAddressLists();
-                alert('Saved successfully');
+                if (window.showSuccess) window.showSuccess('Saved');
+                else alert('Saved successfully');
             } catch (err) {
-                alert(err.message || 'Failed to save');
+                if (window.showError) window.showError(err.message || 'Failed to save');
+                else alert(err.message || 'Failed to save');
             } finally {
                 btnSubmit.disabled = false;
             }
@@ -789,9 +792,11 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             }
 
             fetchAddressLists();
-            alert('Deleted successfully');
+            if (window.showSuccess) window.showSuccess('Deleted');
+            else alert('Deleted successfully');
         } catch (err) {
-            alert(err.message || 'Failed to delete');
+            if (window.showError) window.showError(err.message || 'Failed to delete');
+            else alert(err.message || 'Failed to delete');
         }
     }
 
@@ -810,10 +815,12 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                 throw new Error(data.message || data.error || data.detail || 'Failed to sync');
             }
 
-            alert('Synced successfully');
+            if (window.showSuccess) window.showSuccess('Synced');
+            else alert('Synced successfully');
             fetchAddressLists();
         } catch (err) {
-            alert(err.message || 'Failed to sync');
+            if (window.showError) window.showError(err.message || 'Failed to sync');
+            else alert(err.message || 'Failed to sync');
         } finally {
             if (btnSync) btnSync.disabled = false;
         }
@@ -1102,11 +1109,13 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                 throw new Error(data.detail || data.error || 'Failed to save');
             }
 
-            alert("Saved successfully");
+            if (window.showSuccess) window.showSuccess('Saved');
+            else alert("Saved successfully");
             await fetchResolverConfig();
             closeResolverModal();
         } catch (err) {
-            alert(err.message || 'Failed to save');
+            if (window.showError) window.showError(err.message || 'Failed to save');
+            else alert(err.message || 'Failed to save');
         } finally {
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = "Save Settings";
@@ -1129,16 +1138,16 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
     // Filter table rows based on input and type filter
     function filterListsTable() {
-        const searchVal = document.getElementById('search-lists-input').value.toLowerCase();
+        const searchInput = document.getElementById('search-lists-input');
+        const searchVal = searchInput ? searchInput.value.toLowerCase().trim() : '';
         const rows = document.querySelectorAll('#lists-tbody tr');
 
         rows.forEach(row => {
-            if (row.cells.length === 1) return; // Skip empty row colspan
-            const slugText = row.cells[0].textContent.toLowerCase();
-            const commentCell = row.cells[1] ? row.cells[1].textContent.toLowerCase() : '';
+            if (row.cells.length <= 1) return; // Skip empty row colspan
             const rowType = row.getAttribute('data-list-type') || 'normal';
+            const rowText = row.textContent.toLowerCase();
 
-            const matchesSearch = slugText.includes(searchVal) || commentCell.includes(searchVal);
+            const matchesSearch = !searchVal || rowText.includes(searchVal);
             const matchesType = (currentTypeFilter === 'all') || (rowType === currentTypeFilter);
 
             if (matchesSearch && matchesType) {

@@ -412,21 +412,95 @@
         grid-area: actions;
     }
 
-    /* Badges */
-    .badge-ip {
-        background: #e6e6e6;
+    /* Name & Count Badge */
+    .alias-name-wrapper {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 3px;
+        position: relative;
+    }
+
+    .alias-name-text {
+        font-size: 0.92rem;
+        font-weight: 700;
         color: var(--nk-text-main);
-        padding: 0.35rem 0.65rem;
-        border-radius: 6px;
-        font-family: monospace;
-        font-size: 0.8rem;
+        line-height: 1.2;
+    }
+
+    .alias-count-badge {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #0284c7;
+        background: #e0f2fe;
+        padding: 1px 4px;
+        min-width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        line-height: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transform: translateY(-3px);
+        transition: var(--nk-transition);
+        vertical-align: top;
+    }
+
+    .alias-count-badge:hover {
+        background: #bae6fd;
+    }
+
+    /* Unified Box/Tag System for Type & Items */
+    .alias-tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.78rem;
         font-weight: 600;
-        display: inline-block;
-        max-width: 150px;
+        line-height: 1;
+        padding: 4px 8px;
+        border-radius: 5px;
+        white-space: nowrap;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+        box-sizing: border-box;
+        height: 24px;
+    }
+
+    .alias-tag-normal {
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+    }
+
+    .alias-tag-domain {
+        background: #fef3c7;
+        color: #b45309;
+        border: 1px solid #fde68a;
+    }
+
+    .badge-ip {
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+        padding: 4px 8px;
+        border-radius: 5px;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.78rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        max-width: 200px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         vertical-align: middle;
+        height: 24px;
+        box-sizing: border-box;
     }
 
     .badge-any {

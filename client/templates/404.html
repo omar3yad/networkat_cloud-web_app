@@ -44,7 +44,7 @@
             border: 1px solid rgba(226, 232, 240, 0.8);
             width: 100%;
             max-width: 520px;
-            padding: 48px 40px;
+            padding: 20px 40px 48px 40px;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -61,8 +61,12 @@
         }
 
         .brand-logo {
-            height: 38px;
-            margin-bottom: 28px;
+            display: block;
+            height: 82px;
+            width: auto;
+            max-width: 180px;
+            object-fit: contain;
+            margin: 0 auto 1px auto;
         }
 
         .status-badge {
@@ -160,7 +164,7 @@
 </head>
 <body>
     <div class="error-card">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Networkat Logo" class="brand-logo" onerror="this.style.display='none'">
+        <img src="{{ url_for('static', filename='networkat.png') }}" alt="Networkat Logo" class="brand-logo" onerror="this.style.display='none'">
         
         <div class="status-badge">
             <span class="dot"></span>
@@ -169,7 +173,7 @@
 
         <h1 class="error-code">404</h1>
         <h2 class="error-title">Page Not Found</h2>
-        <p class="error-desc">The page or resource you are trying to access does not exist or may have been moved.</p>
+        <p class="error-desc">Page doesn’t exist or has been moved</p>
 
         <div class="btn-group">
             <a href="{{ url_for('client.dashboard') }}" class="btn-action btn-primary">
