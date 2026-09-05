@@ -117,12 +117,46 @@ def validate_port_spec(port_val):
     return port_val
 
 
-def validate_route_network(network: str, target_peer_id: str, allowed_peer_ids: set, all_routes: list, active_route_overrides: dict = None):
+def validate_route_network(arg1, target_peer_id: str, arg3=None, all_routes: list = None, active_route_overrides: dict = None):
     """
     Validates a network CIDR string and ensures it's not assigned to another peer of the same customer.
     Normalizes host addresses inside a subnet (strict=False).
+    
+    Supports two calling conventions:
+    1. validate_route_network(customer, target_peer_id, network)
+    2. validate_route_network(network, target_peer_id, allowed_peer_ids, all_routes, active_route_overrides)
+    
     Returns (is_valid: bool, error_message: str, normalized_network: str).
     """
+    # Detect signature mode
+    if isinstance(arg1, str) and (isinstance(arg3, (set, list, tuple)) or all_routes is not None):
+        # Pure functional mode: (network, target_peer_id, allowed_peer_ids, all_routes, active_route_overrides)
+        network = arg1
+        allowed_peer_ids = set(arg3) if arg3 else set()
+        routes_list = all_routes or []
+        route_overrides = active_route_overrides or {}
+    else:
+        # Customer entity mode: (customer, target_peer_id, network)
+        customer = arg1
+        network = arg3 if isinstance(arg3, str) else ""
+        allowed_peer_ids = set()
+        routes_list = []
+        route_overrides = {}
+        if customer:
+            try:
+                from services.netbird_service import (
+                    get_cached_customer_peer_ids,
+                    get_cached_all_netbird_routes,
+                    get_api_base_url,
+                    get_api_headers
+                )
+                from utils.cache_manager import get_active_route_overrides
+                allowed_peer_ids = get_cached_customer_peer_ids(customer)
+                routes_list = get_cached_all_netbird_routes(get_api_base_url(), get_api_headers())
+                route_overrides = get_active_route_overrides()
+            except Exception:
+                pass
+
     if not network:
         return True, "", ""
 
@@ -134,13 +168,10 @@ def validate_route_network(network: str, target_peer_id: str, allowed_peer_ids: 
     except ValueError:
         return False, "Invalid subnet", ""
 
-    if active_route_overrides is None:
-        active_route_overrides = {}
-
-    for r in (all_routes or []):
+    for r in routes_list:
         r_peer = r.get("peer")
         if r_peer in allowed_peer_ids and r_peer != target_peer_id:
-            r_net = active_route_overrides.get(r_peer) or r.get("network", "")
+            r_net = route_overrides.get(r_peer) or r.get("network", "")
             if r_net:
                 try:
                     r_obj = ipaddress.ip_network(r_net.strip(), strict=False)
