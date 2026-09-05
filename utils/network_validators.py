@@ -2,6 +2,51 @@ import re
 import ipaddress
 
 
+def validate_dns_name(name: str, allow_dots: bool = False, max_length: int = 63) -> tuple[bool, str]:
+    """
+    Validates DNS name / Hostname conventions:
+    - Latin letters (a-z, A-Z), digits (0-9), and hyphens (-) only.
+    - Cannot start or end with a hyphen.
+    - Max length 63 for labels (or 253 for multi-label FQDN).
+    """
+    if not name or not isinstance(name, str):
+        return False, "Name required"
+    trimmed = name.strip()
+    if not trimmed:
+        return False, "Name required"
+
+    limit = 253 if allow_dots else max_length
+    if len(trimmed) > limit:
+        return False, f"Max {limit} characters"
+
+    if allow_dots:
+        if trimmed.startswith('.') or trimmed.endswith('.'):
+            return False, "Cannot start or end with a dot (.)"
+        labels = trimmed.split('.')
+        for label in labels:
+            if not label:
+                return False, "Empty label between dots"
+            if label.startswith('-') or label.endswith('-'):
+                return False, "Cannot start or end with hyphen (-)"
+            if not re.match(r"^[a-zA-Z0-9-]+$", label):
+                return False, "Only letters, numbers, and hyphens (-) allowed"
+            if len(label) > 63:
+                return False, "Label exceeds 63 characters"
+        return True, ""
+    else:
+        if trimmed.startswith('-') or trimmed.endswith('-'):
+            return False, "Cannot start or end with hyphen (-)"
+        if not re.match(r"^[a-zA-Z0-9-]+$", trimmed):
+            return False, "Only letters, numbers, and hyphens (-) allowed"
+        if not re.match(r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$", trimmed):
+            return False, "Invalid DNS name format"
+        return True, ""
+
+
+def validate_hostname(hostname: str) -> tuple[bool, str]:
+    return validate_dns_name(hostname, allow_dots=True, max_length=253)
+
+
 def validate_address_spec(addr_str: str):
     """
     Validates a comma-separated list of IPv4 addresses/CIDRs or a single alias.

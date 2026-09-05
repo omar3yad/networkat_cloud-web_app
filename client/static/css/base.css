@@ -272,7 +272,7 @@ body {
 }
 
 .peer-status-dot.offline {
-    background-color: #64748b;
+    background-color: red;
 }
 
 .offline-tag {

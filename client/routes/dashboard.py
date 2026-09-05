@@ -20,6 +20,7 @@ from utils.cache_manager import (
     set_name_override,
     get_active_route_overrides
 )
+from utils.network_validators import validate_dns_name
 
 edge_service = EdgeService()
 
@@ -154,6 +155,10 @@ def update_peer(peer_id):
     new_name = data.get('name', '').strip()
     if not new_name:
         return jsonify({'success': False, 'error': 'Name required'}), 400
+
+    is_valid, err_msg = validate_dns_name(new_name, allow_dots=False, max_length=63)
+    if not is_valid:
+        return jsonify({'success': False, 'error': err_msg}), 400
 
     # Check for duplicate device name among customer's peers
     allowed_peer_ids = get_cached_customer_peer_ids(customer)

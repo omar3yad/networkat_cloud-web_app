@@ -60,14 +60,18 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         }
     }
 
+    let lastAliasesSignature = null;
+
     // Fetch Address Lists/Aliases from backend
     async function fetchAddressLists(silent = false) {
         const loadingView = document.getElementById('loading-lists-view');
         const listsTable = document.getElementById('lists-table');
 
-        if (!silent) {
-            loadingView.style.display = 'flex';
-            listsTable.style.display = 'none';
+        const isInitialLoad = (lastAliasesSignature === null);
+
+        if (isInitialLoad && !silent) {
+            if (loadingView) loadingView.style.display = 'flex';
+            if (listsTable) listsTable.style.display = 'none';
         }
 
         try {
@@ -84,24 +88,30 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                     l.slug = l.id;
                 }
             });
-            renderAddressListsTable(cachedAddressLists);
+
+            const signature = JSON.stringify(cachedAddressLists);
+            if (signature !== lastAliasesSignature) {
+                lastAliasesSignature = signature;
+                renderAddressListsTable(cachedAddressLists);
+            }
         } catch (err) {
             console.error(err);
-            if (!silent) {
-                document.getElementById('lists-tbody').innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
-                            Error loading address lists: ${err.message}
-                        </td>
-                    </tr>
-                `;
+            if (isInitialLoad && !silent) {
+                const tbody = document.getElementById('lists-tbody');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+                                Error loading address lists: ${err.message}
+                            </td>
+                        </tr>
+                    `;
+                }
             }
         } finally {
-            if (!silent) {
-                loadingView.style.display = 'none';
-                listsTable.style.display = 'table';
-            }
+            if (loadingView) loadingView.style.display = 'none';
+            if (listsTable) listsTable.style.display = 'table';
         }
     }
 
@@ -428,8 +438,10 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
     function hostname_validator(val) {
         if (!val || typeof val !== 'string') return false;
         const trimmed = val.trim();
-        if (trimmed.includes(':') || trimmed.includes('*') || trimmed.includes('/')) return false;
-        if (trimmed.length > 253) return false;
+        if (window.validateHostname) {
+            const res = window.validateHostname(trimmed);
+            return res.valid;
+        }
         const hostnameRegex = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
         return hostnameRegex.test(trimmed);
     }
@@ -475,18 +487,28 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             // Normal alias: determined by first character
             const firstChar = trimmed[0];
 
-            // Digit (0-9): IPv4 Format
+            // Digit (0-9): IPv4 Format or Hostname starting with digit
             if (/^[0-9]/.test(firstChar)) {
                 const ipv4Res = parseAndValidateIPv4(trimmed, { requireMask: false, allowMask: true, normalizeSubnet: true });
-                if (!ipv4Res.valid) {
-                    return ipv4Res;
+                if (ipv4Res.valid) {
+                    return { valid: true, entryType: 'address', normalized: ipv4Res.normalized, ipData: ipv4Res };
                 }
-                return { valid: true, entryType: 'address', normalized: ipv4Res.normalized, ipData: ipv4Res };
+                // Check if valid hostname
+                const hostRes = window.validateHostname ? window.validateHostname(trimmed) : null;
+                if (hostRes && hostRes.valid) {
+                    return { valid: true, entryType: 'hostname', normalized: trimmed };
+                }
+                return ipv4Res;
             }
 
             // Letter (a-zA-Z): Hostname
             if (/^[a-zA-Z]/.test(firstChar)) {
-                if (!hostname_validator(trimmed)) {
+                const hostRes = window.validateHostname ? window.validateHostname(trimmed) : null;
+                if (hostRes) {
+                    if (!hostRes.valid) {
+                        return { valid: false, error: hostRes.error || 'Invalid hostname' };
+                    }
+                } else if (!hostname_validator(trimmed)) {
                     return { valid: false, error: 'Invalid hostname' };
                 }
                 return { valid: true, entryType: 'hostname', normalized: trimmed };

@@ -148,6 +148,7 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
     // Fetch rules from backend
     let currentRules = [];
     let initialRulesOrder = '';
+    let lastRenderedSignature = null;
 
     async function fetchRules(forceRefresh = false, silent = false) {
         const loadingView = document.getElementById('loading-view');
@@ -155,20 +156,18 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
         const bannerReorder = document.getElementById('banner-reorder');
         const refreshIcon = document.getElementById('refresh-icon');
 
-        // Silent refresh: table already has rows, so update data in the background
-        // without flashing the loading view, hiding the table, or spinning the icon.
-        const tbodyEl = document.getElementById('rules-tbody');
-        const hasRenderedRows = !!tbodyEl && tbodyEl.querySelector('tr[data-rule-id]');
-        const isSilent = silent && hasRenderedRows;
-        console.log('[fetchRules]', { forceRefresh, silent, hasRenderedRows: !!hasRenderedRows, isSilent, tbodyChildren: tbodyEl ? tbodyEl.children.length : 'no-tbody' });
+        const isInitialLoad = (lastRenderedSignature === null);
+        const isSilent = silent || !isInitialLoad;
 
-        if (!isSilent) {
-            if (forceRefresh && refreshIcon) {
-                refreshIcon.classList.add('fa-spin');
-            }
-            loadingView.style.display = 'flex';
-            rulesTable.style.display = 'none';
-            bannerReorder.style.display = 'none';
+        // Spin icon only when manual refresh is requested and not silent
+        if (forceRefresh && !silent && refreshIcon) {
+            refreshIcon.classList.add('fa-spin');
+        }
+
+        // Only show loading view if initial load and not silent
+        if (isInitialLoad && !silent) {
+            if (loadingView) loadingView.style.display = 'flex';
+            if (rulesTable) rulesTable.style.display = 'none';
         }
 
         try {
@@ -186,48 +185,40 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
             const addBtn = document.getElementById('add-rule-btn');
 
             if (!isPeerOnline) {
-                bannerOffline.style.display = 'flex';
-                addBtn.disabled = true;
+                if (bannerOffline) bannerOffline.style.display = 'flex';
+                if (addBtn) addBtn.disabled = true;
             } else {
-                bannerOffline.style.display = 'none';
-                addBtn.disabled = false;
+                if (bannerOffline) bannerOffline.style.display = 'none';
+                if (addBtn) addBtn.disabled = false;
             }
 
             currentRules = data.rules || [];
             initialRulesOrder = currentRules.map(r => r.id).join(',');
-            renderRulesTable(currentRules, data.agent_online, { diffOnly: isSilent });
+            renderRulesTable(currentRules, data.agent_online, { diffOnly: true });
             if (!isSilent) {
                 deselectAllRules();
             }
         } catch (err) {
             console.error(err);
-            // On a silent background refresh, keep the current table intact
-            // and just log — don't replace it with an error row.
-            if (!isSilent) {
-                document.getElementById('rules-tbody').innerHTML = `
-                    <tr>
-                        <td colspan="13" class="text-center" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
-                            Error loading firewall configuration: ${err.message}
-                        </td>
-                    </tr>
-                `;
+            if (isInitialLoad && !silent) {
+                const tbodyEl = document.getElementById('rules-tbody');
+                if (tbodyEl) {
+                    tbodyEl.innerHTML = `
+                        <tr>
+                            <td colspan="13" class="text-center" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+                                Error loading firewall configuration: ${err.message}
+                            </td>
+                        </tr>
+                    `;
+                }
             }
         } finally {
-            if (!isSilent) {
-                loadingView.style.display = 'none';
-                const refreshIcon = document.getElementById('refresh-icon');
-                if (refreshIcon) {
-                    refreshIcon.classList.remove('fa-spin');
-                }
-                rulesTable.style.display = 'table';
-            }
+            if (loadingView) loadingView.style.display = 'none';
+            if (rulesTable) rulesTable.style.display = 'table';
+            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
         }
     }
-
-    // Tracks the currently rendered table state so a silent refresh that
-    // produced identical data doesn't touch the DOM at all (no flicker).
-    let lastRenderedSignature = null;
 
     // Render rules list dynamically
     function renderRulesTable(rules, isAgentOnline, options = {}) {

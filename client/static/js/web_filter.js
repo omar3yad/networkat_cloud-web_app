@@ -43,15 +43,19 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     // Web Filter Rules Logic
     // --------------------------------------------------------------------------
 
+    let lastWebFilterSignature = null;
+
     async function fetchWebFilterRules(silent = false) {
         const loadingView = document.getElementById('loading-rules-view');
         const rulesTable = document.getElementById('rules-table');
         const refreshIcon = document.getElementById('refresh-icon');
 
-        if (refreshIcon) refreshIcon.classList.add('fa-spin');
-        if (!silent) {
-            loadingView.style.display = 'flex';
-            rulesTable.style.display = 'none';
+        const isInitialLoad = (lastWebFilterSignature === null);
+
+        if (!silent && refreshIcon) refreshIcon.classList.add('fa-spin');
+        if (isInitialLoad && !silent) {
+            if (loadingView) loadingView.style.display = 'flex';
+            if (rulesTable) rulesTable.style.display = 'none';
         }
 
         try {
@@ -64,27 +68,33 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
             currentRules = data.rules || [];
             initialRulesOrder = currentRules.map(r => r.id);
-            document.getElementById('banner-reorder').style.display = 'none';
+            const bannerReorder = document.getElementById('banner-reorder');
+            if (bannerReorder) bannerReorder.style.display = 'none';
 
-            renderRulesTable(currentRules);
+            const signature = JSON.stringify(currentRules);
+            if (signature !== lastWebFilterSignature) {
+                lastWebFilterSignature = signature;
+                renderRulesTable(currentRules);
+            }
         } catch (err) {
             console.error(err);
-            if (!silent) {
-                document.getElementById('rules-tbody').innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
-                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
-                            Error loading web filter rules: ${err.message}
-                        </td>
-                    </tr>
-                `;
+            if (isInitialLoad && !silent) {
+                const tbody = document.getElementById('rules-tbody');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
+                                <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+                                Error loading web filter rules: ${err.message}
+                            </td>
+                        </tr>
+                    `;
+                }
             }
         } finally {
             if (refreshIcon) refreshIcon.classList.remove('fa-spin');
-            if (!silent) {
-                loadingView.style.display = 'none';
-                rulesTable.style.display = 'table';
-            }
+            if (loadingView) loadingView.style.display = 'none';
+            if (rulesTable) rulesTable.style.display = 'table';
         }
     }
 

@@ -120,7 +120,64 @@
         };
     }
 
+    /**
+     * Validates DNS name / Hostname conventions:
+     * - Latin letters (a-z, A-Z), digits (0-9), and hyphens (-) only.
+     * - Cannot start or end with a hyphen (-).
+     * - If allowDots is true: validates each dot-separated label.
+     */
+    function validateDNSName(input, options = {}) {
+        const { allowDots = false, maxLength = 63 } = options;
+        if (!input || typeof input !== 'string') {
+            return { valid: false, error: 'Required' };
+        }
+        const trimmed = input.trim();
+        if (!trimmed) {
+            return { valid: false, error: 'Required' };
+        }
+        const limit = allowDots ? 253 : maxLength;
+        if (trimmed.length > limit) {
+            return { valid: false, error: `Max ${limit} characters` };
+        }
+
+        if (allowDots) {
+            if (trimmed.startsWith('.') || trimmed.endsWith('.')) {
+                return { valid: false, error: 'Cannot start or end with a dot (.)' };
+            }
+            const labels = trimmed.split('.');
+            for (let i = 0; i < labels.length; i++) {
+                const label = labels[i];
+                if (!label) {
+                    return { valid: false, error: 'Empty label between dots' };
+                }
+                if (label.startsWith('-') || label.endsWith('-')) {
+                    return { valid: false, error: 'Cannot start or end with hyphen (-)' };
+                }
+                if (!/^[a-zA-Z0-9-]+$/.test(label)) {
+                    return { valid: false, error: 'Only letters, numbers, and hyphens (-) allowed' };
+                }
+                if (label.length > 63) {
+                    return { valid: false, error: 'Label exceeds 63 characters' };
+                }
+            }
+            return { valid: true, normalized: trimmed };
+        } else {
+            if (trimmed.startsWith('-') || trimmed.endsWith('-')) {
+                return { valid: false, error: 'Cannot start or end with hyphen (-)' };
+            }
+            if (!/^[a-zA-Z0-9-]+$/.test(trimmed)) {
+                return { valid: false, error: 'Only letters, numbers, and hyphens (-) allowed' };
+            }
+            if (!/^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/.test(trimmed)) {
+                return { valid: false, error: 'Invalid DNS name format' };
+            }
+            return { valid: true, normalized: trimmed };
+        }
+    }
+
     // Expose globally
     window.parseAndValidateIPv4 = parseAndValidateIPv4;
     window.validateAndNormalizeIPv4 = parseAndValidateIPv4;
+    window.validateDNSName = validateDNSName;
+    window.validateHostname = (val) => validateDNSName(val, { allowDots: true, maxLength: 253 });
 })();

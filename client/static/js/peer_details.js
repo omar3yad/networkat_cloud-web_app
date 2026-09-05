@@ -49,14 +49,15 @@
             return { valid: false, error: 'Name required' };
         }
         const trimmed = name.trim();
-        if (trimmed.length > 200) {
-            return { valid: false, error: 'Max 200 characters' };
+        const dnsRes = window.validateDNSName ? window.validateDNSName(trimmed, { allowDots: false, maxLength: 63 }) : { valid: true };
+        if (!dnsRes.valid) {
+            return { valid: false, error: dnsRes.error || 'Invalid DNS name' };
         }
         const isDup = otherPeers.some(p => p.id !== peerId && (p.name || '').trim().toLowerCase() === trimmed.toLowerCase());
         if (isDup) {
             return { valid: false, error: 'Name already in use' };
         }
-        return { valid: true };
+        return { valid: true, normalized: trimmed };
     }
 
     function validateNetworkField(network) {
