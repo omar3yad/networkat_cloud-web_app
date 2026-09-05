@@ -17,11 +17,56 @@ client_bp = Blueprint('client', __name__, template_folder='templates', static_fo
 customer_service = CustomerService()
 edge_service = EdgeService()
 
-# --------------------------------------------------------------------------
-# Global Caches, Locks & ThreadPool
-# --------------------------------------------------------------------------
 executor = ThreadPoolExecutor(max_workers=20)
 _cache_lock = Lock()
+
+@client_bp.context_processor
+def inject_client_sidebar():
+    customer_id = session.get('client_customer_id')
+    if not customer_id:
+        return dict(sidebar_peers=[])
+    
+    customer = Client.query.get(customer_id)
+    if not customer:
+        return dict(sidebar_peers=[])
+        
+    try:
+        allowed_peer_ids = get_cached_customer_peer_ids(customer)
+        base_url = _get_api_base_url()
+        headers = _get_api_headers()
+        peers_data = get_cached_all_netbird_peers(base_url, headers, cache_ttl=10)
+        customer_peers = [p for p in peers_data if p.get("id") in allowed_peer_ids]
+        
+        processed_peers = []
+        if customer_peers:
+            futures = {
+                executor.submit(
+                    _check_single_peer_handshake,
+                    peer, base_url, headers
+                ): peer
+                for peer in customer_peers
+            }
+            for future in as_completed(futures, timeout=5):
+                try:
+                    res = future.result()
+                    processed_peers.append(res)
+                except Exception as err:
+                    current_app.logger.error(f"Peer handshake check error in inject_client_sidebar: {err}")
+        
+        sidebar_peers = [
+            {
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "connected": p.get("is_online", False),
+                "ip": p.get("ip")
+            }
+            for p in processed_peers
+        ]
+        sidebar_peers.sort(key=lambda p: (p.get("name") or "").lower())
+        return dict(sidebar_peers=sidebar_peers)
+    except Exception as e:
+        current_app.logger.error(f"Error in sidebar context processor: {e}")
+        return dict(sidebar_peers=[])
 
 import os
 import json
@@ -914,6 +959,9 @@ def aliases_page():
         flash("Customer not found", "error")
         return redirect(url_for('client.login'))
     
+    peer_id = request.args.get('peer_id')
+    filter_val = request.args.get('filter')
+    
     customer = Client.query.get(customer_id)
     peers_list = []
     if customer:
@@ -953,11 +1001,27 @@ def aliases_page():
         except Exception as e:
             current_app.logger.error(f"Error fetching peers for aliases page: {e}")
 
+    if not peer_id and peers_list:
+        first_online = next((p for p in peers_list if p["connected"]), None)
+        target_peer = first_online if first_online else peers_list[0]
+        url = url_for('client.peer_aliases', peer_id=target_peer["id"])
+        if filter_val:
+            url += f"?filter={filter_val}"
+        return redirect(url)
+    elif peer_id:
+        url = url_for('client.peer_aliases', peer_id=peer_id)
+        if filter_val:
+            url += f"?filter={filter_val}"
+        return redirect(url)
+
     return render_template(
         'aliases.html',
         customer_name=customer_name,
-        peers=peers_list
-)
+        peers=peers_list,
+        selected_peer_id=None,
+        peer_name='No Peers Available',
+        is_online=False
+    )
 
 @client_bp.route('/peers/<peer_id>/aliases')
 @login_required
@@ -1014,13 +1078,16 @@ def peer_aliases(peer_id):
     # Check if selected peer exists in list
     selected_peer = next((p for p in peers_list if p["id"] == peer_id), None)
     selected_peer_name = selected_peer["name"] if selected_peer else "Peer Device"
+    is_online = selected_peer["connected"] if selected_peer else False
 
     return render_template(
         'aliases.html',
         customer_name=customer_name,
         peers=peers_list,
         selected_peer_id=peer_id,
-        peer_name=selected_peer_name
+        peer_id=peer_id,
+        peer_name=selected_peer_name,
+        is_online=is_online
     )
 
 @client_bp.route('/peers/<peer_id>')
@@ -1066,6 +1133,23 @@ def peer_details(peer_id):
                     current_app.logger.error(f"Failed to format last seen '{peer_last_seen}': {ex}")
             if not request.args.get('name') and checked_peer.get('name'):
                 peer_name = checked_peer.get('name')
+
+        peer_route_network = ""
+        peer_route_id = ""
+        peer_route_network_id = ""
+        try:
+            all_routes = get_cached_all_netbird_routes(base_url, headers, cache_ttl=10)
+            override_routes = _get_active_route_overrides()
+            if peer_id in override_routes:
+                peer_route_network = override_routes[peer_id]
+            else:
+                peer_route = next((r for r in all_routes if r.get("peer") == peer_id), None)
+                if peer_route:
+                    peer_route_network = peer_route.get("network", "")
+                    peer_route_id = peer_route.get("id", "")
+                    peer_route_network_id = peer_route.get("network_id", "")
+        except Exception as ex:
+            current_app.logger.error(f"Failed to fetch peer route in peer_details: {ex}")
     except Exception as e:
         current_app.logger.error(f"Error checking peer status in peer details page: {e}")
 
@@ -1076,9 +1160,13 @@ def peer_details(peer_id):
         customer_name=session.get('client_customer_name'),
         is_online=is_online,
         peer_ip=peer_ip,
+        peer_public_ip=peer_public_ip,
         peer_os=peer_os,
         peer_version=peer_version,
-        peer_last_seen=peer_last_seen
+        peer_last_seen=peer_last_seen,
+        peer_network=peer_route_network,
+        peer_route_id=peer_route_id,
+        peer_route_network_id=peer_route_network_id
     )
 
 
@@ -1191,19 +1279,29 @@ def update_peer(peer_id):
     customer = Client.query.get(customer_id) if customer_id else None
     
     if not customer or not _verify_peer_access(customer, peer_id):
-        return jsonify({'success': False, 'error': 'Unauthorized peer access'}), 403
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
     data = request.get_json() or {}
     new_name = data.get('name', '').strip()
     if not new_name:
-        return jsonify({'success': False, 'error': 'Device name cannot be empty'}), 400
+        return jsonify({'success': False, 'error': 'Name required'}), 400
+
+    # Check for duplicate device name among customer's peers
+    allowed_peer_ids = get_cached_customer_peer_ids(customer)
+    peers_data = get_cached_all_netbird_peers(_get_api_base_url(), _get_api_headers())
+    for p in peers_data:
+        pid = p.get("id")
+        if pid in allowed_peer_ids and pid != peer_id:
+            existing_name = _get_name_override(pid) or p.get("name") or ""
+            if existing_name.strip().lower() == new_name.lower():
+                return jsonify({'success': False, 'error': 'Name already in use'}), 400
 
     success, message = edge_service.update_peer_name(peer_id, new_name)
     if success:
         _set_name_override(peer_id, new_name)
         clear_all_netbird_caches(customer_id)
-        return jsonify({'success': True, 'message': message})
-    return jsonify({'success': False, 'error': message}), 400
+        return jsonify({'success': True, 'message': 'Saved successfully'})
+    return jsonify({'success': False, 'error': message or 'Failed to save'}), 400
 
 
 @client_bp.route('/api/peers', methods=['GET'])
@@ -1274,7 +1372,7 @@ def get_peer_blocked_services(peer_id):
     customer = Client.query.get(customer_id) if customer_id else None
 
     if not customer or not _verify_peer_access(customer, peer_id):
-        return jsonify({"error": "Unauthorized peer access"}), 403
+        return jsonify({"error": "Unauthorized"}), 403
 
     try:
         url = f"{_get_api_base_url()}/api/v1/peers/{peer_id}/adguard/blocked_services"
@@ -1293,7 +1391,7 @@ def update_peer_blocked_services(peer_id):
     customer = Client.query.get(customer_id) if customer_id else None
 
     if not customer or not _verify_peer_access(customer, peer_id):
-        return jsonify({"error": "Unauthorized peer access"}), 403
+        return jsonify({"error": "Unauthorized"}), 403
 
     try:
         payload = request.get_json() or {}
@@ -1314,14 +1412,14 @@ def get_client_blocked_services_proxy(peer_id, client_name):
     customer = Client.query.get(customer_id) if customer_id else None
 
     if not customer or not _verify_peer_access(customer, peer_id):
-        return jsonify({"error": "Unauthorized peer access"}), 403
+        return jsonify({"error": "Unauthorized"}), 403
 
     try:
         url = f"{_get_api_base_url()}/api/v1/peers/{peer_id}/adguard/clients/{client_name}/blocked_services"
         resp = requests.get(url, headers=_get_api_headers(), timeout=10)
         if resp.ok:
             return jsonify(resp.json())
-        return jsonify({"error": f"Failed to fetch blocked services for client {client_name}"}), resp.status_code
+        return jsonify({"error": "Failed to fetch client blocked services"}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -1333,7 +1431,7 @@ def update_client_blocked_services_proxy(peer_id, client_name):
     customer = Client.query.get(customer_id) if customer_id else None
 
     if not customer or not _verify_peer_access(customer, peer_id):
-        return jsonify({"error": "Unauthorized peer access"}), 403
+        return jsonify({"error": "Unauthorized"}), 403
 
     try:
         payload = request.get_json() or {}
@@ -1342,7 +1440,7 @@ def update_client_blocked_services_proxy(peer_id, client_name):
         resp = requests.post(url, json=payload, headers=headers, timeout=10)
         if resp.ok:
             return jsonify(resp.json())
-        return jsonify({"error": f"Failed to update blocked services for client {client_name}", "details": resp.text}), resp.status_code
+        return jsonify({"error": "Failed to update client blocked services", "details": resp.text}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -1408,6 +1506,38 @@ def proxy_get_routes():
         return jsonify({"error": str(e)}), 500
 
 
+def _validate_route_network(customer, target_peer_id, network):
+    if not network:
+        return True, "", ""
+    
+    import ipaddress
+    try:
+        net_obj = ipaddress.ip_network(network.strip(), strict=False)
+        if net_obj.version != 4:
+            return False, "Only IPv4 supported", ""
+        normalized_network = str(net_obj)
+    except ValueError:
+        return False, "Invalid subnet", ""
+
+    allowed_peer_ids = get_cached_customer_peer_ids(customer)
+    all_routes = get_cached_all_netbird_routes(_get_api_base_url(), _get_api_headers())
+    active_route_overrides = _get_active_route_overrides()
+    
+    for r in all_routes:
+        r_peer = r.get("peer")
+        if r_peer in allowed_peer_ids and r_peer != target_peer_id:
+            r_net = active_route_overrides.get(r_peer) or r.get("network", "")
+            if r_net:
+                try:
+                    r_obj = ipaddress.ip_network(r_net.strip(), strict=False)
+                    if str(r_obj).lower() == normalized_network.lower():
+                        return False, "Subnet already in use", ""
+                except ValueError:
+                    if r_net.strip().lower() == normalized_network.lower():
+                        return False, "Subnet already in use", ""
+    return True, "", normalized_network
+
+
 @client_bp.route('/api/v2/netbird/routes', methods=['POST'])
 @login_required
 def proxy_post_route():
@@ -1424,8 +1554,17 @@ def proxy_post_route():
         if not customer or not getattr(customer, 'netbird_group_id', None):
             return jsonify({"error": "NetBird Group ID not found for this customer"}), 400
 
-        if not _verify_peer_access(customer, req_data.get("peer")):
+        target_peer = req_data.get("peer")
+        if not _verify_peer_access(customer, target_peer):
             return jsonify({"error": "This peer does not belong to your account"}), 403
+
+        # Validate network format and duplicate subnet
+        network_val = req_data.get("network", "")
+        valid, err_msg, normalized_net = _validate_route_network(customer, target_peer, network_val)
+        if not valid:
+            return jsonify({"error": err_msg}), 400
+        if normalized_net:
+            req_data["network"] = normalized_net
 
         netbird_group_id = customer.netbird_group_id
         req_data["groups"] = [netbird_group_id]
@@ -1465,8 +1604,17 @@ def proxy_put_route(route_id):
         if not customer or not getattr(customer, 'netbird_group_id', None):
             return jsonify({"error": "NetBird Group ID not found for this customer"}), 400
 
-        if not _verify_peer_access(customer, req_data.get("peer")):
+        target_peer = req_data.get("peer")
+        if not _verify_peer_access(customer, target_peer):
             return jsonify({"error": "This peer does not belong to your account"}), 403
+
+        # Validate network format and duplicate subnet
+        network_val = req_data.get("network", "")
+        valid, err_msg, normalized_net = _validate_route_network(customer, target_peer, network_val)
+        if not valid:
+            return jsonify({"error": err_msg}), 400
+        if normalized_net:
+            req_data["network"] = normalized_net
 
         netbird_group_id = customer.netbird_group_id
         req_data["groups"] = [netbird_group_id]
@@ -1978,6 +2126,7 @@ def get_peer_firewall_rules(peer_id):
             "dst_port": dst_port,
             "protocol": lr.get("protocol") or "any",
             "action": action,
+            "interface": lr.get("interface") or "lan",
             "enabled": lr.get("enabled", True),
             "active_on_agent": True,
             "direction": lr.get("id"),
@@ -2011,16 +2160,19 @@ def add_peer_firewall_rule(peer_id):
     
     protocol = req_data.get('protocol')
     protocol = protocol.lower() if protocol else 'any'
-    
+
+    interface = req_data.get('interface')
+    interface = interface.lower() if interface else 'lan'
+
     src_ip = req_data.get('src_ip')
     src_ip = src_ip.strip() if (src_ip and isinstance(src_ip, str)) else None
-    
+
     dst_ip = req_data.get('dst_ip')
     dst_ip = dst_ip.strip() if (dst_ip and isinstance(dst_ip, str)) else None
-    
+
     src_port = req_data.get('src_port')
     src_port = src_port.strip() if (src_port and isinstance(src_port, str)) else None
-    
+
     dst_port = req_data.get('dst_port')
     dst_port = dst_port.strip() if (dst_port and isinstance(dst_port, str)) else None
 
@@ -2052,6 +2204,9 @@ def add_peer_firewall_rule(peer_id):
 
     if protocol not in ('tcp', 'udp', 'tcp+udp', 'icmp', 'any'):
         return jsonify({"error": "Protocol must be 'tcp', 'udp', 'tcp+udp', 'icmp', or 'any'"}), 400
+
+    if interface not in ('lan', 'vpn'):
+        return jsonify({"error": "Interface must be 'lan' or 'vpn'"}), 400
 
     try:
         src_parts = _validate_address_spec(src_ip)
@@ -2089,6 +2244,7 @@ def add_peer_firewall_rule(peer_id):
         "comment": rule_name,
         "action": action,
         "protocol": protocol,
+        "interface": interface,
         "src": src_parts,
         "src_port": src_port_parts,
         "dst": dst_parts,
@@ -2185,16 +2341,19 @@ def edit_peer_firewall_rule(peer_id, rule_id):
     
     protocol = req_data.get('protocol')
     protocol = protocol.lower() if protocol else 'any'
-    
+
+    interface = req_data.get('interface')
+    interface = interface.lower() if interface else 'lan'
+
     src_ip = req_data.get('src_ip')
     src_ip = src_ip.strip() if (src_ip and isinstance(src_ip, str)) else None
-    
+
     dst_ip = req_data.get('dst_ip')
     dst_ip = dst_ip.strip() if (dst_ip and isinstance(dst_ip, str)) else None
-    
+
     src_port = req_data.get('src_port')
     src_port = src_port.strip() if (src_port and isinstance(src_port, str)) else None
-    
+
     dst_port = req_data.get('dst_port')
     dst_port = dst_port.strip() if (dst_port and isinstance(dst_port, str)) else None
 
@@ -2237,6 +2396,9 @@ def edit_peer_firewall_rule(peer_id, rule_id):
     if protocol not in ('tcp', 'udp', 'tcp+udp', 'icmp', 'any'):
         return jsonify({"error": "Protocol must be 'tcp', 'udp', 'tcp+udp', 'icmp', or 'any'"}), 400
 
+    if interface not in ('lan', 'vpn'):
+        return jsonify({"error": "Interface must be 'lan' or 'vpn'"}), 400
+
     try:
         src_parts = _validate_address_spec(src_ip)
     except ValueError as e:
@@ -2274,6 +2436,7 @@ def edit_peer_firewall_rule(peer_id, rule_id):
         "comment": rule_name,
         "action": action,
         "protocol": protocol,
+        "interface": interface,
         "src": src_parts,
         "src_port": src_port_parts,
         "dst": dst_parts,
@@ -2939,25 +3102,3 @@ def disable_peer_web_filter_rules(peer_id):
         return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503
 
 
-@client_bp.route('/api/peers/<peer_id>/web-filter/rules/reorder', methods=['POST'])
-@login_required
-def reorder_peer_web_filter_rules(peer_id):
-    customer_id = session.get('client_customer_id')
-    customer = Client.query.get(customer_id) if customer_id else None
-    if not customer or not _verify_peer_access(customer, peer_id):
-        return jsonify({"error": "Unauthorized"}), 403
-
-    peers_data = get_cached_all_netbird_peers(_get_api_base_url(), _get_api_headers())
-    peer = next((p for p in peers_data if p.get("id") == peer_id), None)
-    if not peer or not peer.get("ip"):
-        return jsonify({"error": "Peer IP not found"}), 404
-
-    peer_ip = peer.get("ip")
-    agent_url = f"http://{peer_ip}:8765/web-filter/rules/reorder"
-    payload = request.get_json() or {}
-    
-    try:
-        resp = requests.post(agent_url, json=payload, timeout=15)
-        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
-    except requests.RequestException as e:
-        return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503

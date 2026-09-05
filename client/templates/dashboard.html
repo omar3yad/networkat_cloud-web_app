@@ -236,6 +236,90 @@
         color: #991b1b;
     }
 
+    /* Quick Installation Card */
+    .install-card {
+        background: #ffffff;
+        border-radius: var(--nk-radius-lg);
+        border: 1px solid var(--nk-border);
+        box-shadow: var(--nk-shadow-sm);
+        overflow: hidden;
+    }
+
+    .install-card-body {
+        padding: 1.5rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+
+    .install-desc {
+        color: var(--nk-text-muted);
+        font-size: 0.92rem;
+        font-weight: 500;
+        margin: 0;
+    }
+
+    .command-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background-color: #f1f5f9;
+        border: 1px solid var(--nk-border);
+        border-radius: 10px;
+        padding: 0.75rem 1.25rem;
+        gap: 1rem;
+        overflow-x: auto;
+    }
+
+    .command-text-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #f8fafc;
+        white-space: nowrap;
+    }
+
+    .command-prompt {
+        color: #38bdf8;
+        user-select: none;
+        font-weight: 800;
+    }
+
+    .command-text {
+        color: #334155;
+    }
+
+    .btn-copy-cmd {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #334155;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--nk-transition);
+        white-space: nowrap;
+    }
+
+    .btn-copy-cmd:hover {
+        background: var(--nk-blue-primary);
+        border-color: var(--nk-blue-primary);
+        color: #ffffff;
+    }
+
+    .btn-copy-cmd.copied {
+        background: #10b981 !important;
+        border-color: #10b981 !important;
+        color: #ffffff !important;
+    }
+
     @media (max-width: 768px) {
         .stats-grid {
             grid-template-columns: 1fr;
@@ -243,6 +327,16 @@
 
         .dashboard-container {
             padding: 1.5rem;
+        }
+
+        .command-box {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .btn-copy-cmd {
+            align-self: flex-end;
         }
     }
 </style>
@@ -278,6 +372,26 @@
                 <span class="stat-value" id="offline-edges-val" style="color: #dc3545;">{{ total_edges }}</span>
             </div>
             <i class="fas fa-ban stat-icon"></i>
+        </div>
+    </div>
+
+    <!-- Quick Installation Card -->
+    <div class="card install-card">
+        <div class="card-header">
+            <h3><i class="fas fa-terminal"></i> Quick Installation</h3>
+        </div>
+        <div class="install-card-body">
+            <p class="install-desc">Peer install command</p>
+            <div class="command-box">
+                <div class="command-text-wrap">
+                    <span class="command-prompt">$</span>
+                    <span class="command-text" id="install-cmd-text">curl -fsSL https://api.networkat.cloud/install.sh | sudo bash</span>
+                </div>
+                <button class="btn-copy-cmd" onclick="copyInstallCommand(this)" title="Copy command">
+                    <i class="far fa-copy"></i>
+                    <span>Copy</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -360,6 +474,22 @@
             buttonElement.classList.add('copied');
             setTimeout(() => {
                 icon.className = 'far fa-copy';
+                buttonElement.classList.remove('copied');
+            }, 2000);
+        });
+    }
+
+    function copyInstallCommand(buttonElement) {
+        const cmd = "curl -fsSL https://api.networkat.cloud/install.sh | sudo bash";
+        navigator.clipboard.writeText(cmd).then(() => {
+            const icon = buttonElement.querySelector('i');
+            const span = buttonElement.querySelector('span');
+            icon.className = 'fas fa-check';
+            if (span) span.textContent = 'Copied!';
+            buttonElement.classList.add('copied');
+            setTimeout(() => {
+                icon.className = 'far fa-copy';
+                if (span) span.textContent = 'Copy';
                 buttonElement.classList.remove('copied');
             }, 2000);
         });

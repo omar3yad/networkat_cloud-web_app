@@ -22,14 +22,20 @@ done
 echo "[entrypoint] Running Flask DB migrations..."
 FLASK_APP=app.py flask db upgrade
 
-# ── Fix ownership of any files created during migration ─────────────────────
-# 'flask db upgrade' may generate new migration files or __pycache__ entries
-# owned by root if the base image layer ran as root at some point.
-# These two find commands bring everything under /app/migrations into
-# devteam ownership and ensure group-write is set, making all devteam
-# members able to edit migration files without sudo.
-find /app/migrations -not -group devteam -exec chgrp devteam {} +
-find /app/migrations -perm -u+w -exec chmod g+w {} +
+# ── Best-effort: keep migration files group-writable ────────────────────────
+# 'flask db upgrade' may generate new migration files / __pycache__ entries,
+# and on a dev host a team member (e.g. UID 1000) may have created a
+# migration on the bind mount that this container's appuser (UID 1001) does
+# NOT own. chgrp/chmod require being the file OWNER (group membership isn't
+# enough), so those files make the find fail — and under `set -e` that
+# silently kills the container before supervisord ever starts (a 502 with no
+# real error in the logs, just "Operation not permitted" chmod warnings).
+# This is a convenience pass, never a hard dependency: any file this appuser
+# can't touch is fixed on the host instead (compose bind mount is
+# group-writable + has a default ACL; see ha_scripts/lib/common.sh's
+# ensure_group_writable). So: best-effort, never fatal.
+find /app/migrations -not -group devteam -exec chgrp devteam {} + 2>/dev/null || true
+find /app/migrations -perm -u+w -exec chmod g+w {} + 2>/dev/null || true
 
 # ── Hand off to supervisord ──────────────────────────────────────────────────
 # exec replaces the shell process so supervisord becomes PID 1 and receives

@@ -267,6 +267,7 @@
         max-width: 1400px;
         margin: 2rem auto;
         padding: 0 1.5rem;
+        width: 100%;   
     }
 
     .page-header {
@@ -279,31 +280,84 @@
     }
 
     .vpn-toggle-header {
-        display: flex;
+        display: inline-flex;
         align-items: center;
-        gap: 12px;
-        background: #f8fafc;
-        padding: 0.75rem 1.25rem;
-        border-radius: var(--nk-radius-md);
+        gap: 10px;
+        background: #ffffff;
+        padding: 0 0.85rem;
+        height: 38px;
+        border-radius: var(--nk-radius-sm);
         border: 1px solid var(--nk-border);
-        box-shadow: var(--nk-shadow-sm);
+        box-sizing: border-box;
+        transition: var(--nk-transition);
+        user-select: none;
     }
 
     .vpn-toggle-info {
         display: flex;
-        flex-direction: column;
-        gap: 2px;
+        align-items: center;
     }
 
     .vpn-toggle-title {
-        font-weight: 700;
+        font-weight: 600;
         font-size: 0.88rem;
-        color: var(--nk-navy);
+        color: var(--nk-text-main);
+        white-space: nowrap;
     }
 
     .vpn-toggle-desc {
+        display: none;
+    }
+
+    .vpn-toggle-header .switch {
+        position: relative;
+        display: inline-block;
+        width: 36px;
+        height: 18px;
+    }
+
+    .vpn-toggle-header .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .vpn-toggle-header .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #cbd5e1;
+        transition: .25s ease;
+        border-radius: 18px;
+    }
+
+    .vpn-toggle-header .slider:before {
+        position: absolute;
+        content: "";
+        height: 12px;
+        width: 12px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .25s ease;
+        border-radius: 50%;
+    }
+
+    .vpn-toggle-header input:checked + .slider {
+        background-color: var(--nk-blue-primary);
+    }
+
+    .vpn-toggle-header input:checked + .slider:before {
+        transform: translateX(18px);
+    }
+
+    .vpn-toggle-header .toggle-status-text {
         font-size: 0.75rem;
-        color: var(--nk-text-muted);
+        font-weight: 800;
+        min-width: 22px;
     }
 
     .page-header h1 {
@@ -313,42 +367,65 @@
         margin-bottom: 0.5rem;
     }
 
-    .page-header p {
-        color: var(--nk-text-muted);
-        font-size: 0.95rem;
-    }
-
-    /* Top Tabs styling */
-    .gateway-tabs {
+    /* Unified Page Header */
+    .unified-page-header {
         display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 1.75rem;
         border-bottom: 1px solid var(--nk-border);
-        margin-bottom: 1.5rem;
-        gap: 1.5rem;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background-color: #f8fafc;
-        padding-top: 0.75rem;
+        padding-bottom: 0;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
-    .tab-item {
-        padding: 0.75rem 0.25rem;
-        font-weight: 600;
+    .unified-page-header h1 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.75px;
+        color: var(--nk-navy);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        line-height: 1.2;
+    }
+
+    .unified-page-header h1 i {
+        color: var(--nk-blue-primary);
+        margin-right: 12px;
+        font-size: 1.9rem;
+    }
+
+    /* Peer Feature Nav Tabs */
+    .peer-nav-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: -1px;
+    }
+
+    .peer-nav-tab {
+        padding: 0.75rem 1.25rem;
         font-size: 0.95rem;
+        font-weight: 600;
         color: var(--nk-text-muted);
-        text-decoration: none;
-        border-bottom: 2px solid transparent;
         cursor: pointer;
+        border-bottom: 2px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
         transition: var(--nk-transition);
+        text-decoration: none;
+        user-select: none;
     }
 
-    .tab-item:hover {
-        color: var(--nk-text-main);
+    .peer-nav-tab:hover {
+        color: var(--nk-blue-primary);
     }
 
-    .tab-item.active {
+    .peer-nav-tab.active {
         color: var(--nk-blue-primary);
         border-bottom-color: var(--nk-blue-primary);
+        font-weight: 700;
     }
 
     /* Control Panel Header Row */
@@ -363,7 +440,7 @@
         top: 59px;
         z-index: 100;
         background-color: #f8fafc;
-        padding-top: 0.75rem;
+        /* padding-top: 0.75rem; */
         padding-bottom: 1rem;
     }
 
@@ -598,6 +675,7 @@
     }
 
     .rules-table th {
+
         background: #f8fafc;
         padding: 1rem 1.25rem;
         font-weight: 700;
@@ -609,6 +687,7 @@
         position: sticky;
         top: 118px;
         z-index: 90;
+        white-space: nowrap;
     }
 
     .rules-table th:first-child {
@@ -975,6 +1054,52 @@
         cursor: not-allowed;
     }
 
+    /* Form validation styling */
+    .form-group input.is-invalid,
+    .form-group select.is-invalid,
+    .input-dropdown-wrapper.is-invalid {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+    }
+
+    .form-group input.is-invalid:focus,
+    .input-dropdown-wrapper.is-invalid input:focus {
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+    }
+
+    .field-error-msg {
+        color: #dc2626;
+        font-size: 0.76rem;
+        font-weight: 600;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        line-height: 1.25;
+        animation: fadeInError 0.2s ease-in-out;
+    }
+
+    .char-counter {
+        font-size: 0.72rem;
+        color: var(--nk-text-muted);
+        font-weight: 600;
+        float: right;
+    }
+
+    .char-counter.warning {
+        color: #b45309;
+    }
+
+    .char-counter.error {
+        color: #dc2626;
+    }
+
+    @keyframes fadeInError {
+        from { opacity: 0; transform: translateY(-2px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
     .modal-footer {
         padding: 1rem 1.5rem;
         background: #f8fafc;
@@ -1183,7 +1308,7 @@
 
     #rules-table tr {
         display: grid;
-        grid-template-columns: 40px 30px 60px 1.2fr 80px 1.2fr 80px 1.2fr 100px 150px 100px 120px;
+        grid-template-columns: 40px 30px 60px 90px 1.2fr 80px 1.2fr 80px 1.2fr 100px 150px 100px 120px;
         align-items: center;
     }
 
@@ -1219,8 +1344,8 @@
         border-bottom: 1px solid var(--nk-border);
         padding: 0.5rem 0;
         grid-template-areas:
-            ". . . comment comment comment comment comment comment comment comment comment"
-            "check drag order sources src-port destinations dst-port services action counters enabled actions";
+            ". . . comment comment comment comment comment comment comment comment comment comment"
+            "check drag order interface sources src-port destinations dst-port services action counters enabled actions";
     }
 
     #rules-table tbody tr:last-child {
@@ -1361,6 +1486,10 @@
         grid-area: services;
     }
 
+    .cell-interface {
+        grid-area: interface;
+    }
+
     .cell-counters {
         grid-area: counters;
     }
@@ -1450,27 +1579,24 @@
 {% block content %}
 <!-- Main Container -->
 <div class="main-container">
-    <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link">
-        <i class="fas fa-arrow-left"></i> Back to Peer Details
-    </a>
-    <div class="page-header">
-        <div>
-            <h1>Firewall</h1>
-            <p>Peer name: <strong>{{ peer_name }}</strong></p>
-        </div>
-        <!-- VPN-Only Toggle widget -->
-        <div class="vpn-toggle-header">
-            <div class="vpn-toggle-info">
-                <span class="vpn-toggle-title">VPN Only Mode</span>
-                <span class="vpn-toggle-desc">Block the Internet</span>
-            </div>
-            <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
-                <label class="switch" style="margin: 0;">
-                    <input type="checkbox" id="vpn-only-toggle" onchange="toggleVpnOnly(this)" {% if vpn_only %}checked{% endif %} {% if not is_online %}disabled{% endif %}>
-                    <span class="slider"></span>
-                </label>
-                <span class="toggle-status-text" id="vpn-only-text" style="font-size: 0.75rem; font-weight: 800; min-width: 25px; color: {% if vpn_only %}#107c10{% else %}var(--nk-text-muted){% endif %};">{% if vpn_only %}ON{% else %}OFF{% endif %}</span>
-            </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link" style="margin-bottom: 0;">
+            <i class="fas fa-arrow-left"></i> Back to Peer Details
+        </a>
+    </div>
+    <div class="unified-page-header">
+        <h1><i class="fas fa-shield-alt"></i>Firewall</h1>
+        <!-- Peer Feature Nav Tabs -->
+        <div class="peer-nav-tabs">
+            <a href="{{ url_for('client.peer_web_filter', peer_id=peer_id) }}" class="peer-nav-tab">
+                <i class="fas fa-filter"></i> Web Filter
+            </a>
+            <a href="{{ url_for('client.peer_firewall', peer_id=peer_id) }}" class="peer-nav-tab active">
+                <i class="fas fa-shield-alt"></i> Firewall
+            </a>
+            <a href="{{ url_for('client.peer_aliases', peer_id=peer_id) }}?filter=normal" class="peer-nav-tab">
+                <i class="fas fa-list"></i> Aliases
+            </a>
         </div>
     </div>
 
@@ -1480,19 +1606,8 @@
         <span>This peer is offline.</span>
     </div>
 
-    <!-- Gateway Tabs -->
-    <div class="gateway-tabs">
-        <div class="tab-item active" id="tab-rules" onclick="switchTab('rules')">
-            <i class="fas fa-shield-alt"></i> Firewall Rules
-        </div>
-        <div class="tab-item" id="tab-lists" onclick="switchTab('lists')">
-            <i class="fas fa-list"></i> Aliases
-        </div>
-    </div>
-
-    <!-- Firewall Rules Tab Content -->
+    <!-- Firewall Rules Content -->
     <div id="rules-tab-content">
-        <!-- Reorder Warning Banner -->
         <!-- Reorder Warning Banner -->
         <div id="banner-reorder" class="floating-save-bar" style="display: none;">
             <span class="save-bar-text">
@@ -1507,14 +1622,28 @@
         </div>
 
         <div class="control-bar">
-            <div class="control-actions" style="display: flex; gap: 0.5rem;">
+            <div class="control-actions" style="display: flex; gap: 0.5rem; align-items: center;">
                 <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddModal()">
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
-                <button class="btn-action" id="refresh-rules-btn" onclick="fetchRules(true)"
+                <button class="btn-action" id="refresh-rules-btn" onclick="fetchRules(true, true)"
                     style="background: #f1f5f9; color: #334155; border: 1px solid var(--nk-border);">
                     <i class="fas fa-sync-alt" id="refresh-icon"></i> Refresh
                 </button>
+                        <!-- VPN-Only Toggle widget -->
+        <div class="vpn-toggle-header">
+            <div class="vpn-toggle-info">
+                <span class="vpn-toggle-title">VPN Only Mode</span>
+                <!-- <span class="vpn-toggle-desc">Block the Internet</span> -->
+            </div>
+            <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
+                <label class="switch" style="margin: 0;">
+                    <input type="checkbox" id="vpn-only-toggle" onchange="toggleVpnOnly(this)" {% if vpn_only %}checked{% endif %} {% if not is_online %}disabled{% endif %}>
+                    <span class="slider"></span>
+                </label>
+                <span class="toggle-status-text" id="vpn-only-text" style="font-size: 0.75rem; font-weight: 800; min-width: 25px; color: {% if vpn_only %}#107c10{% else %}var(--nk-text-muted){% endif %};">{% if vpn_only %}ON{% else %}OFF{% endif %}</span>
+            </div>
+        </div>
             </div>
 
             <div class="search-box">
@@ -1538,6 +1667,7 @@
                                 onclick="toggleSelectAllRules(this)"></th>
                         <th style="width: 30px; text-align: center;"></th>
                         <th style="width: 60px; text-align: center;">Order</th>
+                        <th>In Interface</th>
                         <th>Sources</th>
                         <th>Src Port</th>
                         <th>Destinations</th>
@@ -1550,50 +1680,6 @@
                     </tr>
                 </thead>
                 <tbody id="rules-tbody">
-                    <!-- Dynamic rendering -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Aliases Tab Content -->
-    <div id="lists-tab-content" style="display: none;">
-        <!-- Aliases Control Actions Header -->
-        <div class="control-bar">
-            <div class="control-actions">
-                <button class="btn-action btn-primary" id="add-list-btn" onclick="openAddListModal()">
-                    <i class="fas fa-plus"></i> Add alias
-                </button>
-                <button class="btn-action" id="resolver-settings-btn" onclick="openResolverConfigModal()">
-                    <i class="fas fa-cog"></i> Resolver Settings
-                </button>
-            </div>
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="search-lists-input" placeholder="Search lists by name..."
-                    onkeyup="filterListsTable()">
-            </div>
-        </div>
-
-        <!-- Aliases Table Container -->
-        <div class="table-card">
-            <div id="loading-lists-view" class="loading-overlay">
-                <div class="spinner"></div>
-                <p>Loading address lists...</p>
-            </div>
-
-            <table class="rules-table" id="lists-table" style="display: none;">
-                <thead style="position: sticky; top: 100px; z-index: 100; background-color: #f8fafc;">
-                    <tr>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Items</th>
-                        <th>Created</th>
-                        <th>Updated</th>
-                        <th style="width: 100px; text-align: center;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="lists-tbody">
                     <!-- Dynamic rendering -->
                 </tbody>
             </table>
@@ -1612,10 +1698,13 @@
             <form id="addRuleForm" onsubmit="submitAddRule(event)">
                 <div class="form-row">
                     <div class="form-group form-group-full">
-                        <label>Comment</label>
-                        <input type="text" id="ruleName" placeholder="e.g. Block-BGP-Outbound"
-                            pattern="^[A-Za-z0-9_-]{1,32}$"
-                            title="Alphanumeric, dash, or underscore only. Max 32 characters.">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="margin-bottom: 0;">Comment</label>
+                            <span class="char-counter" id="ruleName-counter">0 / 200</span>
+                        </div>
+                        <input type="text" id="ruleName" placeholder="e.g. Block-BGP-Outbound" maxlength="200"
+                            title="Free text comment up to 200 characters.">
+                        <div class="field-error-msg" id="ruleName-error" style="display: none;"></div>
                     </div>
                 </div>
 
@@ -1641,8 +1730,18 @@
 
                 <div class="form-row">
                     <div class="form-group">
+                        <label>In Interface *</label>
+                        <select id="ruleInterface" required>
+                            <option value="lan" selected>LAN</option>
+                            <option value="vpn">VPN</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
                         <label>Source Address</label>
-                        <div class="input-dropdown-wrapper">
+                        <div class="input-dropdown-wrapper" id="srcIp-wrapper">
                             <div class="alias-trigger-btn" onclick="toggleAliasList(event, 'srcIp')">@</div>
                             <input type="text" id="srcIp" placeholder="197.62.85.152/24,192.168.1.1/24"
                                 autocomplete="off"
@@ -1651,17 +1750,19 @@
                                 title="Add multiple addresses"><i class="fas fa-plus"></i></div>
                             <div class="custom-autocomplete-dropdown" id="srcIp-dropdown" style="display: none;"></div>
                         </div>
+                        <div class="field-error-msg" id="srcIp-error" style="display: none;"></div>
                     </div>
                     <div class="form-group">
                         <label>Source Port</label>
                         <input type="text" id="srcPort" placeholder="e.g. 80,443,3000-5000" disabled>
+                        <div class="field-error-msg" id="srcPort-error" style="display: none;"></div>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Destination Address</label>
-                        <div class="input-dropdown-wrapper">
+                        <div class="input-dropdown-wrapper" id="dstIp-wrapper">
                             <div class="alias-trigger-btn" onclick="toggleAliasList(event, 'dstIp')">@</div>
                             <input type="text" id="dstIp" placeholder="e.g. 10.0.0.5" autocomplete="off"
                                 style="padding-left: 2.25rem !important; padding-right: 2.25rem !important;">
@@ -1669,10 +1770,12 @@
                                 title="Add multiple addresses"><i class="fas fa-plus"></i></div>
                             <div class="custom-autocomplete-dropdown" id="dstIp-dropdown" style="display: none;"></div>
                         </div>
+                        <div class="field-error-msg" id="dstIp-error" style="display: none;"></div>
                     </div>
                     <div class="form-group">
                         <label>Destination Port</label>
                         <input type="text" id="dstPort" placeholder="e.g. 80,443,3000-5000" disabled>
+                        <div class="field-error-msg" id="dstPort-error" style="display: none;"></div>
                     </div>
                 </div>
                 <div class="form-row" id="place-before-row" style="align-items: center;">
@@ -1707,6 +1810,7 @@
                         <label>Place Before</label>
                         <input type="number" id="ruleOrderCustomInput" placeholder="e.g. 3" min="1"
                             style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem; height: 38px;">
+                        <div class="field-error-msg" id="ruleOrderCustomInput-error" style="display: none;"></div>
                     </div>
                 </div>
             </form>
@@ -1866,7 +1970,7 @@
     let originalSlug = "";
 
     function showFriendlyError(err, prefix = "Error") {
-        let msg = err.message || err || 'Unknown error';
+        let msg = err.message || err || 'Failed';
         if (typeof msg === 'string') {
             msg = msg.replace(/@alias_([a-zA-Z0-9_-]+)/g, (match, id) => {
                 const matched = cachedAddressLists.find(l => String(l.id) === String(id) || String(l.slug) === String(id));
@@ -1877,17 +1981,24 @@
                 return matched ? (matched.name || matched.slug) : id;
             });
         }
-        alert(`${prefix}: ${msg}`);
+        alert(msg);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const savedTab = localStorage.getItem('firewall_active_tab') || 'rules';
-        // Fetch aliases first to populate the cache, then fetch and render rules to avoid ID flashing
+        // Auto-refresh periodically if peer is online
+        if (isPeerOnline) {
+            setInterval(() => {
+                // Silent background refresh: no loading view, no table hide,
+                // no spinner, and the table only re-renders if data changed.
+                fetchRules(true, true);
+            }, 10000);
+        }
+
         fetchAddressLists(true).then(() => {
-            switchTab(savedTab);
+            fetchRules();
         });
-        fetchResolverConfig(); // Load DNS Forwarding resolver configuration settings
         initCustomAutocompletes();
+        initFirewallLiveValidation();
     });
 
     // Toggle ports fields depending on protocol select
@@ -1901,6 +2012,8 @@
             srcPort.disabled = true;
             dstPort.value = '';
             dstPort.disabled = true;
+            clearFieldError('srcPort');
+            clearFieldError('dstPort');
         } else {
             srcPort.disabled = false;
             dstPort.disabled = false;
@@ -1914,7 +2027,14 @@
         if (!isPeerOnline) return;
         editingRuleId = null;
         document.getElementById('addRuleForm').reset();
+        clearAllFieldErrors();
         toggleProtocolFields();
+
+        const charCounter = document.getElementById('ruleName-counter');
+        if (charCounter) {
+            charCounter.textContent = '0 / 200';
+            charCounter.className = 'char-counter';
+        }
 
         updateAddressMultiBtnState('srcIp');
         updateAddressMultiBtnState('dstIp');
@@ -1944,12 +2064,22 @@
 
         editingRuleId = ruleId;
         document.getElementById('addRuleForm').reset();
+        clearAllFieldErrors();
 
         // Populate form
-        document.getElementById('ruleName').value = rule.rule_name;
-        const actLower = rule.action.toLowerCase();
+        const commentVal = rule.rule_name || '';
+        document.getElementById('ruleName').value = commentVal;
+        const charCounter = document.getElementById('ruleName-counter');
+        if (charCounter) {
+            const len = commentVal.length;
+            charCounter.textContent = `${len} / 200`;
+            charCounter.className = 'char-counter' + (len > 180 ? (len > 200 ? ' error' : ' warning') : '');
+        }
+
+        const actLower = (rule.action || '').toLowerCase();
         document.getElementById('ruleAction').value = (actLower === 'accept' || actLower === 'allow') ? 'accept' : 'drop';
-        document.getElementById('ruleProtocol').value = rule.protocol;
+        document.getElementById('ruleProtocol').value = rule.protocol || 'any';
+        document.getElementById('ruleInterface').value = rule.interface || 'lan';
         document.getElementById('srcIp').value = rule.src_ip === 'Any' ? '' : resolveAliasIdToName(rule.src_ip || '');
         document.getElementById('dstIp').value = rule.dst_ip === 'Any' ? '' : resolveAliasIdToName(rule.dst_ip || '');
         document.getElementById('srcPort').value = rule.src_port || '';
@@ -1974,25 +2104,34 @@
     function closeAddModal() {
         document.getElementById('addModal').classList.remove('active');
         editingRuleId = null;
+        clearAllFieldErrors();
     }
 
     // Fetch rules from backend
     let currentRules = [];
     let initialRulesOrder = '';
 
-    async function fetchRules(forceRefresh = false) {
+    async function fetchRules(forceRefresh = false, silent = false) {
         const loadingView = document.getElementById('loading-view');
         const rulesTable = document.getElementById('rules-table');
         const bannerReorder = document.getElementById('banner-reorder');
         const refreshIcon = document.getElementById('refresh-icon');
 
-        if (forceRefresh && refreshIcon) {
-            refreshIcon.classList.add('fa-spin');
-        }
+        // Silent refresh: table already has rows, so update data in the background
+        // without flashing the loading view, hiding the table, or spinning the icon.
+        const tbodyEl = document.getElementById('rules-tbody');
+        const hasRenderedRows = !!tbodyEl && tbodyEl.querySelector('tr[data-rule-id]');
+        const isSilent = silent && hasRenderedRows;
+        console.log('[fetchRules]', { forceRefresh, silent, hasRenderedRows: !!hasRenderedRows, isSilent, tbodyChildren: tbodyEl ? tbodyEl.children.length : 'no-tbody' });
 
-        loadingView.style.display = 'flex';
-        rulesTable.style.display = 'none';
-        bannerReorder.style.display = 'none';
+        if (!isSilent) {
+            if (forceRefresh && refreshIcon) {
+                refreshIcon.classList.add('fa-spin');
+            }
+            loadingView.style.display = 'flex';
+            rulesTable.style.display = 'none';
+            bannerReorder.style.display = 'none';
+        }
 
         try {
             const url = `/api/peers/${peerId}/firewall/rules` + (forceRefresh ? '?refresh=true' : '');
@@ -2018,11 +2157,16 @@
 
             currentRules = data.rules || [];
             initialRulesOrder = currentRules.map(r => r.id).join(',');
-            renderRulesTable(currentRules, data.agent_online);
-            deselectAllRules();
+            renderRulesTable(currentRules, data.agent_online, { diffOnly: isSilent });
+            if (!isSilent) {
+                deselectAllRules();
+            }
         } catch (err) {
             console.error(err);
-            document.getElementById('rules-tbody').innerHTML = `
+            // On a silent background refresh, keep the current table intact
+            // and just log — don't replace it with an error row.
+            if (!isSilent) {
+                document.getElementById('rules-tbody').innerHTML = `
                     <tr>
                         <td colspan="13" class="text-center" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
                             <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
@@ -2030,20 +2174,41 @@
                         </td>
                     </tr>
                 `;
-        } finally {
-            loadingView.style.display = 'none';
-            const refreshIcon = document.getElementById('refresh-icon');
-            if (refreshIcon) {
-                refreshIcon.classList.remove('fa-spin');
             }
-            rulesTable.style.display = 'table';
+        } finally {
+            if (!isSilent) {
+                loadingView.style.display = 'none';
+                const refreshIcon = document.getElementById('refresh-icon');
+                if (refreshIcon) {
+                    refreshIcon.classList.remove('fa-spin');
+                }
+                rulesTable.style.display = 'table';
+            }
         }
     }
 
+    // Tracks the currently rendered table state so a silent refresh that
+    // produced identical data doesn't touch the DOM at all (no flicker).
+    let lastRenderedSignature = null;
+
     // Render rules list dynamically
-    function renderRulesTable(rules, isAgentOnline) {
+    function renderRulesTable(rules, isAgentOnline, options = {}) {
         const tbody = document.getElementById('rules-tbody');
-        tbody.innerHTML = '';
+
+        // If nothing visible changed, skip the DOM swap entirely.
+        const signature = JSON.stringify({
+            agent: isAgentOnline,
+            peer: isPeerOnline,
+            rules: rules.map(r => [
+                r.id, r.order, r.enabled, r.active_on_agent, r.rule_name,
+                r.interface, r.src_ip, r.src_port, r.dst_ip, r.dst_port,
+                r.protocol, r.action, r.packets, r.bytes
+            ])
+        });
+        if (options.diffOnly && signature === lastRenderedSignature) {
+            return;
+        }
+        lastRenderedSignature = signature;
 
         if (rules.length === 0) {
             tbody.innerHTML = `
@@ -2057,6 +2222,11 @@
                 `;
             return;
         }
+
+        // Build all rows off-DOM, then swap in one shot so the table never
+        // appears empty mid-render.
+        const frag = document.createDocumentFragment();
+        const tbody_append_target = frag;
 
         rules.forEach(rule => {
             const tr = document.createElement('tr');
@@ -2109,6 +2279,12 @@
             tdComment.style.margin = '0 0 0 -136px';
             tdComment.innerHTML = `<span style="opacity: 0.9;margin: 13px;">${rule.rule_name}</span>`;
             tr.appendChild(tdComment);
+
+            // In Interface (LAN / VPN)
+            const tdInterface = document.createElement('td');
+            tdInterface.className = 'cell-interface';
+            tdInterface.innerHTML = `<span class="badge-ip">${(rule.interface || 'lan').toUpperCase()}</span>`;
+            tr.appendChild(tdInterface);
 
             // Sources
             const tdSources = document.createElement('td');
@@ -2226,8 +2402,11 @@
                 `;
             tr.appendChild(tdActions);
 
-            tbody.appendChild(tr);
+            tbody_append_target.appendChild(tr);
         });
+
+        // Atomic swap: clear + insert the fully-built fragment in one paint.
+        tbody.replaceChildren(frag);
 
         // Initialize Drag and Drop hooks
         initDragAndDrop();
@@ -2486,130 +2665,375 @@
     }
 
 
-    function validateAddressInput(value) {
-        if (!value) return true;
-        const parts = value.split(',').map(p => p.trim()).filter(Boolean);
-        if (parts.length === 0) return true;
+    // =========================================================================
+    // Real-Time Client-Side Validation Engine (FIREWALL_API Specification)
+    // =========================================================================
 
-        const hasAlias = parts.some(p => p.startsWith('@'));
-        if (hasAlias) {
-            if (parts.length > 1) {
-                throw new Error("Alias must be the only element (no mixing with other addresses)");
-            }
-            const alias = parts[0];
-            if (!alias.startsWith('@') || alias === '@') {
-                throw new Error(`Invalid alias format: ${alias}`);
-            }
-        } else {
-            // Regex for valid IPv4 or CIDR
-            const ipv4Regex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]|[1-2][0-9]|3[0-2]))?$/;
-            for (const part of parts) {
-                if (!ipv4Regex.test(part)) {
-                    throw new Error(`Invalid IPv4 address or CIDR: ${part}`);
-                }
-            }
+    function validateCommentInput(value) {
+        if (!value || typeof value !== 'string') return { valid: true };
+        if (value.length > 200) {
+            return { valid: false, error: 'Max 200 characters' };
         }
-        if (parts.length > 64) {
-            throw new Error("Maximum of 64 addresses allowed");
-        }
-        return true;
+        return { valid: true };
     }
 
-    function validatePortInput(value) {
-        if (!value) return true;
+    function validateAddressInput(value, fieldLabel = 'Address') {
+        if (!value || typeof value !== 'string') return { valid: true };
+        const trimmed = value.trim();
+        if (!trimmed) return { valid: true };
+
+        const parts = trimmed.split(',').map(p => p.trim()).filter(Boolean);
+        if (parts.length === 0) return { valid: true };
+
+        if (parts.length > 64) {
+            return { valid: false, error: 'Max 64 addresses' };
+        }
+
+        const aliasParts = parts.filter(p => p.startsWith('@'));
+        if (aliasParts.length > 0) {
+            if (parts.length > 1) {
+                return { valid: false, error: 'Cannot mix IPs and @alias' };
+            }
+            if (aliasParts.length > 1) {
+                return { valid: false, error: 'Only one alias allowed' };
+            }
+            const aliasRaw = parts[0];
+            let aliasName = aliasRaw.substring(1).trim();
+            if (!aliasName || aliasName === 'alias_') {
+                return { valid: false, error: 'Invalid alias' };
+            }
+            let searchName = aliasName.startsWith('alias_') ? aliasName.substring(6) : aliasName;
+            const matched = cachedAddressLists.find(l => l.name === searchName || l.slug === searchName || String(l.id) === String(searchName));
+            if (matched) {
+                if (matched.type === 'web_domain') {
+                    return { valid: false, error: 'Web Domain aliases not supported' };
+                }
+            }
+            return { valid: true, normalized: aliasRaw };
+        }
+
+        const seen = new Set();
+        const normalizedParts = [];
+        for (const part of parts) {
+            const ipv4Res = parseAndValidateIPv4(part, { requireMask: false, allowMask: true, normalizeSubnet: true });
+            if (!ipv4Res.valid) {
+                return ipv4Res;
+            }
+
+            const lowerVal = ipv4Res.normalized.toLowerCase();
+            if (seen.has(lowerVal)) {
+                return { valid: false, error: 'Duplicate address' };
+            }
+            seen.add(lowerVal);
+            normalizedParts.push(ipv4Res.normalized);
+        }
+
+        return { valid: true, normalized: normalizedParts.join(', ') };
+    }
+
+    function validatePortInput(value, fieldLabel = 'Port') {
+        if (!value || typeof value !== 'string') return { valid: true };
+        const trimmed = value.trim();
+        if (!trimmed) return { valid: true };
+
         if (/\s/.test(value)) {
-            throw new Error("Whitespace is not allowed in ports field");
+            return { valid: false, error: 'No spaces allowed' };
         }
         if (value.startsWith(',') || value.endsWith(',') || value.includes(',,')) {
-            throw new Error("Malformed port specification");
+            return { valid: false, error: 'Invalid port format' };
         }
+
         const parts = value.split(',');
         if (parts.length > 64) {
-            throw new Error("Maximum of 64 port elements allowed");
+            return { valid: false, error: 'Max 64 ports' };
         }
+
         const ranges = [];
         for (const part of parts) {
+            if (!part) {
+                return { valid: false, error: 'Invalid port' };
+            }
             if (part.includes('-')) {
                 const rangeParts = part.split('-');
-                if (rangeParts.length !== 2) {
-                    throw new Error(`Invalid range format: ${part}`);
+                if (rangeParts.length !== 2 || !rangeParts[0] || !rangeParts[1]) {
+                    return { valid: false, error: 'Invalid port range' };
                 }
-                const lo = parseInt(rangeParts[0]);
-                const hi = parseInt(rangeParts[1]);
-                if (isNaN(lo) || isNaN(hi) || lo < 1 || lo > 65535 || hi < 1 || hi > 65535) {
-                    throw new Error(`Ports must be between 1 and 65535: ${part}`);
+                if (!/^\d+$/.test(rangeParts[0]) || !/^\d+$/.test(rangeParts[1])) {
+                    return { valid: false, error: 'Invalid port range' };
                 }
-                if (lo >= hi) {
-                    throw new Error(`Port range start must be less than end: ${part}`);
+                const lo = parseInt(rangeParts[0], 10);
+                const hi = parseInt(rangeParts[1], 10);
+                if (lo < 1 || lo > 65535 || hi < 1 || hi > 65535 || lo >= hi) {
+                    return { valid: false, error: 'Invalid port range (1-65535)' };
                 }
-                ranges.push([lo, hi]);
+                ranges.push({ lo, hi, raw: part });
             } else {
-                const port = parseInt(part);
-                if (isNaN(port) || port < 1 || port > 65535) {
-                    throw new Error(`Invalid port: ${part}`);
+                if (!/^\d+$/.test(part)) {
+                    return { valid: false, error: 'Invalid port' };
                 }
-                ranges.push([port, port]);
+                const port = parseInt(part, 10);
+                if (port < 1 || port > 65535) {
+                    return { valid: false, error: 'Invalid port (1-65535)' };
+                }
+                ranges.push({ lo: port, hi: port, raw: part });
             }
         }
-        // Check for overlaps
+
+        // Check for overlaps and duplicates
         for (let i = 0; i < ranges.length; i++) {
             for (let j = i + 1; j < ranges.length; j++) {
                 const r1 = ranges[i];
                 const r2 = ranges[j];
-                if (Math.max(r1[0], r2[0]) <= Math.min(r1[1], r2[1])) {
-                    throw new Error(`Overlapping or duplicate elements: ${parts[i]} and ${parts[j]}`);
+                if (Math.max(r1.lo, r2.lo) <= Math.min(r1.hi, r2.hi)) {
+                    return { valid: false, error: 'Duplicate or overlapping port' };
                 }
             }
         }
-        return true;
+
+        return { valid: true };
     }
 
-    // Add Rule Form Submit
+    function setFieldError(inputId, errorMsg) {
+        const input = document.getElementById(inputId);
+        const errorDiv = document.getElementById(`${inputId}-error`);
+        const wrapper = document.getElementById(`${inputId}-wrapper`);
+
+        if (wrapper) {
+            wrapper.classList.add('is-invalid');
+        } else if (input) {
+            input.classList.add('is-invalid');
+        }
+
+        if (errorDiv) {
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${errorMsg}`;
+            errorDiv.style.display = 'flex';
+        }
+    }
+
+    function clearFieldError(inputId) {
+        const input = document.getElementById(inputId);
+        const errorDiv = document.getElementById(`${inputId}-error`);
+        const wrapper = document.getElementById(`${inputId}-wrapper`);
+
+        if (wrapper) {
+            wrapper.classList.remove('is-invalid');
+        }
+        if (input) {
+            input.classList.remove('is-invalid');
+        }
+        if (errorDiv) {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+        }
+    }
+
+    function clearAllFieldErrors() {
+        ['ruleName', 'srcIp', 'dstIp', 'srcPort', 'dstPort', 'ruleOrderCustomInput'].forEach(id => {
+            clearFieldError(id);
+        });
+    }
+
+    function initFirewallLiveValidation() {
+        const ruleName = document.getElementById('ruleName');
+        const charCounter = document.getElementById('ruleName-counter');
+        if (ruleName) {
+            ruleName.addEventListener('input', () => {
+                const len = ruleName.value.length;
+                if (charCounter) {
+                    charCounter.textContent = `${len} / 200`;
+                    charCounter.className = 'char-counter' + (len > 180 ? (len > 200 ? ' error' : ' warning') : '');
+                }
+                const res = validateCommentInput(ruleName.value);
+                if (!res.valid) {
+                    setFieldError('ruleName', res.error);
+                } else {
+                    clearFieldError('ruleName');
+                }
+            });
+        }
+
+        const srcIp = document.getElementById('srcIp');
+        if (srcIp) {
+            srcIp.addEventListener('input', () => {
+                const res = validateAddressInput(srcIp.value, 'Source Address');
+                if (!res.valid) {
+                    setFieldError('srcIp', res.error);
+                } else {
+                    clearFieldError('srcIp');
+                }
+            });
+        }
+
+        const dstIp = document.getElementById('dstIp');
+        if (dstIp) {
+            dstIp.addEventListener('input', () => {
+                const res = validateAddressInput(dstIp.value, 'Destination Address');
+                if (!res.valid) {
+                    setFieldError('dstIp', res.error);
+                } else {
+                    clearFieldError('dstIp');
+                }
+            });
+        }
+
+        const srcPort = document.getElementById('srcPort');
+        if (srcPort) {
+            srcPort.addEventListener('input', () => {
+                const protocol = document.getElementById('ruleProtocol').value;
+                if (protocol === 'any' || protocol === 'icmp') {
+                    clearFieldError('srcPort');
+                    return;
+                }
+                const res = validatePortInput(srcPort.value, 'Source Port');
+                if (!res.valid) {
+                    setFieldError('srcPort', res.error);
+                } else {
+                    clearFieldError('srcPort');
+                }
+            });
+        }
+
+        const dstPort = document.getElementById('dstPort');
+        if (dstPort) {
+            dstPort.addEventListener('input', () => {
+                const protocol = document.getElementById('ruleProtocol').value;
+                if (protocol === 'any' || protocol === 'icmp') {
+                    clearFieldError('dstPort');
+                    return;
+                }
+                const res = validatePortInput(dstPort.value, 'Destination Port');
+                if (!res.valid) {
+                    setFieldError('dstPort', res.error);
+                } else {
+                    clearFieldError('dstPort');
+                }
+            });
+        }
+
+        const customOrderInput = document.getElementById('ruleOrderCustomInput');
+        if (customOrderInput) {
+            customOrderInput.addEventListener('input', () => {
+                const val = parseInt(customOrderInput.value);
+                if (isNaN(val) || val < 1) {
+                    setFieldError('ruleOrderCustomInput', 'Order position must be at least 1.');
+                } else {
+                    clearFieldError('ruleOrderCustomInput');
+                }
+            });
+        }
+    }
+
+    // Add Rule Form Submit with Comprehensive Frontend Guard
     async function submitAddRule(e) {
         e.preventDefault();
+        clearAllFieldErrors();
+
         const btnSubmit = document.getElementById('btn-submit-rule');
-        btnSubmit.disabled = true;
 
         const rule_name = document.getElementById('ruleName').value.trim();
         const action = document.getElementById('ruleAction').value;
         const protocol = document.getElementById('ruleProtocol').value;
+        const iface = document.getElementById('ruleInterface').value;
         const src_ip = document.getElementById('srcIp').value.trim();
         const dst_ip = document.getElementById('dstIp').value.trim();
         const src_port = document.getElementById('srcPort').value.trim();
         const dst_port = document.getElementById('dstPort').value.trim();
 
-        try {
-            // Validate inputs
-            validateAddressInput(src_ip);
-            validateAddressInput(dst_ip);
-            if (protocol !== 'any' && protocol !== 'icmp') {
-                validatePortInput(src_port);
-                validatePortInput(dst_port);
-            } else {
-                if (src_port || dst_port) {
-                    throw new Error("Ports are not allowed with protocol ICMP or ANY");
-                }
+        let hasError = false;
+        let firstInvalidInputId = null;
+
+        // 1. Validate Comment / Name
+        const nameRes = validateCommentInput(rule_name);
+        if (!nameRes.valid) {
+            setFieldError('ruleName', nameRes.error);
+            hasError = true;
+            if (!firstInvalidInputId) firstInvalidInputId = 'ruleName';
+        }
+
+        // 2. Validate Source Address
+        const srcRes = validateAddressInput(src_ip, 'Source Address');
+        if (!srcRes.valid) {
+            setFieldError('srcIp', srcRes.error);
+            hasError = true;
+            if (!firstInvalidInputId) firstInvalidInputId = 'srcIp';
+        }
+
+        // 3. Validate Destination Address
+        const dstRes = validateAddressInput(dst_ip, 'Destination Address');
+        if (!dstRes.valid) {
+            setFieldError('dstIp', dstRes.error);
+            hasError = true;
+            if (!firstInvalidInputId) firstInvalidInputId = 'dstIp';
+        }
+
+        // 4. Validate Ports (only if protocol is not ICMP/ANY)
+        if (protocol !== 'any' && protocol !== 'icmp') {
+            const srcPortRes = validatePortInput(src_port, 'Source Port');
+            if (!srcPortRes.valid) {
+                setFieldError('srcPort', srcPortRes.error);
+                hasError = true;
+                if (!firstInvalidInputId) firstInvalidInputId = 'srcPort';
             }
 
+            const dstPortRes = validatePortInput(dst_port, 'Destination Port');
+            if (!dstPortRes.valid) {
+                setFieldError('dstPort', dstPortRes.error);
+                hasError = true;
+                if (!firstInvalidInputId) firstInvalidInputId = 'dstPort';
+            }
+        } else {
+            if (src_port || dst_port) {
+                setFieldError('srcPort', 'Ports are not allowed with protocol ICMP or ANY');
+                setFieldError('dstPort', 'Ports are not allowed with protocol ICMP or ANY');
+                hasError = true;
+                if (!firstInvalidInputId) firstInvalidInputId = 'srcPort';
+            }
+        }
+
+        // 5. Validate Custom Order
+        const radioElem = document.querySelector('input[name="ruleOrderRadio"]:checked');
+        const selectVal = radioElem ? radioElem.value : 'bottom';
+        if (selectVal === 'custom' && editingRuleId === null) {
+            const customOrderVal = parseInt(document.getElementById('ruleOrderCustomInput').value);
+            if (isNaN(customOrderVal) || customOrderVal < 1) {
+                setFieldError('ruleOrderCustomInput', 'Please enter a valid order number (1 or higher).');
+                hasError = true;
+                if (!firstInvalidInputId) firstInvalidInputId = 'ruleOrderCustomInput';
+            }
+        }
+
+        if (hasError) {
+            if (firstInvalidInputId) {
+                const el = document.getElementById(firstInvalidInputId);
+                if (el) el.focus();
+            }
+            return;
+        }
+
+        btnSubmit.disabled = true;
+
+        try {
             let url = `/api/peers/${peerId}/firewall/rules`;
             let method = 'POST';
+
+            const normalizedSrc = (srcRes && srcRes.normalized !== undefined) ? srcRes.normalized : src_ip;
+            const normalizedDst = (dstRes && dstRes.normalized !== undefined) ? dstRes.normalized : dst_ip;
 
             const payload = {
                 rule_name,
                 action,
                 protocol,
-                src_ip: resolveAliasNamesToIds(src_ip) || null,
-                dst_ip: resolveAliasNamesToIds(dst_ip) || null,
-                src_port: src_port || null,
-                dst_port: dst_port || null
+                interface: iface,
+                src_ip: resolveAliasNamesToIds(normalizedSrc) || null,
+                dst_ip: resolveAliasNamesToIds(normalizedDst) || null,
+                src_port: (protocol === 'any' || protocol === 'icmp') ? null : (src_port || null),
+                dst_port: (protocol === 'any' || protocol === 'icmp') ? null : (dst_port || null)
             };
 
             if (editingRuleId !== null) {
                 url = `/api/peers/${peerId}/firewall/rules/${editingRuleId}`;
                 method = 'PUT';
             } else {
-                const radioElem = document.querySelector('input[name="ruleOrderRadio"]:checked');
-                const selectVal = radioElem ? radioElem.value : 'bottom';
                 let orderVal = selectVal;
                 if (selectVal === 'custom') {
                     orderVal = document.getElementById('ruleOrderCustomInput').value.trim();
@@ -2974,6 +3398,7 @@
     // Render Aliases Table
     function renderAddressListsTable(lists) {
         const tbody = document.getElementById('lists-tbody');
+        if (!tbody) return;   // Aliases tab table not present on this page
         tbody.innerHTML = '';
 
         if (lists.length === 0) {
@@ -3221,10 +3646,10 @@
                         comment: addrComment
                     });
                 } else {
-                    const ipv4Pattern = /^([0-9]{1,3}\.){3}[0-9]{1,3}(\/([0-9]|[1-2][0-9]|3[0-2]))?$/;
-                    if (ipv4Pattern.test(val)) {
+                    if (/^[0-9]/.test(val[0])) {
+                        const ipv4Res = parseAndValidateIPv4(val, { requireMask: false, allowMask: true, normalizeSubnet: true });
                         entries.push({
-                            address: val,
+                            address: ipv4Res.valid ? ipv4Res.normalized : val,
                             comment: addrComment
                         });
                     } else {
@@ -3238,7 +3663,7 @@
         }
 
         if (entries.length === 0) {
-            alert("Please add at least one address, subnet or hostname.");
+            alert("At least 1 item required");
             btnSubmit.disabled = false;
             return;
         }
@@ -3256,7 +3681,7 @@
                     });
                     if (!patchResp.ok) {
                         const data = await patchResp.json();
-                        throw new Error(data.message || data.error || data.detail || 'Failed to update alias properties');
+                        throw new Error(data.message || data.error || data.detail || 'Failed to save');
                     }
 
                     // 2. Update address list via PUT
@@ -3267,11 +3692,12 @@
                     });
                     if (!putResp.ok) {
                         const data = await putResp.json();
-                        throw new Error(data.message || data.error || data.detail || 'Failed to update alias address list');
+                        throw new Error(data.message || data.error || data.detail || 'Failed to save');
                     }
 
                     closeListModal();
                     fetchAddressLists();
+                    alert("Saved successfully");
                 } catch (err) {
                     showFriendlyError(err);
                 } finally {
@@ -3292,10 +3718,11 @@
                     });
                     const data = await response.json();
                     if (!response.ok) {
-                        throw new Error(data.message || data.error || data.detail || 'Failed to update alias');
+                        throw new Error(data.message || data.error || data.detail || 'Failed to save');
                     }
                     closeListModal();
                     fetchAddressLists();
+                    alert("Saved successfully");
                 } catch (err) {
                     showFriendlyError(err);
                 } finally {
@@ -3323,11 +3750,12 @@
 
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.message || data.error || data.detail || 'Failed to save alias');
+                throw new Error(data.message || data.error || data.detail || 'Failed to save');
             }
 
             closeListModal();
             fetchAddressLists();
+            alert("Saved successfully");
         } catch (err) {
             showFriendlyError(err);
         } finally {
@@ -3337,7 +3765,7 @@
 
     // Delete Alias
     async function deleteAddressList(slug) {
-        if (!confirm(`Are you sure you want to delete the alias "${slug}" permanently?`)) {
+        if (!confirm(`Delete alias "${slug}"?`)) {
             return;
         }
 
@@ -3348,12 +3776,13 @@
 
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.message || data.error || data.detail || 'Failed to delete alias');
+                throw new Error(data.message || data.error || data.detail || 'Failed to delete');
             }
 
             fetchAddressLists();
+            alert("Deleted successfully");
         } catch (err) {
-            showFriendlyError(err, "Delete Error");
+            showFriendlyError(err);
         }
     }
 
@@ -3369,13 +3798,13 @@
 
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.message || data.error || data.detail || 'Failed to synchronize address lists');
+                throw new Error(data.message || data.error || data.detail || 'Failed to sync');
             }
 
-            alert(`Sync Success: ${data.message || 'Address lists synchronized successfully.'}`);
+            alert("Synced successfully");
             fetchAddressLists();
         } catch (err) {
-            showFriendlyError(err, "Sync Error");
+            showFriendlyError(err);
         } finally {
             btnSync.disabled = false;
         }
@@ -3674,6 +4103,7 @@
         const targetInput = document.getElementById(activeMultiInputId);
         if (targetInput) {
             targetInput.value = addresses.join(', ');
+            targetInput.dispatchEvent(new Event('input'));
             targetInput.dispatchEvent(new Event('change'));
         }
 
@@ -3791,8 +4221,21 @@
         for (let i = 0; i < domainInputs.length; i++) {
             const domain = domainInputs[i].value.trim();
             const dnsIp = dnsInputs[i].value.trim();
-            if (domain && dnsIp) {
-                localUpstreams.push(`[/${domain}/]${dnsIp}`);
+            if (domain || dnsIp) {
+                if (!domain) {
+                    alert('Domain is required');
+                    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Save Changes'; }
+                    domainInputs[i].focus();
+                    return;
+                }
+                const dnsRes = parseAndValidateIPv4(dnsIp, { requireMask: false, allowMask: false });
+                if (!dnsRes.valid) {
+                    alert(`Resolver IP: ${dnsRes.error}`);
+                    if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = 'Save Changes'; }
+                    dnsInputs[i].focus();
+                    return;
+                }
+                localUpstreams.push(`[/${domain}/]${dnsRes.normalized || dnsIp}`);
             }
         }
 
@@ -3817,11 +4260,11 @@
                 throw new Error(data.detail || data.error || 'Failed to save resolver config');
             }
 
-            alert("Resolver settings saved and applied successfully!");
+            alert("Saved successfully");
             await fetchResolverConfig();
             closeResolverModal();
         } catch (err) {
-            showFriendlyError(err, "Resolver Settings Error");
+            showFriendlyError(err);
         } finally {
             if (btnSubmit) {
                 btnSubmit.disabled = false;

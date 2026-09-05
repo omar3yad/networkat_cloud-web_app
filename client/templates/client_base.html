@@ -149,6 +149,164 @@
             text-align: center;
         }
 
+        /* Collapsible Peer Nav Group */
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .nav-item-collapsible {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            color: var(--sb-text-muted);
+            border-radius: 10px;
+            transition: var(--nk-transition);
+        }
+
+        .nav-item-collapsible:hover {
+            color: var(--sb-text-light);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-item-collapsible.active {
+            color: var(--sb-text-light);
+            background-color: var(--sb-accent-blue);
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+        }
+
+        .nav-item-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: inherit;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.05rem;
+            flex-grow: 1;
+        }
+
+        .submenu-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            color: inherit;
+            opacity: 0.8;
+            cursor: pointer;
+            transition: transform 0.25s ease, background-color 0.2s ease;
+        }
+
+        .submenu-arrow:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            opacity: 1;
+        }
+
+        .nav-group.open .submenu-arrow i {
+            transform: rotate(180deg);
+        }
+
+        /* Sidebar Submenu */
+        .sidebar-submenu {
+            display: none;
+            flex-direction: column;
+            gap: 3px;
+            padding-left: 18px;
+            padding-right: 4px;
+            margin-top: 2px;
+            margin-bottom: 4px;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .sidebar-submenu::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar-submenu::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .nav-group.open .sidebar-submenu {
+            display: flex;
+        }
+
+        .submenu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            color: var(--sb-text-muted);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: var(--nk-transition);
+            background: #0a3654;
+        }
+
+        .submenu-item:hover:not(.disabled) {
+            color: var(--sb-text-light);
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .submenu-item.active {
+            color: #ffffff;
+            background-color: rgba(2, 132, 199, 0.3);
+            border: 3px solid #38bdf896;
+            font-weight: 700;
+        }
+
+        .submenu-item.disabled {
+            /* opacity: 0.45; */
+            cursor: not-allowed;
+            user-select: none;
+        }
+
+        .submenu-label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+        }
+
+        .peer-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .peer-status-dot.online {
+            background-color: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+        }
+
+        .peer-status-dot.offline {
+            background-color: #64748b;
+        }
+
+        .offline-tag {
+            font-size: 0.65rem;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--sb-text-muted);
+            font-weight: 600;
+        }
+
+        .submenu-empty {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            color: var(--sb-text-muted);
+            font-style: italic;
+        }
+
         /* Sidebar Footer Details */
         .sidebar-footer {
             padding: 20px 16px;
@@ -297,6 +455,295 @@
                 transform: translateX(-3px);
             }
         }
+
+        /* ==========================================================================
+           Networkat Custom Toast & Alert Notification System
+           ========================================================================== */
+        #nk-toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 420px;
+            width: calc(100vw - 48px);
+            pointer-events: none;
+        }
+
+        .nk-toast {
+            pointer-events: auto;
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            box-shadow: 0 14px 30px -4px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.06);
+            border: 1px solid var(--nk-border);
+            position: relative;
+            overflow: hidden;
+            transform: translateX(120%);
+            opacity: 0;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(8px);
+        }
+
+        .nk-toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .nk-toast.hide {
+            transform: translateX(120%);
+            opacity: 0;
+        }
+
+        .nk-toast-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .nk-toast-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding-top: 2px;
+        }
+
+        .nk-toast-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--nk-navy);
+            line-height: 1.2;
+        }
+
+        .nk-toast-msg {
+            font-size: 0.82rem;
+            color: var(--nk-text-muted);
+            font-weight: 500;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .nk-toast-close {
+            background: transparent;
+            border: none;
+            color: var(--nk-text-muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 4px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--nk-transition);
+            flex-shrink: 0;
+        }
+
+        .nk-toast-close:hover {
+            color: var(--nk-navy);
+            background: #f1f5f9;
+        }
+
+        .nk-toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            width: 100%;
+            transform-origin: left;
+            animation: toastProgress linear forwards;
+        }
+
+        @keyframes toastProgress {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
+
+        /* Toast Color Themes */
+        .nk-toast.toast-success {
+            border-left: 4px solid #10b981;
+        }
+        .nk-toast.toast-success .nk-toast-icon {
+            background: #ecfdf5;
+            color: #10b981;
+        }
+        .nk-toast.toast-success .nk-toast-progress {
+            background: #10b981;
+        }
+
+        .nk-toast.toast-error {
+            border-left: 4px solid #ef4444;
+        }
+        .nk-toast.toast-error .nk-toast-icon {
+            background: #fef2f2;
+            color: #ef4444;
+        }
+        .nk-toast.toast-error .nk-toast-progress {
+            background: #ef4444;
+        }
+
+        .nk-toast.toast-warning {
+            border-left: 4px solid #f59e0b;
+        }
+        .nk-toast.toast-warning .nk-toast-icon {
+            background: #fffbeb;
+            color: #f59e0b;
+        }
+        .nk-toast.toast-warning .nk-toast-progress {
+            background: #f59e0b;
+        }
+
+        .nk-toast.toast-info {
+            border-left: 4px solid #0284c7;
+        }
+        .nk-toast.toast-info .nk-toast-icon {
+            background: #f0f9ff;
+            color: #0284c7;
+        }
+        .nk-toast.toast-info .nk-toast-progress {
+            background: #0284c7;
+        }
+
+        /* ==========================================================================
+           Networkat Custom Alert & Confirmation Modal
+           ========================================================================== */
+        #nk-alert-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(6px);
+            z-index: 9999999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            opacity: 0;
+            transition: opacity 0.25s ease-in-out;
+        }
+
+        #nk-alert-backdrop.show {
+            opacity: 1;
+        }
+
+        .nk-alert-modal-card {
+            background: #ffffff;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+            border: 1px solid var(--nk-border);
+            overflow: hidden;
+            transform: scale(0.92);
+            opacity: 0;
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease-in-out;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #nk-alert-backdrop.show .nk-alert-modal-card {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .nk-alert-body {
+            padding: 2rem 1.75rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .nk-alert-icon-wrap {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .nk-alert-icon-wrap.success { background: #d1fae5; color: #059669; }
+        .nk-alert-icon-wrap.error { background: #fee2e2; color: #dc2626; }
+        .nk-alert-icon-wrap.warning { background: #fef3c7; color: #d97706; }
+        .nk-alert-icon-wrap.info { background: #e0f2fe; color: #0284c7; }
+
+        .nk-alert-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--nk-navy);
+            letter-spacing: -0.25px;
+            margin: 0;
+        }
+
+        .nk-alert-message {
+            font-size: 0.92rem;
+            color: var(--nk-text-muted);
+            line-height: 1.5;
+            font-weight: 500;
+            margin: 0;
+            word-break: break-word;
+        }
+
+        .nk-alert-footer {
+            padding: 1.25rem 1.75rem 1.75rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            background: #fafbfc;
+            border-top: 1px solid var(--nk-border);
+        }
+
+        .nk-alert-btn {
+            padding: 0.65rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: var(--nk-transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-width: 110px;
+        }
+
+        .nk-alert-btn-primary {
+            background: var(--nk-blue-primary);
+            color: #ffffff;
+        }
+
+        .nk-alert-btn-primary:hover {
+            background: #0369a1;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+        }
+
+        .nk-alert-btn-secondary {
+            background: #ffffff;
+            border-color: var(--nk-border);
+            color: var(--nk-text-muted);
+        }
+
+        .nk-alert-btn-secondary:hover {
+            background: #f1f5f9;
+            color: var(--nk-navy);
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -318,11 +765,53 @@
                     <i class="fas fa-chart-line nav-icon"></i>
                     <span class="nav-label">Dashboard</span>
                 </a>
-                <a href="{{ url_for('client.peers_page') }}" class="nav-item {% if request.endpoint == 'client.peers_page' or 'peer_' in request.endpoint or 'filtering' in request.endpoint or 'firewall' in request.endpoint %}active{% endif %}">
-                    <i class="fas fa-desktop nav-icon"></i>
-                    <span class="nav-label">Peer Devices</span>
-                </a>
-                <a href="{{ url_for('client.aliases_page') }}" class="nav-item {% if request.endpoint == 'client.aliases_page' %}active{% endif %}">
+
+                <!-- Peer Devices Collapsible Group -->
+                <div class="nav-group open" id="nav-group-peers">
+                    <div class="nav-item-collapsible {% if request.endpoint == 'client.peers_page' or 'peer_' in request.endpoint or 'filtering' in request.endpoint or 'firewall' in request.endpoint or 'aliases' in request.endpoint %}active{% endif %}">
+                        <a href="{{ url_for('client.peers_page') }}" class="nav-item-link">
+                            <i class="fas fa-desktop nav-icon"></i>
+                            <span class="nav-label">Peer Devices</span>
+                        </a>
+                        <span class="submenu-arrow" onclick="togglePeerSubmenu(event)" title="Toggle Peers">
+                            <i class="fas fa-chevron-down"></i>
+                        </span>
+                    </div>
+
+                    <!-- Submenu with User Peers -->
+                    <div class="sidebar-submenu" id="peer-submenu">
+                        {% if sidebar_peers %}
+                            {% for p in sidebar_peers %}
+                                {% set is_current_peer = (peer_id is defined and peer_id == p.id) or (selected_peer_id is defined and selected_peer_id == p.id) %}
+                                {% if p.connected %}
+                                    {% if request.endpoint == 'client.peer_web_filter' %}
+                                        {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}
+                                    {% elif request.endpoint == 'client.peer_firewall' %}
+                                        {% set target_url = url_for('client.peer_firewall', peer_id=p.id) %}
+                                    {% elif request.endpoint in ['client.peer_aliases', 'client.aliases_page'] %}
+                                        {% set target_url = url_for('client.peer_aliases', peer_id=p.id) %}
+                                    {% else %}
+                                        {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
+                                    {% endif %}
+                                    <a href="{{ target_url }}" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }}">
+                                        <span class="peer-status-dot online"></span>
+                                        <span class="submenu-label">{{ p.name }}</span>
+                                    </a>
+                                {% else %}
+                                    <div class="submenu-item disabled" title="{{ p.name }} (Offline)">
+                                        <span class="peer-status-dot offline"></span>
+                                        <span class="submenu-label">{{ p.name }}</span>
+                                        <span class="offline-tag">Offline</span>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <div class="submenu-empty">No devices available</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <a href="{{ url_for('client.aliases_page') }}" class="nav-item {% if request.endpoint == 'client.aliases_page' and not (peer_id or selected_peer_id) %}active{% endif %}">
                     <i class="fas fa-list nav-icon"></i>
                     <span class="nav-label">Aliases</span>
                 </a>
@@ -364,6 +853,25 @@
         </div>
     </div>
 
+    <!-- Global Toast Container -->
+    <div id="nk-toast-container"></div>
+
+    <!-- Global Alert & Confirmation Modal Backdrop -->
+    <div id="nk-alert-backdrop">
+        <div class="nk-alert-modal-card">
+            <div class="nk-alert-body">
+                <div class="nk-alert-icon-wrap" id="nk-alert-icon-wrap">
+                    <i class="fas fa-info-circle" id="nk-alert-icon"></i>
+                </div>
+                <h3 class="nk-alert-title" id="nk-alert-title">Notification</h3>
+                <p class="nk-alert-message" id="nk-alert-message"></p>
+            </div>
+            <div class="nk-alert-footer" id="nk-alert-footer">
+                <button class="nk-alert-btn nk-alert-btn-primary" id="nk-alert-btn-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('app-sidebar');
@@ -376,6 +884,338 @@
                 overlay.classList.add('active');
             }
         }
+
+        function togglePeerSubmenu(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const group = document.getElementById('nav-group-peers');
+            if (group) {
+                group.classList.toggle('open');
+            }
+        }
+
+        // ==========================================================================
+        // Networkat Custom Toast & Alert Notification System
+        // ==========================================================================
+
+        function showToast(message, type = 'info', duration = 4000) {
+            let container = document.getElementById('nk-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'nk-toast-container';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `nk-toast toast-${type}`;
+
+            let iconClass = 'fa-info-circle';
+            let defaultTitle = 'Information';
+            if (type === 'success') {
+                iconClass = 'fa-check-circle';
+                defaultTitle = 'Success';
+            } else if (type === 'error') {
+                iconClass = 'fa-exclamation-circle';
+                defaultTitle = 'Error';
+            } else if (type === 'warning') {
+                iconClass = 'fa-exclamation-triangle';
+                defaultTitle = 'Warning';
+            }
+
+            toast.innerHTML = `
+                <div class="nk-toast-icon">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <div class="nk-toast-content">
+                    <span class="nk-toast-title">${defaultTitle}</span>
+                    <span class="nk-toast-msg">${message}</span>
+                </div>
+                <button type="button" class="nk-toast-close" onclick="dismissToast(this.parentElement)" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="nk-toast-progress" style="animation-duration: ${duration}ms;"></div>
+            `;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            let autoDismissTimer = setTimeout(() => {
+                dismissToast(toast);
+            }, duration);
+
+            toast.addEventListener('mouseenter', () => {
+                const prog = toast.querySelector('.nk-toast-progress');
+                if (prog) prog.style.animationPlayState = 'paused';
+                clearTimeout(autoDismissTimer);
+            });
+
+            toast.addEventListener('mouseleave', () => {
+                const prog = toast.querySelector('.nk-toast-progress');
+                if (prog) prog.style.animationPlayState = 'running';
+                autoDismissTimer = setTimeout(() => {
+                    dismissToast(toast);
+                }, 1500);
+            });
+        }
+
+        function dismissToast(toast) {
+            if (!toast || toast.classList.contains('hide')) return;
+            toast.classList.remove('show');
+            toast.classList.add('hide');
+            setTimeout(() => {
+                if (toast.parentElement) toast.remove();
+            }, 350);
+        }
+
+        // Global Alert Dialog (Modal format with OK button)
+        function nkAlert(message, type = 'info', title = null) {
+            return new Promise((resolve) => {
+                const backdrop = document.getElementById('nk-alert-backdrop');
+                const iconWrap = document.getElementById('nk-alert-icon-wrap');
+                const icon = document.getElementById('nk-alert-icon');
+                const titleEl = document.getElementById('nk-alert-title');
+                const msgEl = document.getElementById('nk-alert-message');
+                const footer = document.getElementById('nk-alert-footer');
+
+                iconWrap.className = `nk-alert-icon-wrap ${type}`;
+                let defaultTitle = 'Notification';
+                if (type === 'success') {
+                    icon.className = 'fas fa-check-circle';
+                    defaultTitle = 'Success';
+                } else if (type === 'error') {
+                    icon.className = 'fas fa-exclamation-circle';
+                    defaultTitle = 'Error';
+                } else if (type === 'warning') {
+                    icon.className = 'fas fa-exclamation-triangle';
+                    defaultTitle = 'Warning';
+                } else {
+                    icon.className = 'fas fa-info-circle';
+                }
+
+                titleEl.textContent = title || defaultTitle;
+                msgEl.textContent = message;
+
+                footer.innerHTML = `<button class="nk-alert-btn nk-alert-btn-primary" id="nk-alert-btn-ok">OK</button>`;
+                const okBtn = document.getElementById('nk-alert-btn-ok');
+
+                backdrop.style.display = 'flex';
+                requestAnimationFrame(() => {
+                    backdrop.classList.add('show');
+                    if (okBtn) okBtn.focus();
+                });
+
+                function cleanup() {
+                    backdrop.classList.remove('show');
+                    setTimeout(() => {
+                        backdrop.style.display = 'none';
+                        resolve();
+                    }, 250);
+                }
+
+                okBtn.onclick = cleanup;
+                backdrop.onclick = (e) => {
+                    if (e.target === backdrop) cleanup();
+                };
+            });
+        }
+
+        // Global Confirm Dialog (Modal with Cancel / Confirm buttons)
+        function nkConfirm(message, title = 'Are you sure?') {
+            return new Promise((resolve) => {
+                const backdrop = document.getElementById('nk-alert-backdrop');
+                const iconWrap = document.getElementById('nk-alert-icon-wrap');
+                const icon = document.getElementById('nk-alert-icon');
+                const titleEl = document.getElementById('nk-alert-title');
+                const msgEl = document.getElementById('nk-alert-message');
+                const footer = document.getElementById('nk-alert-footer');
+
+                iconWrap.className = 'nk-alert-icon-wrap warning';
+                icon.className = 'fas fa-question-circle';
+                titleEl.textContent = title;
+                msgEl.textContent = message;
+
+                footer.innerHTML = `
+                    <button class="nk-alert-btn nk-alert-btn-secondary" id="nk-alert-btn-cancel">Cancel</button>
+                    <button class="nk-alert-btn nk-alert-btn-primary" id="nk-alert-btn-confirm" style="background: #dc2626;">Confirm</button>
+                `;
+
+                const cancelBtn = document.getElementById('nk-alert-btn-cancel');
+                const confirmBtn = document.getElementById('nk-alert-btn-confirm');
+
+                backdrop.style.display = 'flex';
+                requestAnimationFrame(() => {
+                    backdrop.classList.add('show');
+                    if (confirmBtn) confirmBtn.focus();
+                });
+
+                function cleanup(result) {
+                    backdrop.classList.remove('show');
+                    setTimeout(() => {
+                        backdrop.style.display = 'none';
+                        resolve(result);
+                    }, 250);
+                }
+
+                cancelBtn.onclick = () => cleanup(false);
+                confirmBtn.onclick = () => cleanup(true);
+                backdrop.onclick = (e) => {
+                    if (e.target === backdrop) cleanup(false);
+                };
+            });
+        }
+
+        // =========================================================================
+        // Global IPv4 and Subnet Validation & Normalization Engine
+        // =========================================================================
+        function parseAndValidateIPv4(input, options = {}) {
+            const {
+                requireMask = false,
+                allowMask = true,
+                normalizeSubnet = true
+            } = options;
+
+            if (!input || typeof input !== 'string') {
+                return { valid: false, error: 'Required' };
+            }
+
+            const trimmed = input.trim();
+            if (!trimmed) {
+                return { valid: false, error: 'Required' };
+            }
+
+            if (trimmed.includes(':')) {
+                return { valid: false, error: 'Only IPv4 supported' };
+            }
+
+            const slashCount = (trimmed.match(/\//g) || []).length;
+            if (slashCount > 1) {
+                return { valid: false, error: 'Invalid format (multiple /)' };
+            }
+
+            let ipStr = trimmed;
+            let maskStr = undefined;
+
+            if (slashCount === 1) {
+                if (!allowMask) {
+                    return { valid: false, error: 'Subnet mask not allowed here' };
+                }
+                const parts = trimmed.split('/');
+                ipStr = parts[0];
+                maskStr = parts[1];
+            } else if (requireMask) {
+                return { valid: false, error: 'Subnet mask required (e.g. /24)' };
+            }
+
+            // Validate IP part
+            const octets = ipStr.split('.');
+            if (octets.length !== 4) {
+                return { valid: false, error: 'Must contain 4 octets (x.x.x.x)' };
+            }
+
+            const parsedNums = [];
+            for (let i = 0; i < 4; i++) {
+                const octet = octets[i];
+                if (!octet || !/^\d+$/.test(octet)) {
+                    return { valid: false, error: `Octet ${i + 1} (${octet || 'empty'}) is invalid` };
+                }
+                if (octet.length > 1 && octet.startsWith('0')) {
+                    return { valid: false, error: `Octet ${i + 1} (${octet}) has invalid leading zero` };
+                }
+                const num = parseInt(octet, 10);
+                if (num < 0 || num > 255) {
+                    return { valid: false, error: `Octet ${i + 1} (${octet}) must be 0-255` };
+                }
+                parsedNums.push(num);
+            }
+
+            // Validate Mask part if present
+            let prefix = null;
+            if (maskStr !== undefined) {
+                if (!maskStr || !/^\d+$/.test(maskStr)) {
+                    return { valid: false, error: `Invalid subnet mask /${maskStr || ''}` };
+                }
+                if (maskStr.length > 1 && maskStr.startsWith('0')) {
+                    return { valid: false, error: `Subnet mask /${maskStr} has invalid leading zero` };
+                }
+                prefix = parseInt(maskStr, 10);
+                if (prefix < 0 || prefix > 32) {
+                    return { valid: false, error: `Subnet mask /${maskStr} must be 0-32` };
+                }
+            }
+
+            // Calculate unsigned 32-bit integer for IP
+            const ip32 = ((parsedNums[0] << 24) >>> 0) +
+                         ((parsedNums[1] << 16) >>> 0) +
+                         ((parsedNums[2] << 8) >>> 0) +
+                         (parsedNums[3] >>> 0);
+
+            let networkIp = ipStr;
+            let wasAdjusted = false;
+
+            if (prefix !== null && normalizeSubnet) {
+                let netmask32 = 0;
+                if (prefix === 0) {
+                    netmask32 = 0;
+                } else {
+                    netmask32 = (0xFFFFFFFF << (32 - prefix)) >>> 0;
+                }
+
+                const net32 = (ip32 & netmask32) >>> 0;
+                const net0 = (net32 >>> 24) & 255;
+                const net1 = (net32 >>> 16) & 255;
+                const net2 = (net32 >>> 8) & 255;
+                const net3 = net32 & 255;
+                networkIp = `${net0}.${net1}.${net2}.${net3}`;
+                wasAdjusted = (networkIp !== ipStr);
+            }
+
+            const normalized = (prefix !== null) ? `${networkIp}/${prefix}` : ipStr;
+
+            return {
+                valid: true,
+                raw: trimmed,
+                ip: ipStr,
+                prefix: prefix,
+                hasMask: prefix !== null,
+                networkIp: networkIp,
+                normalized: normalized,
+                wasAdjusted: wasAdjusted
+            };
+        }
+
+        // Expose global methods
+        window.parseAndValidateIPv4 = parseAndValidateIPv4;
+        window.validateAndNormalizeIPv4 = parseAndValidateIPv4;
+        window.showToast = showToast;
+        window.showSuccess = (msg, dur) => showToast(msg, 'success', dur);
+        window.showError = (msg, dur) => showToast(msg, 'error', dur || 5000);
+        window.showWarning = (msg, dur) => showToast(msg, 'warning', dur || 4500);
+        window.showInfo = (msg, dur) => showToast(msg, 'info', dur);
+        window.nkAlert = nkAlert;
+        window.nkConfirm = nkConfirm;
+
+        // Global Smart Override for window.alert
+        window.alert = function (message) {
+            if (!message && message !== 0) return;
+            const msgStr = String(message);
+            const lower = msgStr.toLowerCase();
+
+            let type = 'info';
+            if (lower.includes('success') || lower.includes('saved') || lower.includes('updated') || lower.includes('applied') || lower.includes('نجاح') || lower.includes('تم')) {
+                type = 'success';
+            } else if (lower.includes('error') || lower.includes('failed') || lower.includes('fail') || lower.includes('could not') || lower.includes('cannot') || lower.includes('invalid') || lower.includes('فشل') || lower.includes('خطأ')) {
+                type = 'error';
+            } else if (lower.includes('warning') || lower.includes('please') || lower.includes('required') || lower.includes('يرجى') || lower.includes('تنبيه')) {
+                type = 'warning';
+            }
+
+            showToast(msgStr, type, type === 'error' ? 5500 : 4000);
+        };
     </script>
 </body>
 

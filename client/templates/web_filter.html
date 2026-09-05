@@ -26,6 +26,8 @@
         --success-color: #10b981;
         --danger-color: #ef4444;
         --warning-color: #f59e0b;
+
+        --nk-blocked-badge: #dc2626;
     }
 
     /* Floating Bulk Actions Bar */
@@ -208,10 +210,10 @@
 
     /* Container */
     .filter-container {
-        padding: 2rem;
         max-width: 1400px;
-        margin: 0 auto;
-        min-height: 80vh;
+        margin: 2rem auto;
+        padding: 0 1.5rem;
+        width: 100%;
     }
 
     .back-link {
@@ -290,16 +292,44 @@
         font-weight: 500;
     }
 
-    /* Gateway Tabs */
-    .gateway-tabs {
+    /* Unified Page Header */
+    .unified-page-header {
         display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 1.75rem;
         border-bottom: 1px solid var(--nk-border);
-        margin-bottom: 1.5rem;
-        gap: 0.5rem;
+        padding-bottom: 0;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
-    .tab-item {
-        padding: 0.75rem 1.5rem;
+    .unified-page-header h1 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -0.75px;
+        color: var(--nk-navy);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        line-height: 1.2;
+    }
+
+    .unified-page-header h1 i {
+        color: var(--nk-blue-primary);
+        margin-right: 12px;
+        font-size: 1.9rem;
+    }
+
+    /* Peer Feature Nav Tabs */
+    .peer-nav-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: -1px;
+    }
+
+    .peer-nav-tab {
+        padding: 0.75rem 1.25rem;
         font-size: 0.95rem;
         font-weight: 600;
         color: var(--nk-text-muted);
@@ -309,16 +339,18 @@
         align-items: center;
         gap: 0.5rem;
         transition: var(--nk-transition);
+        text-decoration: none;
         user-select: none;
     }
 
-    .tab-item:hover {
+    .peer-nav-tab:hover {
         color: var(--nk-blue-primary);
     }
 
-    .tab-item.active {
+    .peer-nav-tab.active {
         color: var(--nk-blue-primary);
         border-bottom-color: var(--nk-blue-primary);
+        font-weight: 700;
     }
 
     /* Control bar */
@@ -363,11 +395,13 @@
     .search-box {
         position: relative;
         min-width: 260px;
+        max-width: 300px;
     }
 
     .search-box input {
         width: 100%;
-        padding: 0.55rem 1rem 0.55rem 2.25rem;
+        height: 36px;
+        padding: 0.5rem 1rem 0.5rem 2.25rem;
         border: 1px solid var(--nk-border);
         border-radius: var(--nk-radius-sm);
         font-size: 0.88rem;
@@ -631,7 +665,7 @@
     }
 
     input:checked + .slider {
-        background-color: var(--nk-blue-primary);
+        background-color: var(--nk-blocked-badge);
     }
 
     input:checked + .slider:before {
@@ -786,6 +820,54 @@
         font-size: 0.78rem;
         color: var(--nk-text-muted);
         margin-top: 2px;
+    }
+
+    /* Form validation styling */
+    .form-group input.is-invalid,
+    .form-group select.is-invalid,
+    .input-dropdown-wrapper.is-invalid,
+    .alias-entry-row input.is-invalid {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+    }
+
+    .form-group input.is-invalid:focus,
+    .input-dropdown-wrapper.is-invalid input:focus,
+    .alias-entry-row input.is-invalid:focus {
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+    }
+
+    .field-error-msg {
+        color: #dc2626;
+        font-size: 0.76rem;
+        font-weight: 600;
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        line-height: 1.25;
+        animation: fadeInError 0.2s ease-in-out;
+    }
+
+    .char-counter {
+        font-size: 0.72rem;
+        color: var(--nk-text-muted);
+        font-weight: 600;
+        float: right;
+    }
+
+    .char-counter.warning {
+        color: #b45309;
+    }
+
+    .char-counter.error {
+        color: #dc2626;
+    }
+
+    @keyframes fadeInError {
+        from { opacity: 0; transform: translateY(-2px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     /* Custom Input Dropdown Wrapper & Trigger Buttons (Identical to Firewall) */
@@ -948,10 +1030,28 @@
         background: #f0f9ff;
     }
 
+    .domain-choice-item input[type="radio"],
     .domain-choice-item input[type="checkbox"] {
         accent-color: var(--nk-blue-primary);
         width: 16px;
         height: 16px;
+        cursor: pointer;
+    }
+
+    .btn-delete {
+        background: transparent;
+        border: none;
+        color: var(--nk-text-muted);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: var(--nk-radius-sm);
+        transition: var(--nk-transition);
+        font-size: 1rem;
+    }
+
+    .btn-delete:hover:not(:disabled) {
+        color: #ef4444;
+        background: #fee2e2;
     }
 
     /* Address / Domain Entry Row in Alias Modal */
@@ -998,62 +1098,29 @@
         <i class="fas fa-arrow-left"></i> Back to Peer Details
     </a>
 
-    <div class="header-section">
-        <div class="title-area">
-            <h1><i class="fas fa-filter" style="color: var(--nk-blue-primary);"></i> Web Filter · {{ peer_name }}</h1>
-            <!-- <p>Block external domains and websites using AdGuard DNS filtering engine.</p> -->
-        </div>
-        <div>
-            {% if is_online %}
-            <span class="badge-status badge-online">
-                <i class="fas fa-circle"></i> Connected
-            </span>
-            {% else %}
-            <span class="badge-status badge-offline">
-                <i class="fas fa-circle"></i> Offline
-            </span>
-            {% endif %}
+    <div class="unified-page-header">
+        <h1><i class="fas fa-filter"></i>Web Filter</h1>
+        <!-- Peer Feature Nav Tabs -->
+        <div class="peer-nav-tabs">
+            <a href="{{ url_for('client.peer_web_filter', peer_id=peer_id) }}" class="peer-nav-tab active">
+                <i class="fas fa-filter"></i> Web Filter
+            </a>
+            <a href="{{ url_for('client.peer_firewall', peer_id=peer_id) }}" class="peer-nav-tab">
+                <i class="fas fa-shield-alt"></i> Firewall
+            </a>
+            <a href="{{ url_for('client.peer_aliases', peer_id=peer_id) }}?filter=web_domain" class="peer-nav-tab">
+                <i class="fas fa-list"></i> Aliases
+            </a>
         </div>
     </div>
 
     <!-- Offline Status Banner -->
     <div class="status-banner" id="banner-offline" style="display: none;">
         <i class="fas fa-exclamation-triangle"></i>
-        <span>This peer is currently offline. Web filter rules cannot be modified until the device reconnects.</span>
+        <span>This peer is offline.</span>
     </div>
 
-    <!-- Floating Bulk Actions Bar -->
-    <div class="bulk-floating-bar" id="bulk-action-bar">
-        <div class="bulk-bar-content">
-            <span class="selected-count-badge" id="selected-rules-count">0 selected</span>
-            <div class="bulk-actions-group">
-                <button class="bulk-btn btn-bulk-enable" onclick="applyBulkAction('enable')">
-                    <i class="fas fa-check"></i> Enable
-                </button>
-                <button class="bulk-btn btn-bulk-disable" onclick="applyBulkAction('disable')">
-                    <i class="fas fa-ban"></i> Disable
-                </button>
-                <button class="bulk-btn btn-bulk-delete" onclick="applyBulkAction('delete')">
-                    <i class="fas fa-trash-alt"></i> Delete
-                </button>
-                <button class="bulk-btn" onclick="deselectAllRules()">
-                    <i class="fas fa-times"></i> Deselect
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gateway Tabs -->
-    <div class="gateway-tabs">
-        <div class="tab-item active" id="tab-rules" onclick="switchTab('rules')">
-            <i class="fas fa-filter"></i> Web Filter Rules
-        </div>
-        <div class="tab-item" id="tab-lists" onclick="switchTab('lists')">
-            <i class="fas fa-globe"></i> Domain Aliases
-        </div>
-    </div>
-
-    <!-- Web Filter Rules Tab Content -->
+    <!-- Web Filter Rules Content -->
     <div id="rules-tab-content">
         <!-- Reorder Warning Banner -->
         <div id="banner-reorder" class="floating-save-bar" style="display: none;">
@@ -1098,56 +1165,14 @@
                             <input type="checkbox" id="select-all-rules" onclick="toggleSelectAllRules(this)">
                         </th>
                         <th style="width: 30px; text-align: center;"></th>
-                        <th style="width: 60px; text-align: center;">Order</th>
                         <th style="width: 220px;">Source (Clients)</th>
                         <th>Blocked Domains</th>
                         <th>Comment</th>
-                        <th style="width: 100px; text-align: center;">Enabled</th>
+                        <th style="width: 100px; text-align: center;">Blocked</th>
                         <th style="width: 110px; text-align: right;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="rules-tbody">
-                    <!-- Dynamic rendering -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Domain Aliases Tab Content -->
-    <div id="lists-tab-content" style="display: none;">
-        <div class="control-bar">
-            <div class="control-actions">
-                <button class="btn-action btn-primary" id="add-alias-btn" onclick="openAddDomainAliasModal()">
-                    <i class="fas fa-plus"></i> Add Domain Alias
-                </button>
-            </div>
-
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="search-aliases-input" placeholder="Search domain aliases..."
-                    onkeyup="filterAliasesTable()">
-            </div>
-        </div>
-
-        <!-- Aliases Table Container -->
-        <div class="table-card">
-            <div id="loading-aliases-view" class="loading-overlay">
-                <div class="spinner"></div>
-                <p>Loading domain aliases...</p>
-            </div>
-
-            <table class="rules-table" id="aliases-table" style="display: none;">
-                <thead style="position: sticky; top: 0; z-index: 10; background-color: #f8fafc;">
-                    <tr>
-                        <th style="width: 220px;">Name</th>
-                        <th style="width: 130px; text-align: center;">Type</th>
-                        <th>Items</th>
-                        <th>Comment</th>
-                        <th style="width: 140px;">Created</th>
-                        <th style="width: 100px; text-align: right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="aliases-tbody">
                     <!-- Dynamic rendering -->
                 </tbody>
             </table>
@@ -1166,15 +1191,20 @@
             <form id="ruleForm" onsubmit="submitRuleForm(event)">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Comment</label>
-                        <input type="text" id="ruleComment" placeholder="e.g. Block Social Media during work hours" maxlength="200">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                            <label style="margin-bottom: 0;">Comment</label>
+                            <span class="char-counter" id="ruleComment-counter">0 / 200</span>
+                        </div>
+                        <input type="text" id="ruleComment" placeholder="e.g. Block Social Media during work hours" maxlength="200"
+                            title="Free text comment up to 200 characters.">
+                        <div class="field-error-msg" id="ruleComment-error" style="display: none;"></div>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Source Address</label>
-                        <div class="input-dropdown-wrapper">
+                        <div class="input-dropdown-wrapper" id="ruleSrc-wrapper">
                             <div class="alias-trigger-btn" onclick="toggleAliasList(event, 'ruleSrc')">@</div>
                             <input type="text" id="ruleSrc" placeholder="197.62.85.152/24, 192.168.1.1/24"
                                 autocomplete="off" style="padding-left: 2.25rem !important; padding-right: 2.5rem !important;">
@@ -1182,20 +1212,25 @@
                                 title="Add multiple addresses"><i class="fas fa-plus"></i></div>
                             <div class="custom-autocomplete-dropdown" id="ruleSrc-dropdown" style="display: none;"></div>
                         </div>
+                        <div class="field-error-msg" id="ruleSrc-error" style="display: none;"></div>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label>Blocked Domains (What to Block) *</label>
-                        <div id="domains-choice-container" class="domains-selection-box">
-                            <!-- Populated dynamically with web_domain aliases -->
+                        <div class="input-dropdown-wrapper" id="ruleDomains-wrapper">
+                            <div class="alias-trigger-btn" onclick="toggleAliasList(event, 'ruleDomains')">@</div>
+                            <input type="text" id="ruleDomains" placeholder="e.g. @SocialMedia or @StreamingSites" required
+                                autocomplete="off" style="padding-left: 2.25rem !important; padding-right: 1rem !important;">
+                            <div class="custom-autocomplete-dropdown" id="ruleDomains-dropdown" style="display: none;"></div>
                         </div>
-                        <span class="form-hint">Select at least one Domain Alias to block.</span>
+                        <span class="form-hint">Click <strong>@</strong> to choose from your Domain Aliases.</span>
+                        <div class="field-error-msg" id="ruleDomains-error" style="display: none;"></div>
                     </div>
                 </div>
 
-                <div class="form-row" id="rule-order-row" style="align-items: center;">
+                <div class="form-row" id="rule-order-row" style="align-items: center; display: none;">
                     <div class="form-group" style="flex: 1.5;">
                         <label>Order</label>
                         <div style="display: flex; gap: 1.25rem; margin-top: 0.35rem; align-items: center; height: 38px;">
@@ -1216,6 +1251,7 @@
                     <div class="form-group" id="custom-order-group" style="flex: 1; display: none;">
                         <label>Place Before</label>
                         <input type="number" id="ruleOrderCustomInput" placeholder="e.g. 2" min="1">
+                        <div class="field-error-msg" id="ruleOrderCustomInput-error" style="display: none;"></div>
                     </div>
                 </div>
             </form>
@@ -1241,7 +1277,7 @@
                 </h3>
                 <button type="button" class="btn-action" onclick="addMultiAddressRow()"
                     style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
-                    <i class="fas fa-plus"></i> Add Address
+                    <i class="fas fa-plus"></i> Add
                 </button>
             </div>
             <div id="multi-address-rows-container">
@@ -1270,13 +1306,21 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Name *</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                            <label style="margin-bottom: 0;">Name *</label>
+                            <span class="char-counter" id="aliasName-counter">0 / 200</span>
+                        </div>
                         <input type="text" id="aliasName" placeholder="e.g. SocialMedia" required maxlength="200"
-                            pattern="^[A-Za-z0-9_-]{1,200}$" title="Alphanumeric, dash, or underscore only. Max 200 chars.">
+                            title="Alias Name. Max 200 chars.">
+                        <div class="field-error-msg" id="aliasName-error" style="display: none;"></div>
                     </div>
                     <div class="form-group">
-                        <label>Comment</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                            <label style="margin-bottom: 0;">Comment</label>
+                            <span class="char-counter" id="aliasComment-counter">0 / 200</span>
+                        </div>
                         <input type="text" id="aliasComment" placeholder="e.g. Social media platforms" maxlength="200">
+                        <div class="field-error-msg" id="aliasComment-error" style="display: none;"></div>
                     </div>
                 </div>
 
@@ -1290,6 +1334,7 @@
                         <i class="fas fa-plus"></i> <span id="btn-add-item-text">Add Domain</span>
                     </button>
                 </div>
+                <div class="field-error-msg" id="aliasItems-error" style="display: none; margin-bottom: 0.5rem;"></div>
 
                 <div id="alias-items-container">
                     <!-- Dynamic rows -->
@@ -1320,7 +1365,6 @@
         if (!isPeerOnline) {
             document.getElementById('banner-offline').style.display = 'flex';
             document.getElementById('add-rule-btn').disabled = true;
-            document.getElementById('add-alias-btn').disabled = true;
         }
 
         // Initialize sortable for drag-and-drop rule reordering
@@ -1338,34 +1382,13 @@
 
         // Initialize autocomplete behaviors on Source input
         initCustomAutocompletes();
+        initWebFilterLiveValidation();
 
         // Fetch initial data
         fetchAliases(true).then(() => {
             fetchWebFilterRules();
         });
     });
-
-    function switchTab(tab) {
-        activeTab = tab;
-        const tabRules = document.getElementById('tab-rules');
-        const tabLists = document.getElementById('tab-lists');
-        const rulesContent = document.getElementById('rules-tab-content');
-        const listsContent = document.getElementById('lists-tab-content');
-
-        if (tab === 'rules') {
-            tabRules.classList.add('active');
-            tabLists.classList.remove('active');
-            rulesContent.style.display = 'block';
-            listsContent.style.display = 'none';
-            fetchWebFilterRules();
-        } else {
-            tabRules.classList.remove('active');
-            tabLists.classList.add('active');
-            rulesContent.style.display = 'none';
-            listsContent.style.display = 'block';
-            fetchAliases();
-        }
-    }
 
     // --------------------------------------------------------------------------
     // Web Filter Rules Logic
@@ -1400,7 +1423,7 @@
             if (!silent) {
                 document.getElementById('rules-tbody').innerHTML = `
                     <tr>
-                        <td colspan="8" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
+                        <td colspan="7" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
                             <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
                             Error loading web filter rules: ${err.message}
                         </td>
@@ -1423,7 +1446,7 @@
         if (!rules || rules.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
+                    <td colspan="7" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
                         <i class="fas fa-filter fa-3x mb-3" style="opacity: 0.35;"></i>
                         <h3>No Web Filter Rules Configured</h3>
                         <p style="font-size: 0.85rem; margin-top: 0.25rem;">Create a rule to block domains across your network.</p>
@@ -1449,15 +1472,7 @@
             tdDrag.innerHTML = `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>`;
             tr.appendChild(tdDrag);
 
-            // 3. Order
-            const tdOrder = document.createElement('td');
-            tdOrder.style.textAlign = 'center';
-            tdOrder.style.fontWeight = '700';
-            tdOrder.style.color = 'var(--nk-text-muted)';
-            tdOrder.textContent = rule.order || (idx + 1);
-            tr.appendChild(tdOrder);
-
-            // 4. Source
+            // 3. Source
             const tdSrc = document.createElement('td');
             if (!rule.src || rule.src.length === 0) {
                 tdSrc.innerHTML = `<span class="badge-all"><i class="fas fa-network-wired"></i> All Network</span>`;
@@ -1672,9 +1687,9 @@
 
         rows.forEach(row => {
             if (row.cells.length === 1) return;
-            const src = row.cells[3].textContent.toLowerCase();
-            const domains = row.cells[4].textContent.toLowerCase();
-            const comment = row.cells[5].textContent.toLowerCase();
+            const src = row.cells[2].textContent.toLowerCase();
+            const domains = row.cells[3].textContent.toLowerCase();
+            const comment = row.cells[4].textContent.toLowerCase();
 
             if (src.includes(query) || domains.includes(query) || comment.includes(query)) {
                 row.style.display = '';
@@ -1688,17 +1703,34 @@
     // Rule Modal (Add / Edit)
     // --------------------------------------------------------------------------
 
+    // --------------------------------------------------------------------------
+    // Rule Modal (Add / Edit) with Live Validation
+    // --------------------------------------------------------------------------
+
     function openAddRuleModal() {
         editingRuleId = null;
         document.getElementById('ruleModalTitle').textContent = 'Add Web Filter Rule';
         document.getElementById('ruleComment').value = '';
         document.getElementById('ruleSrc').value = '';
-        updateAddressMultiBtnState('ruleSrc');
-        document.getElementById('rule-order-row').style.display = 'flex';
-        document.querySelector('input[name="ruleOrderRadio"][value="bottom"]').checked = true;
-        toggleCustomOrderField();
+        document.getElementById('ruleDomains').value = '';
+        clearAllFieldErrors();
 
-        populateDomainChoices([]);
+        const commentCounter = document.getElementById('ruleComment-counter');
+        if (commentCounter) {
+            commentCounter.textContent = '0 / 200';
+            commentCounter.className = 'char-counter';
+        }
+
+        updateAddressMultiBtnState('ruleSrc');
+
+        const orderRow = document.getElementById('rule-order-row');
+        if (orderRow) {
+            orderRow.style.display = 'flex';
+            const defaultRadio = document.querySelector('input[name="ruleOrderRadio"][value="bottom"]');
+            if (defaultRadio) defaultRadio.checked = true;
+            toggleCustomOrderField();
+        }
+
         document.getElementById('ruleModal').classList.add('active');
     }
 
@@ -1707,90 +1739,365 @@
         if (!rule) return;
 
         editingRuleId = ruleId;
-        document.getElementById('ruleModalTitle').textContent = 'Edit Web Filter Rule';
-        document.getElementById('ruleComment').value = rule.comment || '';
-        document.getElementById('ruleSrc').value = (rule.src || []).map(s => resolveAliasIdToName(s)).join(', ');
-        updateAddressMultiBtnState('ruleSrc');
-        document.getElementById('rule-order-row').style.display = 'none'; // Order is kept on PUT
+        clearAllFieldErrors();
 
-        populateDomainChoices(rule.domains || []);
+        document.getElementById('ruleModalTitle').textContent = 'Edit Web Filter Rule';
+        const commentVal = rule.comment || '';
+        document.getElementById('ruleComment').value = commentVal;
+        const commentCounter = document.getElementById('ruleComment-counter');
+        if (commentCounter) {
+            commentCounter.textContent = `${commentVal.length} / 200`;
+            commentCounter.className = 'char-counter' + (commentVal.length > 180 ? (commentVal.length > 200 ? ' error' : ' warning') : '');
+        }
+
+        document.getElementById('ruleSrc').value = (rule.src || []).map(s => resolveAliasIdToName(s)).join(', ');
+        document.getElementById('ruleDomains').value = (rule.domains || []).map(d => resolveAliasIdToName(d)).join(', ');
+        updateAddressMultiBtnState('ruleSrc');
+
+        const orderRow = document.getElementById('rule-order-row');
+        if (orderRow) {
+            orderRow.style.display = 'none'; // Order is kept on PUT
+        }
+
         document.getElementById('ruleModal').classList.add('active');
     }
 
     function closeRuleModal() {
         document.getElementById('ruleModal').classList.remove('active');
+        clearAllFieldErrors();
         document.querySelectorAll('.custom-autocomplete-dropdown').forEach(d => d.style.display = 'none');
-    }
-
-    function populateDomainChoices(selectedDomains) {
-        const container = document.getElementById('domains-choice-container');
-        container.innerHTML = '';
-
-        const webDomainAliases = cachedAliases.filter(a => a.type === 'web_domain');
-
-        if (webDomainAliases.length === 0) {
-            container.innerHTML = `
-                <div style="padding: 1rem; text-align: center; color: var(--nk-text-muted); font-size: 0.85rem;">
-                    <i class="fas fa-exclamation-circle mb-2" style="color: var(--warning-color);"></i><br>
-                    No Domain Aliases found. Please create a Domain Alias first.
-                    <div style="margin-top: 0.75rem;">
-                        <button type="button" class="btn-action btn-primary" onclick="closeRuleModal(); switchTab('lists'); openAddDomainAliasModal();" style="font-size: 0.8rem; padding: 4px 12px;">
-                            <i class="fas fa-plus"></i> Create Domain Alias
-                        </button>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        webDomainAliases.forEach(alias => {
-            const aliasRef = `@alias_${alias.id || alias.slug}`;
-            const isChecked = selectedDomains.includes(aliasRef) || selectedDomains.includes(`@${alias.name}`) || selectedDomains.includes(`@${alias.slug}`);
-            const domainCount = (alias.list || []).length;
-
-            const item = document.createElement('label');
-            item.className = 'domain-choice-item';
-            item.innerHTML = `
-                <input type="checkbox" value="${aliasRef}" ${isChecked ? 'checked' : ''}>
-                <span style="font-weight: 700; color: var(--nk-text-main); font-size: 0.88rem;">@${alias.name || alias.slug}</span>
-                <span style="font-size: 0.78rem; color: var(--nk-text-muted);">(${domainCount} domain${domainCount === 1 ? '' : 's'})</span>
-                ${alias.comment ? `<span style="font-size: 0.78rem; color: var(--nk-text-muted); margin-left: auto;">${alias.comment}</span>` : ''}
-            `;
-            container.appendChild(item);
-        });
     }
 
     function toggleCustomOrderField() {
         const radio = document.querySelector('input[name="ruleOrderRadio"]:checked');
         const customGroup = document.getElementById('custom-order-group');
-        customGroup.style.display = (radio && radio.value === 'custom') ? 'flex' : 'none';
+        if (customGroup) {
+            customGroup.style.display = (radio && radio.value === 'custom') ? 'flex' : 'none';
+        }
+    }
+
+    // =========================================================================
+    // Validation Engine (WEB_FILTER_API Specification)
+    // =========================================================================
+
+    function validateWebFilterComment(comment) {
+        if (!comment || typeof comment !== 'string') return { valid: true };
+        if (comment.length > 200) {
+            return { valid: false, error: 'Max 200 characters' };
+        }
+        return { valid: true };
+    }
+
+    function validateWebFilterSource(value) {
+        if (!value || typeof value !== 'string') return { valid: true };
+        const trimmed = value.trim();
+        if (!trimmed) return { valid: true };
+
+        const parts = trimmed.split(',').map(p => p.trim()).filter(Boolean);
+        if (parts.length === 0) return { valid: true };
+
+        if (parts.length > 64) {
+            return { valid: false, error: 'Max 64 addresses' };
+        }
+
+        const aliasParts = parts.filter(p => p.startsWith('@'));
+        if (aliasParts.length > 0) {
+            if (parts.length > 1) {
+                return { valid: false, error: 'Cannot mix IPs and @alias' };
+            }
+            if (aliasParts.length > 1) {
+                return { valid: false, error: 'Only one alias allowed' };
+            }
+            const aliasRaw = parts[0];
+            let aliasName = aliasRaw.substring(1).trim();
+            if (!aliasName || aliasName === 'alias_') {
+                return { valid: false, error: 'Invalid alias' };
+            }
+            let searchName = aliasName.startsWith('alias_') ? aliasName.substring(6) : aliasName;
+            const matched = cachedAliases.find(l => l.name === searchName || l.slug === searchName || String(l.id) === String(searchName));
+            if (matched) {
+                if (matched.type === 'web_domain') {
+                    return { valid: false, error: 'Web Domain aliases not supported' };
+                }
+            }
+            return { valid: true, normalized: aliasRaw };
+        }
+
+        const seen = new Set();
+        const normalizedParts = [];
+        for (const part of parts) {
+            const ipv4Res = parseAndValidateIPv4(part, { requireMask: false, allowMask: true, normalizeSubnet: true });
+            if (!ipv4Res.valid) {
+                return ipv4Res;
+            }
+
+            const lowerVal = ipv4Res.normalized.toLowerCase();
+            if (seen.has(lowerVal)) {
+                return { valid: false, error: 'Duplicate address' };
+            }
+            seen.add(lowerVal);
+            normalizedParts.push(ipv4Res.normalized);
+        }
+
+        return { valid: true, normalized: normalizedParts.join(', ') };
+    }
+
+    function validateWebFilterDomains(value) {
+        if (!value || typeof value !== 'string') {
+            return { valid: false, error: 'Required' };
+        }
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return { valid: false, error: 'Required' };
+        }
+
+        const parts = trimmed.split(',').map(p => p.trim()).filter(Boolean);
+        if (parts.length === 0) {
+            return { valid: false, error: 'Required' };
+        }
+
+        const seen = new Set();
+        for (const part of parts) {
+            let cleanRef = part;
+            if (!cleanRef.startsWith('@')) {
+                cleanRef = '@' + cleanRef;
+            }
+
+            if (seen.has(cleanRef.toLowerCase())) {
+                return { valid: false, error: 'Duplicate alias' };
+            }
+            seen.add(cleanRef.toLowerCase());
+
+            let aliasName = cleanRef.substring(1).trim();
+            if (!aliasName || aliasName === 'alias_') {
+                return { valid: false, error: 'Invalid alias' };
+            }
+            let searchName = aliasName.startsWith('alias_') ? aliasName.substring(6) : aliasName;
+            const matched = cachedAliases.find(l => l.name === searchName || l.slug === searchName || String(l.id) === String(searchName));
+            if (matched) {
+                if (matched.type === 'normal') {
+                    return { valid: false, error: 'Normal aliases not supported' };
+                }
+            }
+        }
+
+        return { valid: true };
+    }
+
+    function setFieldError(inputId, errorMsg) {
+        const input = document.getElementById(inputId);
+        const errorDiv = document.getElementById(`${inputId}-error`);
+        const wrapper = document.getElementById(`${inputId}-wrapper`);
+
+        if (wrapper) {
+            wrapper.classList.add('is-invalid');
+        } else if (input) {
+            input.classList.add('is-invalid');
+        }
+
+        if (errorDiv) {
+            errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${errorMsg}`;
+            errorDiv.style.display = 'flex';
+        }
+    }
+
+    function clearFieldError(inputId) {
+        const input = document.getElementById(inputId);
+        const errorDiv = document.getElementById(`${inputId}-error`);
+        const wrapper = document.getElementById(`${inputId}-wrapper`);
+
+        if (wrapper) {
+            wrapper.classList.remove('is-invalid');
+        }
+        if (input) {
+            input.classList.remove('is-invalid');
+        }
+        if (errorDiv) {
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+        }
+    }
+
+    function clearAllFieldErrors() {
+        ['ruleComment', 'ruleSrc', 'ruleDomains', 'ruleOrderCustomInput', 'aliasName', 'aliasComment', 'aliasItems'].forEach(id => {
+            clearFieldError(id);
+        });
+        document.querySelectorAll('#alias-items-container .is-invalid').forEach(inp => inp.classList.remove('is-invalid'));
+        document.querySelectorAll('#alias-items-container .row-error-msg').forEach(msg => {
+            msg.textContent = '';
+            msg.style.display = 'none';
+        });
+    }
+
+    function initWebFilterLiveValidation() {
+        const commentInp = document.getElementById('ruleComment');
+        const commentCounter = document.getElementById('ruleComment-counter');
+        if (commentInp) {
+            commentInp.addEventListener('input', () => {
+                const len = commentInp.value.length;
+                if (commentCounter) {
+                    commentCounter.textContent = `${len} / 200`;
+                    commentCounter.className = 'char-counter' + (len > 180 ? (len > 200 ? ' error' : ' warning') : '');
+                }
+                const res = validateWebFilterComment(commentInp.value);
+                if (!res.valid) {
+                    setFieldError('ruleComment', res.error);
+                } else {
+                    clearFieldError('ruleComment');
+                }
+            });
+        }
+
+        const srcInp = document.getElementById('ruleSrc');
+        if (srcInp) {
+            srcInp.addEventListener('input', () => {
+                const res = validateWebFilterSource(srcInp.value);
+                if (!res.valid) {
+                    setFieldError('ruleSrc', res.error);
+                } else {
+                    clearFieldError('ruleSrc');
+                }
+            });
+        }
+
+        const domainsInp = document.getElementById('ruleDomains');
+        if (domainsInp) {
+            domainsInp.addEventListener('input', () => {
+                const res = validateWebFilterDomains(domainsInp.value);
+                if (!res.valid) {
+                    setFieldError('ruleDomains', res.error);
+                } else {
+                    clearFieldError('ruleDomains');
+                }
+            });
+        }
+
+        const customOrderInput = document.getElementById('ruleOrderCustomInput');
+        if (customOrderInput) {
+            customOrderInput.addEventListener('input', () => {
+                const val = parseInt(customOrderInput.value);
+                if (isNaN(val) || val < 1) {
+                    setFieldError('ruleOrderCustomInput', 'Order position must be at least 1.');
+                } else {
+                    clearFieldError('ruleOrderCustomInput');
+                }
+            });
+        }
+
+        const aliasNameInp = document.getElementById('aliasName');
+        const aliasNameCounter = document.getElementById('aliasName-counter');
+        if (aliasNameInp) {
+            aliasNameInp.addEventListener('input', () => {
+                const len = aliasNameInp.value.length;
+                if (aliasNameCounter) {
+                    aliasNameCounter.textContent = `${len} / 200`;
+                    aliasNameCounter.className = 'char-counter' + (len > 180 ? (len > 200 ? ' error' : ' warning') : '');
+                }
+                if (!aliasNameInp.value.trim()) {
+                    setFieldError('aliasName', 'Alias Name is required.');
+                } else if (aliasNameInp.value.trim().length > 200) {
+                    setFieldError('aliasName', 'Alias Name exceeds 200 characters.');
+                } else {
+                    clearFieldError('aliasName');
+                }
+            });
+        }
+
+        const aliasCommentInp = document.getElementById('aliasComment');
+        const aliasCommentCounter = document.getElementById('aliasComment-counter');
+        if (aliasCommentInp) {
+            aliasCommentInp.addEventListener('input', () => {
+                const len = aliasCommentInp.value.length;
+                if (aliasCommentCounter) {
+                    aliasCommentCounter.textContent = `${len} / 200`;
+                    aliasCommentCounter.className = 'char-counter' + (len > 180 ? (len > 200 ? ' error' : ' warning') : '');
+                }
+                if (aliasCommentInp.value.length > 200) {
+                    setFieldError('aliasComment', 'Comment exceeds 200 characters.');
+                } else {
+                    clearFieldError('aliasComment');
+                }
+            });
+        }
     }
 
     async function submitRuleForm(e) {
         e.preventDefault();
-        const btn = document.getElementById('btn-submit-rule');
-        btn.disabled = true;
+        clearAllFieldErrors();
 
+        const btn = document.getElementById('btn-submit-rule');
         const comment = document.getElementById('ruleComment').value.trim();
         const srcRaw = document.getElementById('ruleSrc').value.trim();
+        const domainsRaw = document.getElementById('ruleDomains').value.trim();
 
-        // Collect selected domain aliases
-        const checkedBoxes = document.querySelectorAll('#domains-choice-container input[type="checkbox"]:checked');
-        const domains = Array.from(checkedBoxes).map(cb => cb.value);
+        let hasError = false;
+        let firstInvalidInputId = null;
 
-        if (domains.length === 0) {
-            alert('Please select at least one Domain Alias to block.');
-            btn.disabled = false;
+        // 1. Validate Comment
+        const commentRes = validateWebFilterComment(comment);
+        if (!commentRes.valid) {
+            setFieldError('ruleComment', commentRes.error);
+            hasError = true;
+            if (!firstInvalidInputId) firstInvalidInputId = 'ruleComment';
+        }
+
+        // 2. Validate Source Address
+        const srcRes = validateWebFilterSource(srcRaw);
+        if (!srcRes.valid) {
+            setFieldError('ruleSrc', srcRes.error);
+            hasError = true;
+            if (!firstInvalidInputId) firstInvalidInputId = 'ruleSrc';
+        }
+
+        // 3. Validate Blocked Domains
+        const domainsRes = validateWebFilterDomains(domainsRaw);
+        if (!domainsRes.valid) {
+            setFieldError('ruleDomains', domainsRes.error);
+            hasError = true;
+            if (!firstInvalidInputId) firstInvalidInputId = 'ruleDomains';
+        }
+
+        // 4. Validate Custom Order
+        if (editingRuleId === null) {
+            const orderRadio = document.querySelector('input[name="ruleOrderRadio"]:checked');
+            if (orderRadio && orderRadio.value === 'custom') {
+                const customInput = document.getElementById('ruleOrderCustomInput');
+                const customOrder = customInput ? parseInt(customInput.value) : NaN;
+                if (isNaN(customOrder) || customOrder < 1) {
+                    setFieldError('ruleOrderCustomInput', 'Please enter a valid order number (1 or higher).');
+                    hasError = true;
+                    if (!firstInvalidInputId) firstInvalidInputId = 'ruleOrderCustomInput';
+                }
+            }
+        }
+
+        if (hasError) {
+            if (firstInvalidInputId) {
+                const el = document.getElementById(firstInvalidInputId);
+                if (el) el.focus();
+            }
             return;
         }
+
+        btn.disabled = true;
+
+        // Construct payload
+        let domainParts = domainsRaw.split(',').map(p => p.trim()).filter(Boolean);
+        const domains = domainParts.map(d => {
+            let clean = d.startsWith('@') ? d : '@' + d;
+            return resolveAliasNameToId(clean);
+        });
 
         // Parse sources
         let src = null;
         if (srcRaw) {
-            const parts = srcRaw.split(',').map(p => p.trim()).filter(Boolean);
-            src = parts.map(p => {
+            const srcToProcess = (srcRes && srcRes.normalized) ? srcRes.normalized : srcRaw;
+            src = srcToProcess.split(',').map(s => s.trim()).filter(Boolean).map(p => {
                 if (p.startsWith('@')) {
-                    return resolveAliasNameToId(p);
+                    let aName = p.substring(1).trim();
+                    let clean = aName.startsWith('alias_') ? aName.substring(6) : aName;
+                    const matched = cachedAliases.find(a => a.name === clean || a.slug === clean || String(a.id) === String(clean));
+                    return matched ? (matched.id || matched.slug) : p;
                 }
                 return p;
             });
@@ -1804,14 +2111,17 @@
         };
 
         if (editingRuleId === null) {
-            // New rule order
-            const radioVal = document.querySelector('input[name="ruleOrderRadio"]:checked').value;
-            if (radioVal === 'first') {
-                payload.order = 1;
-            } else if (radioVal === 'custom') {
-                const customOrder = parseInt(document.getElementById('ruleOrderCustomInput').value);
-                if (!isNaN(customOrder) && customOrder > 0) {
-                    payload.order = customOrder;
+            const orderRadio = document.querySelector('input[name="ruleOrderRadio"]:checked');
+            if (orderRadio) {
+                const radioVal = orderRadio.value;
+                if (radioVal === 'first') {
+                    payload.order = 1;
+                } else if (radioVal === 'custom') {
+                    const customInput = document.getElementById('ruleOrderCustomInput');
+                    const customOrder = customInput ? parseInt(customInput.value) : NaN;
+                    if (!isNaN(customOrder) && customOrder > 0) {
+                        payload.order = customOrder;
+                    }
                 }
             }
         }
@@ -1833,13 +2143,14 @@
             const data = await resp.json();
 
             if (!resp.ok) {
-                throw new Error(data.message || data.detail || data.error || 'Failed to save rule');
+                throw new Error(data.message || data.detail || data.error || 'Failed to save');
             }
 
             closeRuleModal();
             fetchWebFilterRules();
+            alert('Saved successfully');
         } catch (err) {
-            alert('Error saving rule: ' + err.message);
+            alert(err.message || 'Failed to save');
         } finally {
             btn.disabled = false;
         }
@@ -1850,11 +2161,16 @@
     // --------------------------------------------------------------------------
 
     function initCustomAutocompletes() {
-        const input = document.getElementById('ruleSrc');
-        const dropdown = document.getElementById('ruleSrc-dropdown');
+        setupAutocompleteForField('ruleSrc');
+        setupAutocompleteForField('ruleDomains');
+    }
+
+    function setupAutocompleteForField(inputId) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(inputId + '-dropdown');
         if (!input || !dropdown) return;
 
-        // Open on focus if typed @
+        // Open on focus if typed @ or domain field
         input.addEventListener('focus', () => {
             if (dropdown.style.display === 'block') return;
             if (isTogglingAlias) return;
@@ -1864,12 +2180,14 @@
         // Filter on typing
         input.addEventListener('input', () => {
             renderAutocompleteOptions(input, dropdown);
-            updateAddressMultiBtnState('ruleSrc');
+            if (inputId === 'ruleSrc') updateAddressMultiBtnState('ruleSrc');
         });
 
-        input.addEventListener('change', () => {
-            updateAddressMultiBtnState('ruleSrc');
-        });
+        if (inputId === 'ruleSrc') {
+            input.addEventListener('change', () => {
+                updateAddressMultiBtnState('ruleSrc');
+            });
+        }
 
         // Close on click outside
         document.addEventListener('click', (e) => {
@@ -1899,6 +2217,7 @@
 
     function renderAutocompleteOptions(input, dropdown, forceShow = false) {
         const val = input.value.trim();
+        const isDomainInput = (input.id === 'ruleDomains');
 
         // Show ONLY if starts with '@' or forceShow is true
         if (!val.startsWith('@') && !forceShow) {
@@ -1913,8 +2232,13 @@
 
         let count = 0;
         cachedAliases.forEach(list => {
-            // Only normal aliases can be used as a Source address
-            if (list.type === 'web_domain') return;
+            if (isDomainInput) {
+                // Only web_domain aliases for Blocked Domains
+                if (list.type !== 'web_domain') return;
+            } else {
+                // Only normal aliases for Source address
+                if (list.type === 'web_domain') return;
+            }
 
             const nameMatch = (list.name || '').toLowerCase().includes(cleanFilter);
             const slugMatch = (list.slug || '').toLowerCase().includes(cleanFilter);
@@ -1927,11 +2251,15 @@
                 item.className = 'custom-autocomplete-item';
 
                 const itemsCount = (list.list || []).length;
+                const countBadgeBg = isDomainInput ? '#fef3c7' : '#e0f2fe';
+                const countBadgeColor = isDomainInput ? '#b45309' : 'var(--nk-blue-primary)';
+                const itemLabel = isDomainInput ? (itemsCount === 1 ? 'domain' : 'domains') : (itemsCount === 1 ? 'ip' : 'ips');
+
                 item.innerHTML = `
                     <span class="alias-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <span style="display: inline-flex; align-items: center; gap: 8px;">
                             <span>@${list.name || list.slug}</span>
-                            <span style="font-size: 0.6rem; color: var(--nk-blue-primary); background: #e0f2fe; padding: 1px 4px; border-radius: 4px; font-weight: 700;">${itemsCount}</span>
+                            <span style="font-size: 0.6rem; color: ${countBadgeColor}; background: ${countBadgeBg}; padding: 1px 5px; border-radius: 4px; font-weight: 700;">${itemsCount} ${itemLabel}</span>
                         </span>
                         <span class="badge-edit-alias" style="font-size: 0.75rem; color:#0284c7; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; transition: var(--nk-transition);" onmouseover="this.style.background='#e0f2fe'; this.style.color='var(--nk-blue-primary)';" onmouseout="this.style.background='transparent'; this.style.color='var(--nk-text-muted)';" title="Edit Alias">
                             <i class="fas fa-external-link-alt"></i>
@@ -1964,6 +2292,14 @@
         });
 
         if (count > 0) {
+            dropdown.style.display = 'block';
+        } else if (isDomainInput && forceShow) {
+            dropdown.innerHTML = `
+                <div style="padding: 0.85rem; text-align: center; color: var(--nk-text-muted); font-size: 0.8rem;">
+                    No Domain Aliases found.<br>
+                    <a href="/peers/${peerId}/aliases?filter=web_domain" style="color: var(--nk-blue-primary); font-weight: 600; margin-top: 4px; display: inline-block;">+ Create Domain Alias</a>
+                </div>
+            `;
             dropdown.style.display = 'block';
         } else {
             dropdown.style.display = 'none';
@@ -2028,8 +2364,8 @@
             <div style="flex: 1;">
                 <input type="text" placeholder="IP Address or CIDR (e.g. 192.168.10.5, 10.0.0.0/24)" class="multi-addr-input" required value="${address}" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;">
             </div>
-            <button type="button" class="btn-remove-row" onclick="removeMultiAddressRow(this)">
-                <i class="fas fa-times"></i>
+            <button type="button" class="btn-delete" onclick="removeMultiAddressRow(this)" title="Delete address" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; height: 38px; width: 38px;">
+                <i class="far fa-trash-alt"></i>
             </button>
         `;
         container.appendChild(rowDiv);
@@ -2218,6 +2554,18 @@
         document.getElementById('aliasModalTitle').textContent = 'Create Domain Alias';
         document.getElementById('aliasName').value = '';
         document.getElementById('aliasComment').value = '';
+        clearAllFieldErrors();
+
+        const nameCounter = document.getElementById('aliasName-counter');
+        if (nameCounter) {
+            nameCounter.textContent = '0 / 200';
+            nameCounter.className = 'char-counter';
+        }
+        const commentCounter = document.getElementById('aliasComment-counter');
+        if (commentCounter) {
+            commentCounter.textContent = '0 / 200';
+            commentCounter.className = 'char-counter';
+        }
 
         document.getElementById('alias-items-header').textContent = 'Domain Patterns *';
         document.getElementById('alias-items-hint').innerHTML = 'Use <code>*.facebook.com</code> for all subdomains or <code>tiktok.com</code> for exact match.';
@@ -2239,8 +2587,24 @@
         document.getElementById('aliasEditId').value = alias.id || alias.slug;
         document.getElementById('aliasType').value = alias.type || 'normal';
         document.getElementById('aliasModalTitle').textContent = isWebDomain ? 'Edit Domain Alias' : 'Edit Alias';
-        document.getElementById('aliasName').value = alias.name || alias.slug;
-        document.getElementById('aliasComment').value = alias.comment || '';
+        
+        clearAllFieldErrors();
+
+        const nameVal = alias.name || alias.slug;
+        document.getElementById('aliasName').value = nameVal;
+        const nameCounter = document.getElementById('aliasName-counter');
+        if (nameCounter) {
+            nameCounter.textContent = `${nameVal.length} / 200`;
+            nameCounter.className = 'char-counter' + (nameVal.length > 180 ? (nameVal.length > 200 ? ' error' : ' warning') : '');
+        }
+
+        const commentVal = alias.comment || '';
+        document.getElementById('aliasComment').value = commentVal;
+        const commentCounter = document.getElementById('aliasComment-counter');
+        if (commentCounter) {
+            commentCounter.textContent = `${commentVal.length} / 200`;
+            commentCounter.className = 'char-counter' + (commentVal.length > 180 ? (commentVal.length > 200 ? ' error' : ' warning') : '');
+        }
 
         document.getElementById('alias-items-header').textContent = isWebDomain ? 'Domain Patterns *' : 'Addresses / Subnets *';
         document.getElementById('alias-items-hint').innerHTML = isWebDomain 
@@ -2265,6 +2629,44 @@
 
     function closeAliasModal() {
         document.getElementById('aliasModal').classList.remove('active');
+        clearAllFieldErrors();
+    }
+
+    function validateAliasModalEntry(value, type) {
+        if (!value || typeof value !== 'string' || !value.trim()) {
+            return { valid: false, error: 'Required' };
+        }
+        const trimmed = value.trim();
+
+        if (type === 'web_domain') {
+            if (trimmed === '*' || trimmed === '*.') {
+                return { valid: false, error: 'Invalid domain' };
+            }
+            if (/^(\d{1,3}\.){3}\d{1,3}(\/\d+)?$/.test(trimmed)) {
+                return { valid: false, error: 'Enter domain name' };
+            }
+            const domainRegex = /^(\*\.)?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9]{2,}$/;
+            if (!domainRegex.test(trimmed)) {
+                return { valid: false, error: 'Invalid domain' };
+            }
+            return { valid: true, normalized: trimmed, entryType: 'domain' };
+        } else {
+            const firstChar = trimmed[0];
+            if (/^[0-9]/.test(firstChar)) {
+                const ipv4Res = parseAndValidateIPv4(trimmed, { requireMask: false, allowMask: true, normalizeSubnet: true });
+                if (!ipv4Res.valid) return ipv4Res;
+                return { valid: true, normalized: ipv4Res.normalized, entryType: 'address' };
+            }
+            if (/^[a-zA-Z]/.test(firstChar)) {
+                if (trimmed.includes(':') || trimmed.includes('*') || trimmed.includes('/')) return { valid: false, error: 'Invalid hostname' };
+                const hostnameRegex = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+                if (!hostnameRegex.test(trimmed) || trimmed.length > 253) {
+                    return { valid: false, error: 'Invalid hostname' };
+                }
+                return { valid: true, normalized: trimmed, entryType: 'hostname' };
+            }
+            return { valid: false, error: 'Invalid format' };
+        }
     }
 
     function addAliasItemRow(type = 'web_domain', val = '', commentVal = '') {
@@ -2274,20 +2676,43 @@
         const container = document.getElementById('alias-items-container');
         const row = document.createElement('div');
         row.className = 'alias-entry-row';
+        row.style.flexDirection = 'column';
+        row.style.alignItems = 'stretch';
         row.innerHTML = `
-            <input type="text" placeholder="${placeholder}" value="${val}" required class="alias-val-input" style="flex: 1.5;">
-            <input type="text" placeholder="Comment (optional)" value="${commentVal}" class="alias-comment-input" style="flex: 1;">
-            <button type="button" class="btn-remove-row" onclick="removeAliasItemRow(this)" title="Remove item">
-                <i class="fas fa-times"></i>
-            </button>
+            <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                <input type="text" placeholder="${placeholder}" value="${val}" required class="alias-val-input" style="flex: 1.5;">
+                <input type="text" placeholder="Comment (optional)" value="${commentVal}" class="alias-comment-input" maxlength="200" style="flex: 1;">
+                <button type="button" class="btn-delete" onclick="removeAliasItemRow(this)" title="Remove item" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; height: 38px; width: 38px;">
+                    <i class="far fa-trash-alt"></i>
+                </button>
+            </div>
+            <div class="field-error-msg row-error-msg" style="display: none;"></div>
         `;
         container.appendChild(row);
+
+        const valInput = row.querySelector('.alias-val-input');
+        const errorDiv = row.querySelector('.row-error-msg');
+        if (valInput) {
+            valInput.addEventListener('input', () => {
+                const currentType = document.getElementById('aliasType').value;
+                const res = validateAliasModalEntry(valInput.value, currentType);
+                if (!res.valid) {
+                    valInput.classList.add('is-invalid');
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${res.error}`;
+                    errorDiv.style.display = 'flex';
+                } else {
+                    valInput.classList.remove('is-invalid');
+                    errorDiv.textContent = '';
+                    errorDiv.style.display = 'none';
+                }
+            });
+        }
     }
 
     function removeAliasItemRow(btn) {
         const container = document.getElementById('alias-items-container');
         if (container.children.length <= 1) {
-            alert('An alias must contain at least one item.');
+            setFieldError('aliasItems', 'An alias must contain at least one item.');
             return;
         }
         btn.closest('.alias-entry-row').remove();
@@ -2295,45 +2720,118 @@
 
     async function submitAliasForm(e) {
         e.preventDefault();
-        const btn = document.getElementById('btn-submit-alias');
-        btn.disabled = true;
+        clearAllFieldErrors();
 
+        const btn = document.getElementById('btn-submit-alias');
         const actionType = document.getElementById('aliasActionType').value;
         const aliasId = document.getElementById('aliasEditId').value;
         const aliasType = document.getElementById('aliasType').value;
         const name = document.getElementById('aliasName').value.trim();
         const comment = document.getElementById('aliasComment').value.trim();
 
+        let hasError = false;
+        let firstInvalidInput = null;
+
+        if (!name) {
+            setFieldError('aliasName', 'Alias Name is required.');
+            hasError = true;
+            if (!firstInvalidInput) firstInvalidInput = document.getElementById('aliasName');
+        } else if (name.length > 200) {
+            setFieldError('aliasName', 'Alias Name exceeds 200 characters.');
+            hasError = true;
+            if (!firstInvalidInput) firstInvalidInput = document.getElementById('aliasName');
+        }
+
+        if (comment.length > 200) {
+            setFieldError('aliasComment', 'Comment exceeds 200 characters.');
+            hasError = true;
+            if (!firstInvalidInput) firstInvalidInput = document.getElementById('aliasComment');
+        }
+
         const rows = document.querySelectorAll('#alias-items-container .alias-entry-row');
         const list = [];
+        const seen = new Set();
+
         rows.forEach(r => {
-            const itemVal = r.querySelector('.alias-val-input').value.trim();
-            const cmt = r.querySelector('.alias-comment-input').value.trim();
-            if (itemVal) {
-                if (aliasType === 'web_domain') {
-                    list.push({ domain: itemVal, comment: cmt || null });
+            const valInp = r.querySelector('.alias-val-input');
+            const cmtInp = r.querySelector('.alias-comment-input');
+            const errorDiv = r.querySelector('.row-error-msg');
+
+            const itemVal = valInp ? valInp.value.trim() : '';
+            const cmt = (cmtInp ? cmtInp.value.trim() : '') || null;
+
+            if (!itemVal) {
+                if (valInp) valInp.classList.add('is-invalid');
+                if (errorDiv) {
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> Value cannot be empty.`;
+                    errorDiv.style.display = 'flex';
+                }
+                hasError = true;
+                if (!firstInvalidInput) firstInvalidInput = valInp;
+                return;
+            }
+
+            const itemRes = validateAliasModalEntry(itemVal, aliasType);
+            if (!itemRes.valid) {
+                if (valInp) valInp.classList.add('is-invalid');
+                if (errorDiv) {
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${itemRes.error}`;
+                    errorDiv.style.display = 'flex';
+                }
+                hasError = true;
+                if (!firstInvalidInput) firstInvalidInput = valInp;
+                return;
+            }
+
+            const normalizedItemVal = itemRes.normalized || itemVal;
+            if (valInp && valInp.value !== normalizedItemVal) {
+                valInp.value = normalizedItemVal;
+            }
+
+            const lowerVal = normalizedItemVal.toLowerCase();
+            if (seen.has(lowerVal)) {
+                if (valInp) valInp.classList.add('is-invalid');
+                if (errorDiv) {
+                    errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> Duplicate item "${itemVal}".`;
+                    errorDiv.style.display = 'flex';
+                }
+                hasError = true;
+                if (!firstInvalidInput) firstInvalidInput = valInp;
+                return;
+            }
+            seen.add(lowerVal);
+
+            if (aliasType === 'web_domain') {
+                list.push({ domain: normalizedItemVal, comment: cmt });
+            } else {
+                if (itemRes.entryType === 'address') {
+                    list.push({ address: normalizedItemVal, comment: cmt });
                 } else {
-                    // Check if IPv4/CIDR vs hostname
-                    const ipv4Regex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\/([0-9]|[1-2][0-9]|3[0-2]))?$/;
-                    if (ipv4Regex.test(itemVal)) {
-                        list.push({ address: itemVal, comment: cmt || null });
-                    } else {
-                        list.push({ hostname: itemVal, comment: cmt || null });
-                    }
+                    list.push({ hostname: normalizedItemVal, comment: cmt });
                 }
             }
         });
 
         if (list.length === 0) {
-            alert('Please add at least one entry.');
-            btn.disabled = false;
+            setFieldError('aliasItems', 'Please add at least one item.');
+            hasError = true;
+        } else if (list.length > 256) {
+            setFieldError('aliasItems', `Maximum 256 items allowed per alias (current: ${list.length}).`);
+            hasError = true;
+        }
+
+        if (hasError) {
+            if (firstInvalidInput) firstInvalidInput.focus();
             return;
         }
+
+        btn.disabled = true;
 
         try {
             if (actionType === 'add') {
                 const payload = {
                     name: name,
+                    slug: name,
                     type: aliasType,
                     comment: comment || null,
                     list: list
@@ -2377,15 +2875,16 @@
             fetchAliases().then(() => {
                 fetchWebFilterRules(true);
             });
+            alert('Saved successfully');
         } catch (err) {
-            alert('Error saving alias: ' + err.message);
+            alert(err.message || 'Failed to save');
         } finally {
             btn.disabled = false;
         }
     }
 
     async function deleteAlias(aliasId) {
-        if (!confirm('Are you sure you want to delete this alias?')) return;
+        if (!confirm('Delete this alias?')) return;
 
         try {
             const resp = await fetch(`/api/peers/${peerId}/aliases/${aliasId}`, {
@@ -2393,13 +2892,14 @@
             });
             const data = await resp.json();
             if (!resp.ok) {
-                throw new Error(data.message || data.detail || 'Failed to delete alias');
+                throw new Error(data.message || data.detail || 'Failed to delete');
             }
             fetchAliases().then(() => {
                 fetchWebFilterRules(true);
             });
+            alert('Deleted successfully');
         } catch (err) {
-            alert('Error deleting alias: ' + err.message);
+            alert(err.message || 'Failed to delete');
         }
     }
 
