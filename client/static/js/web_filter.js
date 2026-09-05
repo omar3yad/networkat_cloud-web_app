@@ -12,8 +12,8 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!isPeerOnline) {
-            document.getElementById('banner-offline').style.display = 'flex';
-            document.getElementById('add-rule-btn').disabled = true;
+            window.location.href = `/peers/${peerId}`;
+            return;
         }
 
         // Initialize sortable for drag-and-drop rule reordering
@@ -56,6 +56,11 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
             if (!response.ok) {
                 throw new Error(data.error || data.detail || 'Failed to fetch web filter rules');
+            }
+
+            if (data.agent_online === false) {
+                window.location.href = `/peers/${peerId}`;
+                return;
             }
 
             currentRules = data.rules || [];

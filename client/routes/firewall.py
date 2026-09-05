@@ -56,6 +56,9 @@ def peer_firewall(peer_id):
     except Exception as e:
         current_app.logger.error(f"Error checking peer status on loading firewall page: {e}")
 
+    if not is_online:
+        return redirect(url_for('client.peer_details', peer_id=peer_id))
+
     return render_template(
         'firewall.html',
         peer_id=peer_id,

@@ -47,6 +47,9 @@ def peer_web_filter(peer_id):
     except Exception as e:
         current_app.logger.error(f"Error checking peer status on loading web filter page: {e}")
 
+    if not is_online:
+        return redirect(url_for('client.peer_details', peer_id=peer_id))
+
     return render_template(
         'web_filter.html',
         peer_id=peer_id,
@@ -78,6 +81,9 @@ def peer_filtering(peer_id):
             is_online = checked_peer.get("is_online", False)
     except Exception as e:
         current_app.logger.error(f"Error checking peer status on loading filtering page: {e}")
+
+    if not is_online:
+        return redirect(url_for('client.peer_details', peer_id=peer_id))
 
     peer_name = request.args.get('name', 'Edge Device')
     return render_template(

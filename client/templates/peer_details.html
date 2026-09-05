@@ -41,15 +41,19 @@
                     <div style="display: flex; flex-direction: column; align-items: flex-start;">
                         <div class="info-value-wrapper">
                             <span class="info-value" id="peer-name-display">{{ peer_name }}</span>
-                            <input type="text" class="info-inline-input" id="peer-name-input" value="{{ peer_name }}" maxlength="200" style="display: none;">
-                            <button class="btn-badge-edit" id="btn-edit-name" onclick="toggleEditField('name', true)" title="Edit Name">
+                            <input type="text" class="info-inline-input" id="peer-name-input" value="{{ peer_name }}"
+                                maxlength="200" style="display: none;">
+                            <button class="btn-badge-edit" id="btn-edit-name" onclick="toggleEditField('name', true)"
+                                title="Edit Name">
                                 <i class="far fa-edit"></i>
                             </button>
                             <div class="inline-save-cancel" id="actions-name" style="display: none;">
-                                <button class="btn-badge-action btn-badge-save" onclick="savePeerField('name')" title="Save Name">
+                                <button class="btn-badge-action btn-badge-save" onclick="savePeerField('name')"
+                                    title="Save Name">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button class="btn-badge-action btn-badge-cancel" onclick="toggleEditField('name', false)" title="Cancel">
+                                <button class="btn-badge-action btn-badge-cancel"
+                                    onclick="toggleEditField('name', false)" title="Cancel">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -69,15 +73,20 @@
                                 <span style="color: var(--nk-text-muted); font-style: italic;">Not configured</span>
                                 {% endif %}
                             </span>
-                            <input type="text" class="info-inline-input" id="peer-network-input" value="{{ peer_network or '' }}" placeholder="e.g. 192.168.1.0/24" style="display: none;">
-                            <button class="btn-badge-edit" id="btn-edit-network" onclick="toggleEditField('network', true)" title="Edit Network Subnet">
+                            <input type="text" class="info-inline-input" id="peer-network-input"
+                                value="{{ peer_network or '' }}" placeholder="e.g. 192.168.1.0/24"
+                                style="display: none;">
+                            <button class="btn-badge-edit" id="btn-edit-network"
+                                onclick="toggleEditField('network', true)" title="Edit Network Subnet">
                                 <i class="far fa-edit"></i>
                             </button>
                             <div class="inline-save-cancel" id="actions-network" style="display: none;">
-                                <button class="btn-badge-action btn-badge-save" onclick="savePeerField('network')" title="Save Network Subnet">
+                                <button class="btn-badge-action btn-badge-save" onclick="savePeerField('network')"
+                                    title="Save Network Subnet">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button class="btn-badge-action btn-badge-cancel" onclick="toggleEditField('network', false)" title="Cancel">
+                                <button class="btn-badge-action btn-badge-cancel"
+                                    onclick="toggleEditField('network', false)" title="Cancel">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -110,15 +119,17 @@
                     <span>Aliases</span>
                 </a>
                 {% else %}
-                <a href="javascript:void(0)" class="action-card disabled" title="This peer is offline. Firewall rules are only accessible when the peer is online.">
+                <a href="javascript:void(0)" class="action-card disabled"
+                    title="This peer is offline. Firewall rules are only accessible when the peer is online.">
                     <i class="fas fa-shield-alt" style="color: var(--nk-text-muted);"></i>
                     <span style="color: var(--nk-text-muted);">Firewall Rules</span>
                 </a>
-                <a href="javascript:void(0)" class="action-card disabled" title="This peer is offline. Web Filter is only accessible when the peer is online.">
+                <a href="javascript:void(0)" class="action-card disabled" title="Peer is offline">
                     <i class="fas fa-filter" style="color: var(--nk-text-muted);"></i>
                     <span style="color: var(--nk-text-muted);">Web Filter</span>
                 </a>
-                <a href="javascript:void(0)" class="action-card disabled" title="This peer is offline. Aliases are only accessible when the peer is online.">
+                <a href="javascript:void(0)" class="action-card disabled"
+                    title="This peer is offline. Aliases are only accessible when the peer is online.">
                     <i class="fas fa-list" style="color: var(--nk-text-muted);"></i>
                     <span style="color: var(--nk-text-muted);">Aliases</span>
                 </a>
@@ -155,7 +166,8 @@
             <div class="graph-placeholder">
                 <i class="fas fa-chart-area fa-3x" style="opacity: 0.3;"></i>
                 <span style="font-weight: 700;">Realtime Bandwidth Usage</span>
-                <span style="font-size: 0.8rem; opacity: 0.7;">Graph integration will be populated in subsequent sprints.</span>
+                <span style="font-size: 0.8rem; opacity: 0.7;">Graph integration will be populated in subsequent
+                    sprints.</span>
             </div>
 
             <h3 class="card-title" style="margin-top: 2rem;">
@@ -175,11 +187,11 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         window.initPeerDetails({
-            peerName: {{ peer_name|tojson }},
-            peerNetwork: {{ (peer_network or '')|tojson }},
-            routeId: {{ (peer_route_id or '')|tojson }},
-            routeNetworkId: {{ (peer_route_network_id or '')|tojson }},
-            peerId: {{ peer_id|tojson }}
+            peerName: {{ peer_name| tojson }},
+        peerNetwork: {{ (peer_network or '') | tojson }},
+        routeId: {{ (peer_route_id or '') | tojson }},
+        routeNetworkId: {{ (peer_route_network_id or '') | tojson }},
+        peerId: {{ peer_id| tojson }}
         });
     });
 </script>

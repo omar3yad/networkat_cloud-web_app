@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networkat · Page Not Found (404)</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --nk-primary: #0284c7;
+            --nk-primary-dark: #0369a1;
+            --nk-bg: #f8fafc;
+            --nk-card-bg: #ffffff;
+            --nk-text-main: #0f172a;
+            --nk-text-muted: #64748b;
+            --nk-border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f8fafc 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--nk-text-main);
+        }
+
+        .error-card {
+            background: var(--nk-card-bg);
+            border-radius: 20px;
+            box-shadow: 0 20px 50px -10px rgba(2, 132, 199, 0.12), 0 10px 20px -5px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            width: 100%;
+            max-width: 520px;
+            padding: 48px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .error-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #0284c7, #38bdf8, #0ea5e9);
+        }
+
+        .brand-logo {
+            height: 38px;
+            margin-bottom: 28px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            background: #f1f5f9;
+            color: #475569;
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .status-badge .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .error-code {
+            font-size: 4.5rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--nk-text-main);
+            margin-bottom: 10px;
+        }
+
+        .error-desc {
+            font-size: 0.95rem;
+            color: var(--nk-text-muted);
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--nk-primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: var(--nk-primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+        }
+
+        .btn-secondary {
+            background: #f8fafc;
+            color: #334155;
+            border: 1px solid var(--nk-border);
+        }
+
+        .btn-secondary:hover {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Networkat Logo" class="brand-logo" onerror="this.style.display='none'">
+        
+        <div class="status-badge">
+            <span class="dot"></span>
+            Error 404
+        </div>
+
+        <h1 class="error-code">404</h1>
+        <h2 class="error-title">Page Not Found</h2>
+        <p class="error-desc">The page or resource you are trying to access does not exist or may have been moved.</p>
+
+        <div class="btn-group">
+            <a href="{{ url_for('client.dashboard') }}" class="btn-action btn-primary">
+                <i class="fas fa-arrow-left"></i>
+                Return to Dashboard
+            </a>
+            <a href="{{ url_for('client.peers_page') }}" class="btn-action btn-secondary">
+                <i class="fas fa-desktop"></i>
+                Peer Devices
+            </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -68,11 +68,11 @@
                                         <span class="submenu-label">{{ p.name }}</span>
                                     </a>
                                 {% else %}
-                                    <div class="submenu-item disabled" title="{{ p.name }} (Offline)">
+                                    <a href="{{ url_for('client.peer_details', peer_id=p.id) }}" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} (Offline)">
                                         <span class="peer-status-dot offline"></span>
                                         <span class="submenu-label">{{ p.name }}</span>
                                         <span class="offline-tag"></span>
-                                    </div>
+                                    </a>
                                 {% endif %}
                             {% endfor %}
                         {% else %}

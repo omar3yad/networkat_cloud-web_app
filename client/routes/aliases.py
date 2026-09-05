@@ -70,12 +70,17 @@ def aliases_page():
 
     if not peer_id and peers_list:
         first_online = next((p for p in peers_list if p["connected"]), None)
-        target_peer = first_online if first_online else peers_list[0]
-        url = url_for('client.peer_aliases', peer_id=target_peer["id"])
-        if filter_val:
-            url += f"?filter={filter_val}"
-        return redirect(url)
+        if first_online:
+            url = url_for('client.peer_aliases', peer_id=first_online["id"])
+            if filter_val:
+                url += f"?filter={filter_val}"
+            return redirect(url)
+        else:
+            return redirect(url_for('client.peer_details', peer_id=peers_list[0]["id"]))
     elif peer_id:
+        target_peer = next((p for p in peers_list if p["id"] == peer_id), None)
+        if target_peer and not target_peer["connected"]:
+            return redirect(url_for('client.peer_details', peer_id=peer_id))
         url = url_for('client.peer_aliases', peer_id=peer_id)
         if filter_val:
             url += f"?filter={filter_val}"
@@ -147,6 +152,9 @@ def peer_aliases(peer_id):
     selected_peer = next((p for p in peers_list if p["id"] == peer_id), None)
     selected_peer_name = selected_peer["name"] if selected_peer else "Peer Device"
     is_online = selected_peer["connected"] if selected_peer else False
+
+    if not is_online:
+        return redirect(url_for('client.peer_details', peer_id=peer_id))
 
     return render_template(
         'aliases.html',

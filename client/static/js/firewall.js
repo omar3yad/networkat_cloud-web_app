@@ -23,14 +23,17 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Auto-refresh periodically if peer is online
-        if (isPeerOnline) {
-            setInterval(() => {
-                // Silent background refresh: no loading view, no table hide,
-                // no spinner, and the table only re-renders if data changed.
-                fetchRules(true, true);
-            }, 10000);
+        if (!isPeerOnline) {
+            window.location.href = `/peers/${peerId}`;
+            return;
         }
+
+        // Auto-refresh periodically if peer is online
+        setInterval(() => {
+            // Silent background refresh: no loading view, no table hide,
+            // no spinner, and the table only re-renders if data changed.
+            fetchRules(true, true);
+        }, 10000);
 
         fetchAddressLists(true).then(() => {
             fetchRules();
@@ -169,15 +172,9 @@ const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
 
             // Update online status UI dynamically from rules check
             isPeerOnline = data.agent_online;
-            const bannerOffline = document.getElementById('banner-offline');
-            const addBtn = document.getElementById('add-rule-btn');
-
-            if (!isPeerOnline) {
-                if (bannerOffline) bannerOffline.style.display = 'flex';
-                if (addBtn) addBtn.disabled = true;
-            } else {
-                if (bannerOffline) bannerOffline.style.display = 'none';
-                if (addBtn) addBtn.disabled = false;
+            if (data.agent_online === false) {
+                window.location.href = `/peers/${peerId}`;
+                return;
             }
 
             currentRules = data.rules || [];

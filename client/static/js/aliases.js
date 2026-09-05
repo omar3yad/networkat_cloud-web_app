@@ -10,26 +10,12 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         const filterParam = urlParams.get('filter');
 
         if (currentPeerId) {
+            if (!isPeerOnline) {
+                window.location.href = `/peers/${currentPeerId}`;
+                return;
+            }
             updateNavTabLinks(currentPeerId);
             document.getElementById("aliases-workspace").style.display = "block";
-
-            // Update Offline Banner & Action Buttons
-            const offlineBanner = document.getElementById("banner-offline");
-            const addBtn = document.getElementById("add-list-btn");
-            const syncBtn = document.getElementById("sync-lists-btn");
-            const resolverBtn = document.getElementById("resolver-settings-btn");
-
-            if (!isPeerOnline) {
-                if (offlineBanner) offlineBanner.style.display = "flex";
-                if (addBtn) addBtn.disabled = true;
-                if (syncBtn) syncBtn.disabled = true;
-                if (resolverBtn) resolverBtn.disabled = true;
-            } else {
-                if (offlineBanner) offlineBanner.style.display = "none";
-                if (addBtn) addBtn.disabled = false;
-                if (syncBtn) syncBtn.disabled = false;
-                if (resolverBtn) resolverBtn.disabled = false;
-            }
 
             fetchAddressLists();
             fetchResolverConfig();
