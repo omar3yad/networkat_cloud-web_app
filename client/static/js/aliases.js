@@ -405,6 +405,42 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         return true;
     }
 
+    function getLocalForwardingDomains() {
+        const domains = [];
+        const upstreams = (cachedResolverConfig && cachedResolverConfig.upstream_dns) || [];
+        upstreams.forEach(upstream => {
+            const match = upstream.match(/^\[\/([a-zA-Z0-9._-]+)\/\](.+)$/);
+            if (match) {
+                domains.push(match[1].toLowerCase());
+            }
+        });
+        return domains;
+    }
+
+    function isHostnameMatchingLocalDomain(trimmed) {
+        const localDomains = getLocalForwardingDomains();
+        if (!localDomains || localDomains.length === 0) {
+            return {
+                valid: false,
+                error: 'No Local Domain Server in Resolver Settings'
+            };
+        }
+
+        const lowerHost = trimmed.toLowerCase();
+        const matchesLocalDomain = localDomains.some(d => {
+            return lowerHost === d || lowerHost.endsWith('.' + d);
+        });
+
+        if (!matchesLocalDomain) {
+            return {
+                valid: false,
+                error: `Must match a Local Domain Server (${localDomains.join(', ')})`
+            };
+        }
+
+        return { valid: true };
+    }
+
     function hostname_validator(val) {
         if (!val || typeof val !== 'string') return false;
         const trimmed = val.trim();
@@ -454,7 +490,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             }
             return { valid: true, normalized: trimmed, entryType: 'domain' };
         } else {
-            // Normal alias: determined by first character
+            // Normal alias: IPv4 or Hostname matching local domain servers
             const firstChar = trimmed[0];
 
             // Digit (0-9): IPv4 Format or Hostname starting with digit
@@ -463,15 +499,19 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                 if (ipv4Res.valid) {
                     return { valid: true, entryType: 'address', normalized: ipv4Res.normalized, ipData: ipv4Res };
                 }
-                // Check if valid hostname
+                // Check if valid hostname starting with digit
                 const hostRes = window.validateHostname ? window.validateHostname(trimmed) : null;
                 if (hostRes && hostRes.valid) {
+                    const localRes = isHostnameMatchingLocalDomain(trimmed);
+                    if (!localRes.valid) {
+                        return localRes;
+                    }
                     return { valid: true, entryType: 'hostname', normalized: trimmed };
                 }
                 return ipv4Res;
             }
 
-            // Letter (a-zA-Z): Hostname
+            // Letter (a-zA-Z): Hostname must match configured local domain servers
             if (/^[a-zA-Z]/.test(firstChar)) {
                 const hostRes = window.validateHostname ? window.validateHostname(trimmed) : null;
                 if (hostRes) {
@@ -481,6 +521,13 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                 } else if (!hostname_validator(trimmed)) {
                     return { valid: false, error: 'Invalid hostname' };
                 }
+
+                // Strictly verify against Local Domain Servers (Resolver Settings)
+                const localRes = isHostnameMatchingLocalDomain(trimmed);
+                if (!localRes.valid) {
+                    return localRes;
+                }
+
                 return { valid: true, entryType: 'hostname', normalized: trimmed };
             }
 
