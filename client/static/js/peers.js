@@ -314,7 +314,7 @@
 
     async function fetchPeersStatus() {
         try {
-            const response = await fetch(`/api/peers/status?t=${Date.now()}`);
+            const response = await fetch(`/api/peers/status?refresh=true&t=${Date.now()}`);
             if (!response.ok) {
                 if (response.status === 401) {
                     window.location.href = '/login';

@@ -300,7 +300,7 @@ def _revalidate_customer_peers_status(customer_id, customer, base_url, headers, 
                 ): peer
                 for peer in customer_peers
             }
-            for future in as_completed(futures, timeout=5):
+            for future in as_completed(futures, timeout=15):
                 try:
                     res = future.result()
                     processed_peers.append(res)
@@ -344,15 +344,16 @@ def get_peers_status_api():
             "summary": {"total": 0, "online": 0, "offline": 0}
         })
 
+    force_refresh = request.args.get('refresh') == 'true'
     now = time.time()
     cached_payload, cached_time = read_file_cache(f"customer_status_{customer_id}")
 
-    # 1. Fresh cache (< 30s)
-    if cached_payload and (now - cached_time < 30):
+    # 1. Fresh cache (< 10s) when not forcing refresh
+    if not force_refresh and cached_payload and (now - cached_time < 10):
         return no_cache_json(cached_payload)
 
-    # 2. Stale cache: return immediately, revalidate in background
-    if cached_payload:
+    # 2. Stale cache: return immediately, revalidate in background (only when not forcing refresh)
+    if not force_refresh and cached_payload:
         if not is_revalidating(customer_id):
             start_revalidating(customer_id)
             executor.submit(
@@ -361,9 +362,9 @@ def get_peers_status_api():
             )
         return no_cache_json(cached_payload)
 
-    # 3. No cache available: synchronous load
+    # 3. Synchronous fresh load
     try:
-        peers_data = get_cached_all_netbird_peers(base_url, headers, cache_ttl=10)
+        peers_data = get_cached_all_netbird_peers(base_url, headers, cache_ttl=0 if force_refresh else 10)
         customer_peers = [p for p in peers_data if p.get("id") in allowed_peer_ids]
 
         processed_peers = []
@@ -377,7 +378,7 @@ def get_peers_status_api():
                 ): peer
                 for peer in customer_peers
             }
-            for future in as_completed(futures, timeout=5):
+            for future in as_completed(futures, timeout=15):
                 try:
                     res = future.result()
                     processed_peers.append(res)
@@ -428,18 +429,20 @@ def peer_vpn_only_proxy(peer_id):
         else:
             resp = requests.get(agent_url, timeout=10)
 
-        if resp.ok and request.method == 'POST':
+        if resp.ok:
             try:
                 resp_data = resp.json()
-                if resp_data.get("ok") or resp_data.get("status") == "success":
-                    enabled = resp_data.get("enabled")
-                    if enabled is None:
-                        op = data.get("operation", "").lower()
-                        enabled = op in ("enable", "on")
-                    
+                enabled = resp_data.get("enabled")
+                if enabled is not None:
+                    with cache_lock:
+                        vpn_only_cache[peer_id] = (bool(enabled), time.time())
+                elif request.method == 'POST':
+                    op = data.get("operation", "").lower()
+                    enabled = op in ("enable", "on")
                     with cache_lock:
                         vpn_only_cache[peer_id] = (enabled, time.time())
-                    
+                
+                if request.method == 'POST':
                     clear_all_netbird_caches(customer_id)
             except Exception as cache_err:
                 current_app.logger.error(f"Error updating vpn-only cache: {cache_err}")

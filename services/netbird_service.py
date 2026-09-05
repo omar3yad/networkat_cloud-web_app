@@ -172,7 +172,7 @@ class NetBirdService:
         return is_reachable
 
     @classmethod
-    def get_cached_peer_vpn_only(cls, peer_id: str, peer_ip: str, cache_ttl: int = 15) -> bool:
+    def get_cached_peer_vpn_only(cls, peer_id: str, peer_ip: str, cache_ttl: int = 10) -> bool:
         """Fetch peer VPN-only status from edge agent with in-memory TTL cache."""
         now = time.time()
 
@@ -185,16 +185,23 @@ class NetBirdService:
         enabled = False
         try:
             url = f"http://{peer_ip}:8765/vpn-only"
-            resp = requests.get(url, timeout=1.5)
+            resp = requests.get(url, timeout=2.5)
             if resp.ok:
-                enabled = resp.json().get("enabled", False)
-        except Exception:
-            enabled = False
+                resp_data = resp.json()
+                enabled = bool(resp_data.get("enabled", False))
+                with cache_lock:
+                    vpn_only_cache[peer_id] = (enabled, now)
+                return enabled
+        except Exception as e:
+            logger.debug(f"Error fetching vpn-only for peer {peer_id}: {e}")
 
+        # If call failed, return last known cached value if available, else False
         with cache_lock:
-            vpn_only_cache[peer_id] = (enabled, now)
+            if peer_id in vpn_only_cache:
+                return vpn_only_cache[peer_id][0]
+            vpn_only_cache[peer_id] = (False, now)
 
-        return enabled
+        return False
 
     @classmethod
     def check_single_peer_handshake(cls, peer: dict, base_url: str = None, headers: dict = None) -> dict:
@@ -208,9 +215,9 @@ class NetBirdService:
         vpn_only = False
 
         if is_connected:
-            is_reachable = cls.get_cached_peer_handshake(peer_id, base_url, headers, cache_ttl=60)
+            is_reachable = cls.get_cached_peer_handshake(peer_id, base_url, headers, cache_ttl=10)
             if is_reachable and peer.get("ip"):
-                vpn_only = cls.get_cached_peer_vpn_only(peer_id, peer.get("ip"), cache_ttl=60)
+                vpn_only = cls.get_cached_peer_vpn_only(peer_id, peer.get("ip"), cache_ttl=10)
 
         real_online = is_connected and is_reachable
         pname = peer.get("name")
@@ -249,7 +256,7 @@ class NetBirdService:
                     executor.submit(cls.check_single_peer_handshake, peer, base_url, headers): peer
                     for peer in customer_peers
                 }
-                for future in as_completed(futures, timeout=5):
+                for future in as_completed(futures, timeout=15):
                     try:
                         res = future.result()
                         processed_peers.append(res)
