@@ -4,7 +4,7 @@ from models import Client
 from functools import wraps
 from services.auth_service import AuthService
 from services.customer_service import CustomerService
-from client.routes import _get_customer_group_peer_ids
+from services.netbird_service import get_cached_customer_peer_ids as _get_customer_group_peer_ids
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
 admin_bp = Blueprint('admin', __name__, template_folder='../templates')

@@ -43,11 +43,11 @@ def get_netbird_setup_keys():
         customer_name = request.args.get('customer_name', '').strip()
         
         netbird_url = 'https://api.networkat.cloud/api/v2/netbird/setup-keys'
-        
+        internal_key = os.environ.get('NETBIRD_API_TOKEN', '57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874')
 
         headers = {
             'accept': 'application/json',
-            'Authorization': f'Bearer {internal_key}'  # <-- إضافة الـ Bearer Token هنا
+            'Authorization': f'Bearer {internal_key}'
         }
         
         # جلب كل المفاتيح من NetBird
