@@ -9,13 +9,16 @@ import time
 import logging
 from threading import Lock
 
-from fastapi import APIRouter, Request, status
+from typing import Optional
+
+from fastapi import APIRouter, Request, Header, Response, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from werkzeug.security import check_password_hash
 
 from fastapi_app.database import SessionLocal
 from fastapi_app.schemas.auth import SetupKeyRequest, SetupKeyResponse, AccountMeta, ClientSetupKeyInfo, ErrorResponse
+from fastapi_app.services.auth.download_token import make_token, verify_token
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -252,13 +255,17 @@ async def get_setup_key(payload: SetupKeyRequest, request: Request):
         )
 
         # ── 7. Audit log ───────────────────────────────────────────────────
-        logger.info(f"[setup-key-api] ✅ Key retrieved — username='{username}' ip={ip}")
+        logger.info(f"[setup-key-api]   Key retrieved — username='{username}' ip={ip}")
 
         # ── 8. Return ──────────────────────────────────────────────────────
+        # The download_token gates the tarball fetch in install.sh: it is minted
+        # here on a successful login and verified by nginx auth_request via
+        # /verify-download below. Short-lived (see download_token.py).
         return SetupKeyResponse(
             username  = username,
             account   = account_meta,
-            setup_keys = client_setup_keys_info
+            setup_keys = client_setup_keys_info,
+            download_token = make_token(username),
         )
 
     except Exception as exc:
@@ -272,5 +279,26 @@ async def get_setup_key(payload: SetupKeyRequest, request: Request):
         )
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/auth/verify-download
+# ---------------------------------------------------------------------------
+# Internal gate for the peer-installer tarball. nginx auth_request hits this
+# (see core/nginx/conf/peer-installer.locations) forwarding the client's
+# Authorization header; 204 tells nginx to serve the file, 401 (which nginx
+# maps to a 403 for the client) blocks it. Hidden from /docs — it is not a
+# public API surface, just the check behind the download.
+@router.get("/verify-download", include_in_schema=False)
+async def verify_download(authorization: Optional[str] = Header(default=None)):
+    token = ""
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    if token and verify_token(token):
+        return Response(status_code=204)
+    return JSONResponse(
+        status_code=401,
+        content={"error": "Unauthorized", "message": "Invalid or expired download token."},
+    )
 
 

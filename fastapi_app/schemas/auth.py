@@ -55,6 +55,7 @@ class SetupKeyResponse(BaseModel):
     username:   str                     = Field(..., description="The authenticated username.")
     account:    AccountMeta             = Field(..., description="Non-sensitive metadata about the account.")
     setup_keys: List[ClientSetupKeyInfo] = Field(default=[], description="All NetBird Setup Keys linked to this account.")
+    download_token: Optional[str]        = Field(None, description="Short-lived token to fetch the installer tarball.")
 
     model_config = {
         "json_schema_extra": {
