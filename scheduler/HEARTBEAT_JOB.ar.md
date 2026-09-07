@@ -35,7 +35,7 @@
 
 | ملف | نوع التغيير |
 |---|---|
-| `scheduler/heartbeat.py` | **جديد** — اللوب الرئيسي |
+| `scheduler/peers_heartbeat.py` | **جديد** — اللوب الرئيسي |
 | `scheduler/__init__.py` | **جديد** — يجعل `scheduler/` package (كان فيه ملفات لكن بلا `__init__.py`) |
 | `supervisord.conf` | **تعديل** — إضافة `[program:heartbeat]` |
 
@@ -49,7 +49,7 @@
 
 ```ini
 [program:heartbeat]
-command=python -u -m scheduler.heartbeat
+command=python -u -m scheduler.peers_heartbeat
 directory=/app
 autostart=true
 autorestart=true
@@ -75,7 +75,7 @@ stderr_logfile_maxbytes=0
 
 ---
 
-## 3. كيف يعمل `scheduler/heartbeat.py`
+## 3. كيف يعمل `scheduler/peers_heartbeat.py`
 
 ### 3.1 الدورة (round) — كل ~60 ثانية
 
@@ -117,7 +117,7 @@ stderr_logfile_maxbytes=0
 
 | المتغيّر | الافتراضي | المعنى |
 |---|---|---|
-| `HEARTBEAT_INTERVAL_SECONDS` | `60` | الفاصل بين الدورات — مريح مقارنةً بمهلة الـ failsafe (`DEFAULT_TIMEOUT_SECONDS = 21600` = 6 ساعات على الأسطول)، فدورة أو اثنتان فائتتان لا تضرّ |
+| `HEARTBEAT_INTERVAL_SECONDS` | `60` | الفاصل بين الدورات — مريح مقارنةً بمهلة الـ failsafe (`DEFAULT_TIMEOUT_SECONDS = 604800` = أسبوع على الأسطول)، فدورة أو اثنتان فائتتان لا تضرّ |
 | `HEARTBEAT_PEER_GROUP` | `all-peers` | مجموعة NetBird التي تُعتبر peers مُدارة |
 | `HEARTBEAT_WORKERS` | `20` | عرض التوازي |
 | `HEARTBEAT_REQUEST_TIMEOUT` | `5` | timeout نداء `/heartbeat` لكل peer (ثوانٍ) |
@@ -174,7 +174,7 @@ curl -s http://100.123.117.214:8765/failsafe | jq
     "state": "off",
     "rules_present": false,
     "filtering_enabled": true,
-    "timeout_seconds": 21600,
+    "timeout_seconds": 604800,
     "last_contact_age_seconds": 12,
     "reason": "reconcile_only"
   }
@@ -208,14 +208,14 @@ curl -s -XPOST http://100.123.117.214:8765/failsafe \
 
 ### 4.4 `PUT /failsafe/config` — ضبط المهلة
 
-body: `{"timeout_seconds": <int>}` — بين `1` و `86400`.
+body: `{"timeout_seconds": <int>}` — بين `60` و `1209600`.
 
 ```bash
 curl -s -XPUT http://100.123.117.214:8765/failsafe/config \
-  -H 'content-type: application/json' -d '{"timeout_seconds": 21600}' | jq
+  -H 'content-type: application/json' -d '{"timeout_seconds": 604800}' | jq
 ```
 > الافتراضي الحالي في المُنصِّب (`failsafe_engine.py: DEFAULT_TIMEOUT_SECONDS`) =
-> `21600` ثانية (6 ساعات). هذا الـ endpoint يسمح للـ Controller بضبطها لكل peer على
+> `604800` ثانية (أسبوع). هذا الـ endpoint يسمح للـ Controller بضبطها لكل peer على
 > حدة. لا يلمس nft — يكتب المفتاح في جدول `setting` فقط.
 
 ---
@@ -245,7 +245,7 @@ curl -s -XPUT http://100.123.117.214:8765/failsafe/config \
 
 - **مُفعَّل على البيئة الحيّة** (`docker compose restart web_app` تم).
 - **لم يُعمَل commit** — بانتظار مراجعة الفريق. (يوجد شغل غير مُقيَّد في الشجرة من
-  جلسة أخرى — الملفات الخاصة بهذا العمل فقط: `scheduler/heartbeat.py`،
+  جلسة أخرى — الملفات الخاصة بهذا العمل فقط: `scheduler/peers_heartbeat.py`،
   `scheduler/__init__.py`، وأسطر `[program:heartbeat]` في `supervisord.conf`.)
 - هذا تغيير في `core/web_app` — **لا يمرّ عبر `peer_installer/dev/release.sh`**
   (ذاك للـ peer_installer فقط).

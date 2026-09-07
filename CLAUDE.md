@@ -22,7 +22,7 @@ docker compose up -d --build   # picks up compose.yaml + compose.override.yaml a
 
 `compose.override.yaml` bind-mounts this directory into the container and runs Gunicorn/Uvicorn with `--reload`, so edits are picked up live without rebuilding — just save.
 
-Inside the container, `entrypoint.sh` waits for Postgres, runs `flask db upgrade` (Alembic), then execs `supervisord`, which runs `program:admin`, `program:client`, `program:api`, and `program:heartbeat` (see `supervisord.conf`). Ports: admin `5000`, client `8097`, FastAPI gateway `8098` (docs at `/docs`); `heartbeat` has no port.
+Inside the container, `entrypoint.sh` waits for Postgres, runs `flask db upgrade` (Alembic), then execs `supervisord`, which runs `program:admin`, `program:client`, `program:api`, and `program:heartbeat` (`scheduler/peers_heartbeat.py`; see `supervisord.conf`). Ports: admin `5000`, client `8097`, FastAPI gateway `8098` (docs at `/docs`); `heartbeat` has no port.
 
 `.env` is not propagated into the process environment on the deploy host — every process (including the scheduler) relies on `python-dotenv` reading `/app/.env` at import time via `config/settings.py`. Follow that pattern in any new entrypoint; don't assume `os.getenv` works without `load_dotenv()`.
 
@@ -60,7 +60,7 @@ Only `tests/test_dns.py` is a real pytest suite — it exercises `fastapi_app/se
 
 - `PROJECT_ARCHITECTURE.md` — a long-form master reference for client routes, services, templates, and static assets. Consult it before large client-portal changes; keep it roughly in sync when you add client routes/services.
 - `README.md` — setup/onboarding narrative.
-- `scheduler/HEARTBEAT_JOB.ar.md` / `HEARTBEAT_CHANGES.ar.md` — rationale for the heartbeat job (Arabic).
+- `scheduler/HEARTBEAT_JOB.ar.md` / `HEARTBEAT_CHANGES.ar.md` — rationale for the peers-heartbeat job (Arabic).
 
 ## Project rule: message copy
 
@@ -73,7 +73,7 @@ Three request-serving processes + one background loop, one database, one set of 
 1. **Admin Portal** (`app.py`, blueprint in `admin/routes.py`, port 5000) — operator-facing: customer/tenant creation, global metrics, user management. Auto-seeds a default admin user on startup via `services/auth_service.py: AuthService.seed_default_admin()`.
 2. **Client Portal** (`client_app.py`, blueprint in `client/routes.py`, port 8097) — tenant-facing dashboard: peer/device status, DNS filtering, firewall rules. Its own templates/static live under `client/`. Includes an SSE endpoint (`/api/peers/stream`) that fans out concurrent peer-reachability checks via a `ThreadPoolExecutor` to avoid blocking Flask's worker.
 3. **FastAPI Gateway** (`fastapi_app/main.py`, port 8098) — the only thing that talks to NetBird, AdGuard, and edge agents. Every route is guarded app-wide by a single `Depends(verify_api_key)` (`fastapi_app/dependencies.py`) checking a bearer token against `INTERNAL_API_KEY`. Both Flask apps call into this gateway as an internal HTTP client, not directly.
-4. **Heartbeat job** (`scheduler/heartbeat.py`, `program:heartbeat`, no port) — a dumb pinger loop, independent of the FastAPI package. Every `HEARTBEAT_INTERVAL` seconds it lists peers straight from the internal NetBird API, and POSTs `http://<mesh-ip>:8765/heartbeat` (no auth — mesh is the trust boundary) to every connected peer with a mesh IP. This refreshes the peer-side dead-man-switch (`failsafe_engine.py` on the edge) so it doesn't trip to "basic router" mode; without it, the only liveness signal is incidental dashboard traffic. The peer owns the timeout/state machine; the loop keeps no state and must never die. Other scheduler modules: `cleanup.py`, `monitor.py`, `jobs.py`.
+4. **Heartbeat job** (`scheduler/peers_heartbeat.py`, `program:heartbeat`, no port) — a dumb pinger loop, independent of the FastAPI package. Every `HEARTBEAT_INTERVAL` seconds it lists peers straight from the internal NetBird API, and POSTs `http://<mesh-ip>:8765/heartbeat` (no auth — mesh is the trust boundary) to every connected peer with a mesh IP. This refreshes the peer-side dead-man-switch (`failsafe_engine.py` on the edge) so it doesn't trip to "basic router" mode; without it, the only liveness signal is incidental dashboard traffic. The peer owns the timeout/state machine; the loop keeps no state and must never die. Other scheduler modules: `cleanup.py`, `monitor.py`, `jobs.py`.
 
 Layering inside this repo: routes/blueprints stay thin and delegate to `services/` (business logic / orchestration of NetBird calls), which use `repositories/` for DB access. Follow this pattern for new admin/client features — don't put SQLAlchemy queries directly in route handlers. `test_clean_arch_suite.py` exists to police this and template health. The FastAPI side mirrors this with `fastapi_app/routes/` → `fastapi_app/services/` → raw `SessionLocal` queries, plus `fastapi_app/schemas/` for Pydantic request/response validation, organized by external system (`adguard/`, `netbird/`, `controller/`).
 

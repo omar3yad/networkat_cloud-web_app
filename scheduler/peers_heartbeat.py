@@ -60,8 +60,8 @@ NETBIRD_LIST_TIMEOUT = float(os.getenv("HEARTBEAT_NETBIRD_TIMEOUT", "10"))
 # is just wasted sockets and noise in the failure count.
 PEER_GROUP = os.getenv("HEARTBEAT_PEER_GROUP", "all-peers")
 
-# Target ~60s between rounds. The peer default timeout is measured in hours
-# (installer failsafe_engine.py DEFAULT_TIMEOUT_SECONDS = 21600), so a missed
+# Target ~60s between rounds. The peer default timeout is a week
+# (installer failsafe_engine.py DEFAULT_TIMEOUT_SECONDS = 604800), so a missed
 # round or two is harmless - this does not need to be tight.
 HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL_SECONDS", "60"))
 
