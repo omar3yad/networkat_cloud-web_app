@@ -79,6 +79,39 @@ class CustomerService:
             except Exception as e:
                 print(f"Error fetching NetBird peers: {str(e)}")
 
+        if netbird_peers:
+            peer_ids = [p.get("id") for p in netbird_peers if isinstance(p, dict) and p.get("id")]
+            if peer_ids:
+                try:
+                    from models.group_peer import GroupPeer
+                    records = GroupPeer.query.filter(GroupPeer.peer_id.in_(peer_ids)).all()
+                    pwd_map = {r.peer_id: r.adguard_password for r in records if r.adguard_password}
+                    for p in netbird_peers:
+                        if isinstance(p, dict):
+                            p_id = p.get("id")
+                            p_ip = p.get("ip")
+                            stored_pwd = pwd_map.get(p_id)
+                            if (not stored_pwd or stored_pwd in ("default_password", "adguard-api")) and p_ip:
+                                try:
+                                    cred_resp = requests.get(f"http://{p_ip}:8765/adguard-credential", timeout=1.5)
+                                    if cred_resp.ok:
+                                        cred_data = cred_resp.json() if cred_resp.headers.get("Content-Type", "").startswith("application/json") else cred_resp.text.strip()
+                                        fetched_pwd = cred_data.get("password") if isinstance(cred_data, dict) else str(cred_data).strip()
+                                        if fetched_pwd:
+                                            stored_pwd = fetched_pwd
+                                            target_rec = next((r for r in records if r.peer_id == p_id), None)
+                                            if target_rec:
+                                                target_rec.adguard_password = fetched_pwd
+                                                self.client_repo.flush()
+                                except Exception:
+                                    pass
+                            p["adguard_password"] = stored_pwd or "adguard-api"
+                except Exception as e:
+                    print(f"Error fetching AdGuard passwords: {str(e)}")
+                    for p in netbird_peers:
+                        if isinstance(p, dict) and "adguard_password" not in p:
+                            p["adguard_password"] = "adguard-api"
+
         return {
             'customer': client,
             'edges': edges,

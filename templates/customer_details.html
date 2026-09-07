@@ -588,6 +588,7 @@
                                     <th>IP Address</th>
                                     <th>OS & Version</th>
                                     <th>Status</th>
+                                    <th>AdGuard Password</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -626,6 +627,19 @@
                                         </span>
                                     </td>
                                     <td>
+                                        {% set ag_pwd = peer.adguard_password or 'adguard-api' %}
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span
+                                                style="font-family: monospace; font-size: 0.85rem; color: var(--gray-600); letter-spacing: 2px;">••••••••</span>
+                                            <button type="button" class="action-btn"
+                                                onclick="copyAdGuardPassword('{{ ag_pwd }}', this)"
+                                                title="Copy AdGuard Password"
+                                                style="padding: 4px 8px; border: 1px solid var(--gray-200); border-radius: 4px; background: white; cursor: pointer; color: var(--primary);">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <button class="action-btn text-danger"
                                             onclick="deletePeer('{{ peer.id }}', '{{ peer.name }}')"
                                             title="Delete Peer">
@@ -636,7 +650,7 @@
                                 {% endfor %}
                                 {% else %}
                                 <tr>
-                                    <td colspan="4" class="text-center"
+                                    <td colspan="6" class="text-center"
                                         style="text-align: center; padding: 3rem; color: var(--gray-600);">
                                         <i class="fas fa-info-circle mb-2"
                                             style="font-size: 1.5rem; display: block;"></i>
@@ -914,7 +928,7 @@
                 const data = await response.json();
                 if (data.success) {
                     hideTokenModal();
-                    showNotification('✅ Token generated successfully');
+                    showNotification('  Token generated successfully');
                     setTimeout(() => location.reload(), 2000);
                 }
             } catch (error) {
@@ -933,7 +947,7 @@
 
         function copyToken(token) {
             navigator.clipboard.writeText(token).then(() => {
-                showNotification('✅ Token copied to clipboard!');
+                showNotification('  Token copied to clipboard!');
             });
         }
 
@@ -1006,7 +1020,7 @@
                 });
                 if (response.ok) {
                     hideResetModal();
-                    showNotification('✅ Password reset successfully');
+                    showNotification('  Password reset successfully');
                 } else {
                     alert('Error resetting password');
                 }
@@ -1021,7 +1035,7 @@
                 const response = await fetch(`/api/users/${userId}/delete`, { method: 'DELETE' });
                 if (response.ok) {
                     loadUsers();
-                    showNotification('✅ User deleted');
+                    showNotification('  User deleted');
                 }
             } catch (error) {
                 alert('Error deleting user');
@@ -1048,6 +1062,56 @@
                 alert('Error deleting customer');
             }
         }
+        // --- Copy AdGuard Password ---
+        function copyAdGuardPassword(password, btn) {
+            if (!password) {
+                showNotification('⚠️ No password found');
+                return;
+            }
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(password).then(() => {
+                    showNotification('copied');
+                    highlightCopyBtn(btn);
+                }).catch(() => {
+                    fallbackCopy(password, btn);
+                });
+            } else {
+                fallbackCopy(password, btn);
+            }
+        }
+
+        function fallbackCopy(text, btn) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            el.style.position = 'fixed';
+            el.style.left = '-9999px';
+            document.body.appendChild(el);
+            el.select();
+            try {
+                document.execCommand('copy');
+                showNotification('copied');
+                highlightCopyBtn(btn);
+            } catch (err) {
+                alert('Password: ' + text);
+            }
+            document.body.removeChild(el);
+        }
+
+        function highlightCopyBtn(btn) {
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    const origClass = icon.className;
+                    icon.className = 'fas fa-check';
+                    icon.style.color = '#10b981';
+                    setTimeout(() => {
+                        icon.className = origClass;
+                        icon.style.color = '';
+                    }, 1500);
+                }
+            }
+        }
+
         // --- Notification Utility ---
         function showNotification(message) {
             const notification = document.getElementById('notification');
@@ -1073,7 +1137,7 @@
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    showNotification('✅ Peer and its routes deleted successfully');
+                    showNotification('  Peer and its routes deleted successfully');
                     // إزالة الصف مباشرة من الصفحة بدون إعادة تحميل بالكامل
                     const row = document.querySelector(`tr[data-peer-id="${peerId}"]`);
                     if (row) row.remove();

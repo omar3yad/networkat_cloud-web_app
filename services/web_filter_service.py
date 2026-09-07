@@ -69,6 +69,16 @@ class WebFilterService:
             return {"error": f"Device agent is offline or unreachable: {e}"}, 503
 
     @staticmethod
+    def reorder_peer_rules(peer_ip: str, items: list) -> tuple:
+        """Reorders web filter rules on edge device agent."""
+        agent_url = f"http://{peer_ip}:8765/web-filter/rules/reorder"
+        try:
+            resp = requests.post(agent_url, json={"items": items}, timeout=15)
+            return resp.text, resp.status_code
+        except requests.RequestException as e:
+            return {"error": f"Device agent is offline or unreachable: {e}"}, 503
+
+    @staticmethod
     def get_adguard_blocked_services(peer_id: str, base_url: str, headers: dict) -> tuple:
         """Fetches global AdGuard blocked services for a peer."""
         url = f"{base_url}/api/v1/peers/{peer_id}/adguard/blocked_services"

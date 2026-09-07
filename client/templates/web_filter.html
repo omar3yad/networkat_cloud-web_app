@@ -32,25 +32,10 @@
 
     <!-- Web Filter Rules Content -->
     <div id="rules-tab-content">
-        <!-- Reorder Warning Banner -->
-        <div id="banner-reorder" class="floating-save-bar" style="display: none;">
-            <span class="save-bar-text">
-                <i class="fas fa-arrows-rotate fa-spin"></i>
-                Unsaved rule order
-            </span>
-            <div style="width: 1px; height: 20px; background: var(--nk-border);"></div>
-            <button class="btn-cancel" onclick="fetchWebFilterRules()">Discard</button>
-            <button class="btn-apply" onclick="submitReorder()">Apply order</button>
-        </div>
-
         <div class="control-bar">
             <div class="control-actions">
                 <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddRuleModal()">
                     <i class="fas fa-plus"></i> Add Rule
-                </button>
-                <button class="btn-action" id="refresh-rules-btn" onclick="fetchWebFilterRules(true)"
-                    style="background: #f1f5f9; color: #334155; border: 1px solid var(--nk-border);">
-                    <i class="fas fa-sync-alt" id="refresh-icon"></i> Refresh
                 </button>
             </div>
 
@@ -70,9 +55,8 @@
                             <input type="checkbox" id="select-all-rules" onclick="toggleSelectAllRules(this)">
                         </th>
                         <th style="width: 30px; text-align: center;"></th>
-                        <th style="width: 220px;">Source (Clients)</th>
+                        <th>Source (Clients)</th>
                         <th>Blocked Domains</th>
-                        <th>Comment</th>
                         <th style="width: 100px; text-align: center;">Blocked</th>
                         <th style="width: 110px; text-align: right;">Actions</th>
                     </tr>
@@ -89,7 +73,7 @@
 <div class="modal-overlay" id="ruleModal">
     <div class="modal-card">
         <div class="modal-header">
-            <h2 id="ruleModalTitle">Add Web Filter Rule</h2>
+            <h2 id="ruleModalTitle">Add Rule</h2>
             <button class="modal-close" onclick="closeRuleModal()">&times;</button>
         </div>
         <div class="modal-body">
@@ -249,6 +233,21 @@
         <div class="modal-footer">
             <button class="btn-action" onclick="closeAliasModal()">Cancel</button>
             <button class="btn-action btn-primary" type="submit" form="aliasForm" id="btn-submit-alias">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Bulk Actions Bar -->
+<div id="bulk-action-bar" class="bulk-floating-bar">
+    <div class="bulk-bar-content">
+        <span class="selected-count-badge" id="selected-rules-count">0 selected</span>
+        <div class="bulk-divider"></div>
+        <button class="bulk-btn btn-bulk-cancel" onclick="deselectAllRules()"><i class=""></i> Cancel</button>
+        <div class="bulk-divider"></div>
+        <div class="bulk-actions-group">
+            <button class="bulk-btn btn-bulk-enable" onclick="applyBulkAction('enable')">Block</button>
+            <button class="bulk-btn btn-bulk-disable" onclick="applyBulkAction('disable')">Unblock</button>
+            <button class="bulk-btn btn-bulk-remove" onclick="applyBulkAction('delete')">Remove</button>
         </div>
     </div>
 </div>

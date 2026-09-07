@@ -282,7 +282,7 @@ def get_peer_resolver_config_proxy(peer_id):
         resp = requests.get(url, headers=headers, timeout=10)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
-        return jsonify({"detail": "AdGuard service is offline or unreachable"}), 503
+        return jsonify({"detail": "DNS service is unreachable"}), 503
 
 
 @client_bp.route('/api/peers/<peer_id>/resolver-config', methods=['PUT'])
@@ -328,4 +328,4 @@ def update_peer_resolver_config_proxy(peer_id):
 
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
-        return jsonify({"detail": "AdGuard service is offline or unreachable"}), 503
+        return jsonify({"detail": "DNS service is unreachable"}), 503

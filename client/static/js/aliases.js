@@ -825,7 +825,8 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
     async function deleteAddressList(slug) {
         const listObj = cachedAddressLists.find(l => l.slug === slug);
         const displayName = listObj ? (listObj.name || slug) : slug;
-        if (!confirm(`Delete alias "${displayName}"?`)) {
+        const ok = await nkConfirm(`Are you sure you want to delete alias "${displayName}"?`, 'Delete Alias');
+        if (!ok) {
             return;
         }
 
@@ -840,11 +841,9 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             }
 
             fetchAddressLists();
-            if (window.showSuccess) window.showSuccess('Deleted');
-            else alert('Deleted successfully');
+            showSuccess('Deleted');
         } catch (err) {
-            if (window.showError) window.showError(err.message || 'Failed to delete');
-            else alert(err.message || 'Failed to delete');
+            showError(err.message || 'Failed to delete');
         }
     }
 
@@ -863,12 +862,10 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                 throw new Error(data.message || data.error || data.detail || 'Failed to sync');
             }
 
-            if (window.showSuccess) window.showSuccess('Synced');
-            else alert('Synced successfully');
+            showSuccess('Synced');
             fetchAddressLists();
         } catch (err) {
-            if (window.showError) window.showError(err.message || 'Failed to sync');
-            else alert(err.message || 'Failed to sync');
+            showError(err.message || 'Failed to sync');
         } finally {
             if (btnSync) btnSync.disabled = false;
         }

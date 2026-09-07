@@ -16,20 +16,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             return;
         }
 
-        // Initialize sortable for drag-and-drop rule reordering
-        const tbody = document.getElementById('rules-tbody');
-        if (tbody && typeof Sortable !== 'undefined') {
-            sortableInstance = new Sortable(tbody, {
-                animation: 150,
-                handle: '.drag-handle',
-                ghostClass: 'sortable-ghost',
-                onEnd: function () {
-                    checkReorderStatus();
-                }
-            });
-        }
-
-        // Initialize autocomplete behaviors on Source input
+        // Initialize autocomplete behaviors on Source and Domains input
         initCustomAutocompletes();
         initWebFilterLiveValidation();
 
@@ -37,21 +24,61 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         fetchAliases(true).then(() => {
             fetchWebFilterRules();
         });
+
+        // Auto-refresh periodically if peer is online
+        setInterval(() => {
+            fetchWebFilterRules(true, true);
+        }, 10000);
     });
 
     // --------------------------------------------------------------------------
     // Web Filter Rules Logic
     // --------------------------------------------------------------------------
 
+    let lastWebFilterManualRefreshTime = 0;
+    const REFRESH_COOLDOWN_MS = 5000;
+
+    function handleManualRefresh(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        const now = Date.now();
+        const elapsed = now - lastWebFilterManualRefreshTime;
+        if (elapsed < REFRESH_COOLDOWN_MS) {
+            const remainingSec = Math.ceil((REFRESH_COOLDOWN_MS - elapsed) / 1000);
+            if (window.showToast) {
+                window.showToast(`You can refresh it again in ${remainingSec} seconds`, 'info', 2000);
+            } else {
+                alert(`You can refresh it again in ${remainingSec} seconds`);
+            }
+            return;
+        }
+
+        lastWebFilterManualRefreshTime = now;
+        const btn = document.getElementById('refresh-rules-btn');
+        if (btn) btn.classList.add('btn-cooldown');
+
+        fetchWebFilterRules(true, false).finally(() => {
+            const remainingCooldown = Math.max(0, REFRESH_COOLDOWN_MS - (Date.now() - lastWebFilterManualRefreshTime));
+            setTimeout(() => {
+                if (Date.now() - lastWebFilterManualRefreshTime >= REFRESH_COOLDOWN_MS) {
+                    if (btn) btn.classList.remove('btn-cooldown');
+                }
+            }, remainingCooldown);
+        });
+    }
+
     let lastWebFilterSignature = null;
 
-    async function fetchWebFilterRules(silent = false) {
+    async function fetchWebFilterRules(forceRefresh = false, silent = false) {
         const refreshIcon = document.getElementById('refresh-icon');
 
-        if (!silent && refreshIcon) refreshIcon.classList.add('fa-spin');
+        if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
         try {
-            const response = await fetch(`/api/peers/${peerId}/web-filter/rules`);
+            const url = `/api/peers/${peerId}/web-filter/rules` + (forceRefresh ? '?refresh=true' : '');
+            const response = await fetch(url);
             const data = await response.json();
 
             if (!response.ok) {
@@ -65,8 +92,6 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
             currentRules = data.rules || [];
             initialRulesOrder = currentRules.map(r => r.id);
-            const bannerReorder = document.getElementById('banner-reorder');
-            if (bannerReorder) bannerReorder.style.display = 'none';
 
             const signature = JSON.stringify(currentRules);
             if (signature !== lastWebFilterSignature) {
@@ -100,7 +125,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         if (!rules || rules.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
+                    <td colspan="6" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
                         <i class="fas fa-filter fa-3x mb-3" style="opacity: 0.35;"></i>
                         <h3>No Web Filter Rules Configured</h3>
                         <p style="font-size: 0.85rem; margin-top: 0.25rem;">Create a rule to block domains across your network.</p>
@@ -114,22 +139,31 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             const tr = document.createElement('tr');
             tr.setAttribute('data-rule-id', rule.id);
 
+            // 0. Comment (above the row)
+            const tdComment = document.createElement('td');
+            tdComment.className = 'rule-comment-cell';
+            tdComment.innerHTML = `<span style="opacity: 0.9;">${rule.comment || ''}</span>`;
+            tr.appendChild(tdComment);
+
             // 1. Checkbox
             const tdCheck = document.createElement('td');
+            tdCheck.className = 'cell-check';
             tdCheck.style.textAlign = 'center';
             tdCheck.innerHTML = `<input type="checkbox" class="rule-row-checkbox" data-rule-id="${rule.id}" onchange="onRuleCheckboxChange()">`;
             tr.appendChild(tdCheck);
 
-            // 2. Drag handle
+            // 2. Drag Handle
             const tdDrag = document.createElement('td');
+            tdDrag.className = 'cell-drag';
             tdDrag.style.textAlign = 'center';
             tdDrag.innerHTML = `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>`;
             tr.appendChild(tdDrag);
 
             // 3. Source
             const tdSrc = document.createElement('td');
+            tdSrc.className = 'cell-source';
             if (!rule.src || rule.src.length === 0) {
-                tdSrc.innerHTML = `<span class="badge-all"><i class="fas fa-network-wired"></i> All Network</span>`;
+                tdSrc.innerHTML = `<span class="badge-all">All Network</span>`;
             } else {
                 const srcBadges = rule.src.map(s => {
                     if (s.startsWith('@')) {
@@ -142,24 +176,20 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             }
             tr.appendChild(tdSrc);
 
-            // 5. Blocked Domains
+            // 4. Blocked Domains
             const tdDomains = document.createElement('td');
+            tdDomains.className = 'cell-domains';
             const domainChips = (rule.domains || []).map(d => {
                 const aliasName = resolveAliasIdToName(d);
                 const tooltipText = getDomainAliasTooltip(d);
-                return `<span class="badge-domain" title="${tooltipText}"><i class="fas fa-globe"></i> ${aliasName}</span>`;
+                return `<span class="badge-domain" title="${tooltipText}">${aliasName}</span>`;
             }).join(' ');
             tdDomains.innerHTML = `<div class="domains-chip-list">${domainChips}</div>`;
             tr.appendChild(tdDomains);
 
-            // 6. Comment
-            const tdComment = document.createElement('td');
-            tdComment.style.fontWeight = '500';
-            tdComment.textContent = rule.comment || '-';
-            tr.appendChild(tdComment);
-
-            // 7. Enabled Toggle
+            // 5. Enabled Toggle
             const tdEnabled = document.createElement('td');
+            tdEnabled.className = 'cell-enabled';
             tdEnabled.style.textAlign = 'center';
             const isChecked = rule.enabled ? 'checked' : '';
             tdEnabled.innerHTML = `
@@ -170,7 +200,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             `;
             tr.appendChild(tdEnabled);
 
-            // 8. Actions
+            // 6. Actions
             const tdActions = document.createElement('td');
             tdActions.className = 'cell-actions';
             tdActions.innerHTML = `
@@ -184,6 +214,49 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             tr.appendChild(tdActions);
 
             tbody.appendChild(tr);
+        });
+
+        initSortable();
+    }
+
+    function initSortable() {
+        const tbody = document.getElementById('rules-tbody');
+        if (!tbody || typeof Sortable === 'undefined') return;
+
+        if (sortableInstance) {
+            try { sortableInstance.destroy(); } catch (e) {}
+        }
+
+        sortableInstance = new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: async function () {
+                const rowElements = tbody.querySelectorAll('tr[data-rule-id]');
+                const newOrderIds = Array.from(rowElements).map(row => row.getAttribute('data-rule-id'));
+                currentRules.sort((a, b) => newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id));
+
+                const items = newOrderIds.map((id, index) => ({
+                    id: id,
+                    order: index + 1
+                }));
+
+                try {
+                    const response = await fetch(`/api/peers/${peerId}/web-filter/rules/reorder`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ items: items })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.message || data.error || data.detail || 'Failed to save rule order');
+                    }
+                    showSuccess('Order saved');
+                } catch (err) {
+                    console.error('Error saving rule order:', err);
+                    showError(err.message || 'Error saving rule order');
+                }
+            }
         });
     }
 
@@ -214,7 +287,8 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
     // Delete Single Rule
     async function deleteSingleRule(ruleId) {
-        if (!confirm('Are you sure you want to delete this web filter rule?')) return;
+        const ok = await nkConfirm('Are you sure you want to delete this web filter rule?', 'Delete Rule');
+        if (!ok) return;
 
         try {
             const resp = await fetch(`/api/peers/${peerId}/web-filter/rules/${ruleId}`, {
@@ -224,42 +298,10 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             if (!resp.ok) {
                 throw new Error(data.message || data.detail || 'Failed to delete rule');
             }
+            showSuccess('Deleted');
             fetchWebFilterRules();
         } catch (err) {
-            alert('Error deleting rule: ' + err.message);
-        }
-    }
-
-    // Reorder rules detection
-    function checkReorderStatus() {
-        const rows = document.querySelectorAll('#rules-tbody tr[data-rule-id]');
-        const currentOrder = Array.from(rows).map(r => r.getAttribute('data-rule-id'));
-        const isChanged = currentOrder.some((id, idx) => id !== initialRulesOrder[idx]);
-
-        const banner = document.getElementById('banner-reorder');
-        banner.style.display = isChanged ? 'flex' : 'none';
-    }
-
-    async function submitReorder() {
-        const rows = document.querySelectorAll('#rules-tbody tr[data-rule-id]');
-        const items = Array.from(rows).map((r, idx) => ({
-            id: r.getAttribute('data-rule-id'),
-            order: idx + 1
-        }));
-
-        try {
-            const resp = await fetch(`/api/peers/${peerId}/web-filter/rules/reorder`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ items })
-            });
-            const data = await resp.json();
-            if (!resp.ok) {
-                throw new Error(data.message || data.detail || 'Failed to reorder rules');
-            }
-            fetchWebFilterRules();
-        } catch (err) {
-            alert('Error applying rule order: ' + err.message);
+            showError(err.message || 'Error deleting rule');
         }
     }
 
@@ -313,8 +355,9 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         if (action === 'enable') endpoint = `/api/peers/${peerId}/web-filter/rules/enable`;
         if (action === 'disable') endpoint = `/api/peers/${peerId}/web-filter/rules/disable`;
 
-        if (action === 'delete' && !confirm(`Are you sure you want to delete ${ids.length} selected rule(s)?`)) {
-            return;
+        if (action === 'delete') {
+            const ok = await nkConfirm(`Are you sure you want to delete ${ids.length} selected rule(s)?`, 'Delete Rules');
+            if (!ok) return;
         }
 
         try {
@@ -327,10 +370,11 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             if (!resp.ok) {
                 throw new Error(data.message || data.detail || 'Failed to apply bulk action');
             }
+            showSuccess(action === 'delete' ? 'Deleted' : 'Saved');
             deselectAllRules();
             fetchWebFilterRules();
         } catch (err) {
-            alert('Bulk action error: ' + err.message);
+            showError(err.message || 'Bulk action error');
         }
     }
 
@@ -341,11 +385,8 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
         rows.forEach(row => {
             if (row.cells.length === 1) return;
-            const src = row.cells[2].textContent.toLowerCase();
-            const domains = row.cells[3].textContent.toLowerCase();
-            const comment = row.cells[4].textContent.toLowerCase();
-
-            if (src.includes(query) || domains.includes(query) || comment.includes(query)) {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(query)) {
                 row.style.display = '';
             } else {
                 row.style.display = 'none';
@@ -363,7 +404,9 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
     function openAddRuleModal() {
         editingRuleId = null;
-        document.getElementById('ruleModalTitle').textContent = 'Add Web Filter Rule';
+        document.getElementById('ruleModalTitle').textContent = 'Add Rule';
+        const submitBtn = document.getElementById('btn-submit-rule');
+        if (submitBtn) submitBtn.textContent = 'Add Rule';
         document.getElementById('ruleComment').value = '';
         document.getElementById('ruleSrc').value = '';
         document.getElementById('ruleDomains').value = '';
@@ -376,15 +419,6 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         }
 
         updateAddressMultiBtnState('ruleSrc');
-
-        const orderRow = document.getElementById('rule-order-row');
-        if (orderRow) {
-            orderRow.style.display = 'flex';
-            const defaultRadio = document.querySelector('input[name="ruleOrderRadio"][value="bottom"]');
-            if (defaultRadio) defaultRadio.checked = true;
-            toggleCustomOrderField();
-        }
-
         document.getElementById('ruleModal').classList.add('active');
     }
 
@@ -395,7 +429,9 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         editingRuleId = ruleId;
         clearAllFieldErrors();
 
-        document.getElementById('ruleModalTitle').textContent = 'Edit Web Filter Rule';
+        document.getElementById('ruleModalTitle').textContent = 'Edit Rule';
+        const submitBtn = document.getElementById('btn-submit-rule');
+        if (submitBtn) submitBtn.textContent = 'Save Changes';
         const commentVal = rule.comment || '';
         document.getElementById('ruleComment').value = commentVal;
         const commentCounter = document.getElementById('ruleComment-counter');
@@ -408,11 +444,6 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         document.getElementById('ruleDomains').value = (rule.domains || []).map(d => resolveAliasIdToName(d)).join(', ');
         updateAddressMultiBtnState('ruleSrc');
 
-        const orderRow = document.getElementById('rule-order-row');
-        if (orderRow) {
-            orderRow.style.display = 'none'; // Order is kept on PUT
-        }
-
         document.getElementById('ruleModal').classList.add('active');
     }
 
@@ -420,14 +451,6 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         document.getElementById('ruleModal').classList.remove('active');
         clearAllFieldErrors();
         document.querySelectorAll('.custom-autocomplete-dropdown').forEach(d => d.style.display = 'none');
-    }
-
-    function toggleCustomOrderField() {
-        const radio = document.querySelector('input[name="ruleOrderRadio"]:checked');
-        const customGroup = document.getElementById('custom-order-group');
-        if (customGroup) {
-            customGroup.style.display = (radio && radio.value === 'custom') ? 'flex' : 'none';
-        }
     }
 
     // =========================================================================
@@ -524,14 +547,15 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
             let aliasName = cleanRef.substring(1).trim();
             if (!aliasName || aliasName === 'alias_') {
-                return { valid: false, error: 'Invalid alias' };
+                return { valid: false, error: 'Invalid domain alias' };
             }
             let searchName = aliasName.startsWith('alias_') ? aliasName.substring(6) : aliasName;
             const matched = cachedAliases.find(l => l.name === searchName || l.slug === searchName || String(l.id) === String(searchName));
-            if (matched) {
-                if (matched.type === 'normal') {
-                    return { valid: false, error: 'Normal aliases not supported' };
-                }
+            if (!matched) {
+                return { valid: false, error: 'Please select a Domain Alias (@alias)' };
+            }
+            if (matched.type === 'normal') {
+                return { valid: false, error: 'Normal aliases not supported in domains' };
             }
         }
 
@@ -799,9 +823,9 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
             closeRuleModal();
             fetchWebFilterRules();
-            alert('Saved successfully');
+            showSuccess('Saved');
         } catch (err) {
-            alert(err.message || 'Failed to save');
+            showError(err.message || 'Failed to save');
         } finally {
             btn.disabled = false;
         }
@@ -821,17 +845,29 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         const dropdown = document.getElementById(inputId + '-dropdown');
         if (!input || !dropdown) return;
 
-        // Open on focus if typed @ or domain field
+        // Open on focus if domain field or typed @
         input.addEventListener('focus', () => {
             if (dropdown.style.display === 'block') return;
             if (isTogglingAlias) return;
-            renderAutocompleteOptions(input, dropdown);
+            if (inputId === 'ruleDomains') {
+                renderAutocompleteOptions(input, dropdown, true);
+            } else {
+                renderAutocompleteOptions(input, dropdown);
+            }
         });
 
-        // Filter on typing
+        // Filter on typing & Auto-prepend '@' for domains input
         input.addEventListener('input', () => {
-            renderAutocompleteOptions(input, dropdown);
-            if (inputId === 'ruleSrc') updateAddressMultiBtnState('ruleSrc');
+            if (inputId === 'ruleDomains') {
+                let currentVal = input.value;
+                if (currentVal && !currentVal.startsWith('@')) {
+                    input.value = '@' + currentVal;
+                }
+                renderAutocompleteOptions(input, dropdown, true);
+            } else {
+                renderAutocompleteOptions(input, dropdown);
+                updateAddressMultiBtnState('ruleSrc');
+            }
         });
 
         if (inputId === 'ruleSrc') {
@@ -1054,11 +1090,11 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     // Domain Aliases Logic
     // --------------------------------------------------------------------------
 
-    async function fetchAliases(silent = false) {
+    async function fetchAliases(silent = true) {
         const loadingView = document.getElementById('loading-aliases-view');
         const table = document.getElementById('aliases-table');
 
-        if (!silent) {
+        if (!silent && loadingView && table) {
             loadingView.style.display = 'flex';
             table.style.display = 'none';
         }
@@ -1076,11 +1112,15 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                 if (!a.slug && a.id) a.slug = a.id;
             });
 
-            renderAliasesTable(cachedAliases.filter(a => a.type === 'web_domain'));
+            const tbody = document.getElementById('aliases-tbody');
+            if (tbody) {
+                renderAliasesTable(cachedAliases.filter(a => a.type === 'web_domain'));
+            }
         } catch (err) {
             console.error(err);
-            if (!silent) {
-                document.getElementById('aliases-tbody').innerHTML = `
+            const tbody = document.getElementById('aliases-tbody');
+            if (!silent && tbody) {
+                tbody.innerHTML = `
                     <tr>
                         <td colspan="6" style="text-align: center; padding: 3rem; color: #ef4444; font-weight: 600;">
                             <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
@@ -1090,7 +1130,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                 `;
             }
         } finally {
-            if (!silent) {
+            if (!silent && loadingView && table) {
                 loadingView.style.display = 'none';
                 table.style.display = 'table';
             }
@@ -1529,12 +1569,13 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             }
 
             closeAliasModal();
-            await fetchAliases();
+            await fetchAliases(true);
             
             // Auto-select newly created alias in domain input if rule modal is open
-            const domainInp = document.getElementById('ruleDomain');
-            if (domainInp && (!domainInp.value || domainInp.value.startsWith('@'))) {
-                domainInp.value = `@${name}`;
+            const domainInp = document.getElementById('ruleDomains');
+            if (domainInp) {
+                const currentVal = domainInp.value.trim();
+                domainInp.value = currentVal ? `${currentVal}, @${name}` : `@${name}`;
                 domainInp.dispatchEvent(new Event('input'));
             }
 
@@ -1549,7 +1590,10 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     }
 
     async function deleteAlias(aliasId) {
-        if (!confirm('Delete this alias?')) return;
+        const alias = cachedAliases.find(a => (a.id || a.slug) === aliasId || a.name === aliasId);
+        const displayName = alias ? (alias.name || alias.slug || aliasId) : aliasId;
+        const ok = await nkConfirm(`Are you sure you want to delete alias "${displayName}"?`, 'Delete Alias');
+        if (!ok) return;
 
         try {
             const resp = await fetch(`/api/peers/${peerId}/aliases/${aliasId}`, {
@@ -1559,12 +1603,12 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             if (!resp.ok) {
                 throw new Error(data.message || data.detail || 'Failed to delete');
             }
-            fetchAliases().then(() => {
+            fetchAliases(true).then(() => {
                 fetchWebFilterRules(true);
             });
-            alert('Deleted successfully');
+            showSuccess('Deleted');
         } catch (err) {
-            alert(err.message || 'Failed to delete');
+            showError(err.message || 'Failed to delete');
         }
     }
 
@@ -1589,7 +1633,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             let name = aliasRef.substring(1).trim();
             if (name.startsWith('alias_')) return `@${name}`; // Already @alias_<id>
             const found = cachedAliases.find(a => a.name === name || a.slug === name || (a.id || a.slug) === name);
-            if (found) return `@alias_${found.slug || found.id || found.name}`;
+            if (found) return `@alias_${found.id || found.slug || found.name}`;
             return `@alias_${name}`;
         }
         return aliasRef;

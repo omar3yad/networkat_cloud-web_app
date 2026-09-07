@@ -96,6 +96,9 @@ def get_peer_firewall_rules(peer_id):
             cache_found = True
 
     force_refresh = request.args.get('refresh', 'false').lower() == 'true'
+    # 5-second backend rate limit threshold on force refresh
+    if force_refresh and (now - cache_time < 5):
+        force_refresh = False
     should_revalidate = force_refresh or not cache_found or (now - cache_time > 15)
     
     if should_revalidate:

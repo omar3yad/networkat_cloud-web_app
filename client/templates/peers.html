@@ -26,13 +26,12 @@
                         <th>Device Name</th>
                         <th>Network Route</th>
                         <th>VPN-Only Mode</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="peers-table-body">
                     <tr id="peers-loading-row">
-                        <td colspan="5" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
+                        <td colspan="4" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
                             <i class="fas fa-circle-notch fa-spin"></i> Loading Peer status...
                         </td>
                     </tr>
@@ -40,12 +39,13 @@
             </table>
         </div>
     </div>
+</div>
 
-    <!-- Status Legend -->
-    <div class="legend-footer">
-        <span><i class="fas fa-circle" style="color: #10b981; font-size: 0.6rem;"></i> Connected (Fully reachable)</span>
-        <span><i class="fas fa-circle" style="color: #dc3545; font-size: 0.6rem;"></i> Offline</span>
-    </div>
+<!-- Floating Apply Changes Bar -->
+<div id="peers-apply-bar" class="floating-save-bar" style="display: none;">
+    <span class="save-bar-text"><i class="fas fa-sync-alt"></i> Unsaved changes</span>
+    <button class="btn-cancel" onclick="discardAllPeerChanges()">Discard</button>
+    <button class="btn-apply" id="btn-apply-peers" onclick="applyAllPeerChanges()">Apply changes</button>
 </div>
 {% endblock %}
 

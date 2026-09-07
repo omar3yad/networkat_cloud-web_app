@@ -1,3 +1,5 @@
+import time
+from threading import Lock
 import requests
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
@@ -12,6 +14,13 @@ from services.netbird_service import (
     get_api_headers
 )
 from utils.cache_manager import get_name_override
+
+web_filter_cache_lock = Lock()
+web_filter_rules_cache = {}  # { peer_id: (rules, agent_online, timestamp) }
+
+def _invalidate_web_filter_cache(peer_id):
+    with web_filter_cache_lock:
+        web_filter_rules_cache.pop(peer_id, None)
 
 
 @client_bp.route('/peers/<peer_id>/web-filter')
@@ -189,18 +198,41 @@ def get_peer_web_filter_rules(peer_id):
         return jsonify({"rules": [], "agent_online": False}), 200
 
     peer_ip = peer.get("ip")
-    agent_url = f"http://{peer_ip}:8765/web-filter/rules"
-    try:
-        resp = requests.get(agent_url, timeout=10)
-        if resp.ok:
-            data = resp.json()
-            return jsonify({
-                "rules": data.get("rules", []),
-                "agent_online": True
-            }), 200
-        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
-    except requests.RequestException as e:
-        return jsonify({"rules": [], "agent_online": False, "error": str(e)}), 200
+    
+    now = time.time()
+    cached_rules = []
+    agent_online = False
+    cache_found = False
+    cache_time = 0
+
+    with web_filter_cache_lock:
+        if peer_id in web_filter_rules_cache:
+            cached_rules, agent_online, cache_time = web_filter_rules_cache[peer_id]
+            cache_found = True
+
+    force_refresh = request.args.get('refresh', 'false').lower() == 'true'
+    # 5-second backend rate limit threshold on force refresh
+    if force_refresh and (now - cache_time < 5):
+        force_refresh = False
+    should_revalidate = force_refresh or not cache_found or (now - cache_time > 15)
+
+    if should_revalidate:
+        agent_url = f"http://{peer_ip}:8765/web-filter/rules"
+        try:
+            resp = requests.get(agent_url, timeout=10)
+            if resp.ok:
+                data = resp.json()
+                cached_rules = data.get("rules", [])
+                agent_online = True
+            with web_filter_cache_lock:
+                web_filter_rules_cache[peer_id] = (cached_rules, agent_online, time.time())
+        except requests.RequestException as e:
+            current_app.logger.error(f"Sync web-filter rules fetch failed: {e}")
+
+    return jsonify({
+        "rules": cached_rules,
+        "agent_online": agent_online
+    }), 200
 
 
 def _sanitize_web_filter_payload(payload: dict) -> dict:
@@ -251,6 +283,8 @@ def add_peer_web_filter_rule(peer_id):
     
     try:
         resp = requests.post(agent_url, json=payload, timeout=15)
+        if resp.ok:
+            _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503
@@ -275,6 +309,8 @@ def update_peer_web_filter_rule(peer_id, rule_id):
     
     try:
         resp = requests.put(agent_url, json=payload, timeout=15)
+        if resp.ok:
+            _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503
@@ -298,6 +334,8 @@ def delete_peer_web_filter_rule(peer_id, rule_id):
     
     try:
         resp = requests.post(agent_url, json={"ids": [rule_id]}, timeout=15)
+        if resp.ok:
+            _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503
@@ -322,6 +360,8 @@ def bulk_remove_peer_web_filter_rules(peer_id):
     
     try:
         resp = requests.post(agent_url, json=payload, timeout=15)
+        if resp.ok:
+            _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503
@@ -346,6 +386,8 @@ def enable_peer_web_filter_rules(peer_id):
     
     try:
         resp = requests.post(agent_url, json=payload, timeout=15)
+        if resp.ok:
+            _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503
@@ -370,6 +412,35 @@ def disable_peer_web_filter_rules(peer_id):
     
     try:
         resp = requests.post(agent_url, json=payload, timeout=15)
+        if resp.ok:
+            _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503
+
+
+@client_bp.route('/api/peers/<peer_id>/web-filter/rules/reorder', methods=['POST'])
+@login_required
+def reorder_peer_web_filter_rules(peer_id):
+    customer_id = session.get('client_customer_id')
+    customer = Client.query.get(customer_id) if customer_id else None
+    if not customer or not verify_peer_access(customer, peer_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    peers_data = get_cached_all_netbird_peers(get_api_base_url(), get_api_headers())
+    peer = next((p for p in peers_data if p.get("id") == peer_id), None)
+    if not peer or not peer.get("ip"):
+        return jsonify({"error": "Peer IP not found"}), 404
+
+    peer_ip = peer.get("ip")
+    agent_url = f"http://{peer_ip}:8765/web-filter/rules/reorder"
+    payload = request.get_json() or {}
+    
+    try:
+        resp = requests.post(agent_url, json=payload, timeout=15)
+        if resp.ok:
+            _invalidate_web_filter_cache(peer_id)
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except requests.RequestException as e:
+        return jsonify({"error": f"Device agent is offline or unreachable: {e}"}), 503
+

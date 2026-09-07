@@ -51,9 +51,8 @@
                 <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddModal()">
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
-                <button class="btn-action" id="refresh-rules-btn" onclick="fetchRules(true, true)"
-                    style="background: #f1f5f9; color: #334155; border: 1px solid var(--nk-border);">
-                    <i class="fas fa-sync-alt" id="refresh-icon"></i> Refresh
+                <button class="btn-action btn-icon-only" id="refresh-rules-btn" title="Refresh" onclick="handleManualRefresh(event)">
+                    <i class="fas fa-sync-alt" id="refresh-icon"></i>
                 </button>
                         <!-- VPN-Only Toggle widget -->
         <div class="vpn-toggle-header">
@@ -283,13 +282,21 @@
                 <input type="hidden" id="listActionType" value="add">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Name *</label>
-                        <input type="text" id="listSlug" placeholder="e.g. sales" required pattern="^[a-z0-9_-]{1,28}$"
-                            title="Lowercase alphanumeric, dash, or underscore only. Max 28 characters.">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="margin-bottom: 0;">Name *</label>
+                            <span class="char-counter" id="listSlug-counter">0 / 200</span>
+                        </div>
+                        <input type="text" id="listSlug" placeholder="e.g. sales" required maxlength="200"
+                            title="Alias Name. Max 200 characters.">
+                        <div class="field-error-msg" id="listSlug-error" style="display: none;"></div>
                     </div>
                     <div class="form-group">
-                        <label>Comment</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="margin-bottom: 0;">Comment</label>
+                            <span class="char-counter" id="listComment-counter">0 / 200</span>
+                        </div>
                         <input type="text" id="listComment" placeholder="e.g. Sales Department" maxlength="200">
+                        <div class="field-error-msg" id="listComment-error" style="display: none;"></div>
                     </div>
                 </div>
 
@@ -304,7 +311,7 @@
                 </div>
 
                 <div
-                    style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: -28px; background: white; padding: 12px 0 13px 0; z-index: 5;">
                     <h3
                         style="font-size: 0.8rem; font-weight: 700; color: var(--nk-text-muted); text-transform: capitalize; letter-spacing: 0.5px;">
                         Items</h3>
@@ -313,6 +320,7 @@
                         <i class="fas fa-plus"></i> Add
                     </button>
                 </div>
+                <div class="field-error-msg" id="listItems-error" style="display: none; margin-bottom: 0.75rem;"></div>
 
                 <div id="address-rows-container">
                     <!-- Dynamic address rows will be added here -->

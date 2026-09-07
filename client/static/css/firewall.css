@@ -470,6 +470,48 @@
         cursor: not-allowed;
     }
 
+    .btn-action.btn-icon-only {
+        padding: 0.5rem 0.75rem;
+        min-width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    @keyframes nkFullSpin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    #refresh-icon {
+        display: inline-block;
+        transform-origin: 50% 50%;
+    }
+
+    #refresh-icon.is-spinning {
+        animation: nkFullSpin 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+
+    .btn-action.btn-cooldown {
+        opacity: 0.65 !important;
+        cursor: not-allowed !important;
+        background: #f1f5f9 !important;
+        color: #94a3b8 !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    .btn-action.btn-cooldown:hover {
+        background: #f1f5f9 !important;
+        color: #94a3b8 !important;
+        border-color: #cbd5e1 !important;
+        cursor: not-allowed !important;
+    }
+
     .btn-action.btn-primary {
         background: var(--nk-blue-primary);
         color: #ffffff;

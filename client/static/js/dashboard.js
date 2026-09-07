@@ -73,6 +73,29 @@
         });
     }
 
+    function formatOfflineDuration(lastSeenVal) {
+        if (!lastSeenVal) return "";
+        try {
+            const dt = new Date(lastSeenVal);
+            if (isNaN(dt.getTime())) return "";
+            const now = new Date();
+            const diffMs = now - dt;
+            const secs = Math.max(0, Math.floor(diffMs / 1000));
+            if (secs < 60) return "1m";
+            if (secs < 3600) return `${Math.floor(secs / 60)}m`;
+            if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
+            return `${Math.floor(secs / 86400)}d`;
+        } catch (e) {
+            return "";
+        }
+    }
+
+    function getPeerStatusTitle(peer) {
+        if (peer.is_online) return 'Connected';
+        const dur = formatOfflineDuration(peer.last_seen);
+        return dur ? `Offline for ${dur}` : 'Offline';
+    }
+
     async function fetchDashboardStats() {
         try {
             const response = await fetch('/api/peers/status');
@@ -86,6 +109,34 @@
                     if (totalEl) totalEl.innerText = data.summary.total;
                     if (onlineEl) onlineEl.innerText = data.summary.online;
                     if (offlineEl) offlineEl.innerText = data.summary.offline;
+                }
+
+                if (data.peers) {
+                    data.peers.forEach(peer => {
+                        const statusTitle = getPeerStatusTitle(peer);
+                        const sidebarDot = document.getElementById(`sidebar-dot-${peer.id}`);
+                        if (sidebarDot) {
+                            sidebarDot.className = `peer-status-dot ${peer.is_online ? 'online' : 'offline'}`;
+                            sidebarDot.title = statusTitle;
+                        }
+
+                        const sidebarItem = document.getElementById(`sidebar-peer-${peer.id}`);
+                        if (sidebarItem) {
+                            sidebarItem.title = `${peer.name || 'Edge Device'} (${statusTitle})`;
+                        }
+
+                        const sidebarSeen = document.getElementById(`sidebar-seen-${peer.id}`);
+                        if (sidebarSeen) {
+                            if (peer.is_online) {
+                                sidebarSeen.textContent = '';
+                                sidebarSeen.style.display = 'none';
+                            } else {
+                                const dur = formatOfflineDuration(peer.last_seen);
+                                sidebarSeen.textContent = dur ? `${dur} ago` : '';
+                                sidebarSeen.style.display = dur ? '' : 'none';
+                            }
+                        }
+                    });
                 }
             }
         } catch (err) {

@@ -10,15 +10,40 @@
 }
 
 :root {
-    /* General styling variables */
-    --sb-navy-dark: #0f172a;
-    --sb-navy-light: #1e293b;
-    --sb-accent-blue: #0284c7;
-    --sb-accent-hover: #0369a1;
-    --sb-border-glass: rgba(255, 255, 255, 0.08);
-    --sb-text-muted: #94a3b8;
-    --sb-text-light: #f8fafc;
+    /* ==========================================================================
+       SIDEBAR THEME CONTROLS (Change these variables to quickly restyle Sidebar)
+       ========================================================================== */
+    --sb-bg: #f1f5f9;                       /* Main sidebar background */
+    --sb-border: #e2e8f0;                   /* Sidebar right & section borders */
+    --sb-brand-bg: #f1f5f9;                 /* Brand logo section background */
+    --sb-brand-text: #0f172a;               /* Brand title text */
     
+    --sb-nav-text: #475569;                 /* Navigation link text */
+    --sb-nav-hover-bg: #f1f5f9;             /* Navigation link hover background */
+    --sb-nav-hover-text: #0284c7;           /* Navigation link hover text */
+    --sb-nav-active-bg: #0284c7;            /* Active navigation item background */
+    --sb-nav-active-text: #ffffff;          /* Active navigation item text */
+    --sb-nav-active-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+    
+    --sb-submenu-bg: #f8fafc;               /* Submenu item background */
+    --sb-submenu-border: #f1f5f9;           /* Submenu item border */
+    --sb-submenu-text: #334155;             /* Submenu item text */
+    --sb-submenu-hover-bg: #f1f5f9;         /* Submenu hover background */
+    --sb-submenu-hover-border: #e2e8f0;     /* Submenu hover border */
+    --sb-submenu-hover-text: #0284c7;       /* Submenu hover text */
+    --sb-submenu-active-bg: #e0f2fe;        /* Submenu active background */
+    --sb-submenu-active-border: #7dd3fc;    /* Submenu active border */
+    --sb-submenu-active-text: #0284c7;      /* Submenu active text */
+    
+    --sb-footer-bg: #f8fafc;                /* Sidebar footer background */
+    --sb-footer-border: #e2e8f0;            /* Sidebar footer top border */
+    --sb-user-name: #0f172a;                /* User name text */
+    --sb-user-role: #64748b;                /* User role / muted text */
+    --sb-user-avatar: #64748b;              /* User avatar icon color */
+    
+    /* ==========================================================================
+       GLOBAL APP DESIGN TOKENS
+       ========================================================================== */
     --nk-bg: #f8fafc;
     --nk-surface-bg: #f8fafc;
     --nk-card-bg: #ffffff;
@@ -60,8 +85,8 @@ body {
 /* Sidebar Container */
 .sidebar {
     width: 318px;
-    background: linear-gradient(180deg, var(--sb-navy-dark) 0%, #090d16 100%);
-    border-right: 1px solid var(--sb-border-glass);
+    background: var(--sb-bg);
+    border-right: 1px solid var(--sb-border);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -74,11 +99,12 @@ body {
 
 /* Sidebar Brand */
 .sidebar-brand {
-    padding: 24px;
+    padding: 2px 24px;
     display: flex;
     align-items: center;
     gap: 12px;
-    border-bottom: 1px solid var(--sb-border-glass);
+    border-bottom: 1px solid var(--sb-border);
+    background: var(--sb-brand-bg);
 }
 
 .brand-logo {
@@ -90,7 +116,7 @@ body {
 .brand-name {
     font-size: 1.3rem;
     font-weight: 800;
-    color: var(--sb-text-light);
+    color: var(--sb-brand-text);
     letter-spacing: -0.5px;
 }
 
@@ -109,23 +135,24 @@ body {
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
-    color: var(--sb-text-muted);
+    color: var(--sb-nav-text);
     text-decoration: none;
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     border-radius: 10px;
     transition: var(--nk-transition);
+    background-color: var(--sb-submenu-bg);
 }
 
 .nav-item:hover {
-    color: var(--sb-text-light);
-    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--sb-nav-hover-text);
+    background-color: var(--sb-nav-hover-bg);
 }
 
 .nav-item.active {
-    color: var(--sb-text-light);
-    background-color: var(--sb-accent-blue);
-    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    color: var(--sb-nav-active-text);
+    background-color: var(--sb-nav-active-bg);
+    box-shadow: var(--sb-nav-active-shadow);
 }
 
 .nav-icon {
@@ -146,20 +173,24 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 10px 14px;
-    color: var(--sb-text-muted);
+    color: var(--sb-nav-text);
     border-radius: 10px;
     transition: var(--nk-transition);
 }
 
 .nav-item-collapsible:hover {
-    color: var(--sb-text-light);
-    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--sb-nav-hover-text);
+    background-color: var(--sb-nav-hover-bg);
 }
 
 .nav-item-collapsible.active {
-    color: var(--sb-text-light);
-    background-color: var(--sb-accent-blue);
-    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    color: var(--sb-nav-active-text);
+    background-color: var(--sb-nav-active-bg);
+    box-shadow: var(--sb-nav-active-shadow);
+}
+
+.nav-item-collapsible.active .submenu-arrow {
+    color: var(--sb-nav-active-text);
 }
 
 .nav-item-link {
@@ -187,7 +218,7 @@ body {
 }
 
 .submenu-arrow:hover {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(0, 0, 0, 0.05);
     opacity: 1;
 }
 
@@ -199,10 +230,10 @@ body {
 .sidebar-submenu {
     display: none;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     padding-left: 18px;
     padding-right: 4px;
-    margin-top: 2px;
+    margin-top: 4px;
     margin-bottom: 4px;
     max-height: 260px;
     overflow-y: auto;
@@ -213,7 +244,7 @@ body {
 }
 
 .sidebar-submenu::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
+    background: #cbd5e1;
     border-radius: 4px;
 }
 
@@ -226,37 +257,51 @@ body {
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    color: var(--sb-text-muted);
+    color: var(--sb-submenu-text);
     text-decoration: none;
     font-size: 0.88rem;
     font-weight: 500;
     border-radius: 8px;
     transition: var(--nk-transition);
-    background: #0a3654;
+    background: var(--sb-submenu-bg);
+    border: 1px solid var(--sb-submenu-border);
 }
 
 .submenu-item:hover:not(.disabled) {
-    color: var(--sb-text-light);
-    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--sb-submenu-hover-text);
+    background-color: var(--sb-submenu-hover-bg);
+    border-color: var(--sb-submenu-hover-border);
 }
 
 .submenu-item.active {
-    color: #ffffff;
-    background-color: rgba(2, 132, 199, 0.3);
-    border: 3px solid #38bdf896;
+    color: var(--sb-submenu-active-text);
+    background-color: var(--sb-submenu-active-bg);
+    border: 1px solid var(--sb-submenu-active-border);
     font-weight: 700;
 }
 
 .submenu-item.disabled {
     cursor: not-allowed;
     user-select: none;
+    opacity: 0.6;
 }
 
 .submenu-label {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    flex-grow: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.submenu-last-seen {
+    font-size: 0.72rem;
+    color: var(--sb-user-role, #64748b);
+    font-weight: 500;
+    white-space: nowrap;
+    margin-left: auto;
+    flex-shrink: 0;
+    opacity: 0.85;
 }
 
 .peer-status-dot {
@@ -272,30 +317,21 @@ body {
 }
 
 .peer-status-dot.offline {
-    background-color: red;
-}
-
-.offline-tag {
-    font-size: 0.65rem;
-    padding: 1px 5px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--sb-text-muted);
-    font-weight: 600;
+    background-color: #ef4444;
 }
 
 .submenu-empty {
     padding: 8px 12px;
     font-size: 0.8rem;
-    color: var(--sb-text-muted);
+    color: #94a3b8;
     font-style: italic;
 }
 
 /* Sidebar Footer Details */
 .sidebar-footer {
     padding: 20px 16px;
-    border-top: 1px solid var(--sb-border-glass);
-    background-color: rgba(0, 0, 0, 0.15);
+    border-top: 1px solid var(--sb-footer-border);
+    background-color: var(--sb-footer-bg);
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -309,7 +345,7 @@ body {
 
 .user-avatar {
     font-size: 2.2rem;
-    color: var(--sb-text-muted);
+    color: var(--sb-user-avatar);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -324,7 +360,7 @@ body {
 .user-name {
     font-size: 0.9rem;
     font-weight: 700;
-    color: var(--sb-text-light);
+    color: var(--sb-user-name);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -332,7 +368,7 @@ body {
 
 .user-role {
     font-size: 0.75rem;
-    color: var(--sb-text-muted);
+    color: var(--sb-user-role);
     font-weight: 500;
 }
 
@@ -342,9 +378,9 @@ body {
     justify-content: center;
     gap: 8px;
     padding: 10px 16px;
-    background-color: rgba(239, 68, 68, 0.1);
+    background-color: #fef2f2;
     color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.2);
+    border: 1px solid #fee2e2;
     text-decoration: none;
     font-weight: 700;
     font-size: 0.9rem;

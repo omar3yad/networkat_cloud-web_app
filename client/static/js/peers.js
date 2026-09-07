@@ -5,6 +5,7 @@
     'use strict';
 
     let peersPollingInterval = null;
+    let originalPeerState = {};
 
     async function fetchAndPopulateRoutes() {
         try {
@@ -15,9 +16,10 @@
             for (const input of routeInputs) {
                 const peerId = input.getAttribute('data-peer-id');
                 const peerRoute = routes.find(r => r.peer === peerId);
+                const currentRoute = peerRoute ? peerRoute.network : '';
 
                 if (document.activeElement !== input) {
-                    input.value = peerRoute ? peerRoute.network : '';
+                    input.value = currentRoute;
                 }
 
                 if (peerRoute) {
@@ -27,67 +29,97 @@
                     input.removeAttribute('data-route-id');
                     input.removeAttribute('data-route-network-id');
                 }
+
+                if (originalPeerState[peerId]) {
+                    originalPeerState[peerId].route = currentRoute;
+                    originalPeerState[peerId].route_id = peerRoute ? peerRoute.id : null;
+                    originalPeerState[peerId].route_network_id = peerRoute ? peerRoute.network_id : null;
+                }
             }
         } catch (err) {
             console.error('Error fetching routes:', err);
         }
     }
 
+    function formatOfflineDuration(lastSeenVal) {
+        if (!lastSeenVal) return "";
+        try {
+            const dt = new Date(lastSeenVal);
+            if (isNaN(dt.getTime())) return "";
+            const now = new Date();
+            const diffMs = now - dt;
+            const secs = Math.max(0, Math.floor(diffMs / 1000));
+            if (secs < 60) return "1m";
+            if (secs < 3600) return `${Math.floor(secs / 60)}m`;
+            if (secs < 86400) return `${Math.floor(secs / 3600)}h`;
+            return `${Math.floor(secs / 86400)}d`;
+        } catch (e) {
+            return "";
+        }
+    }
+
+    function getPeerStatusTitle(peer) {
+        if (peer.is_online) return 'Connected';
+        const dur = formatOfflineDuration(peer.last_seen);
+        return dur ? `Offline for ${dur}` : 'Offline';
+    }
+
     function updatePeerStatuses(data) {
         if (!data || !data.peers) return;
 
         data.peers.forEach(peer => {
+            const statusTitle = getPeerStatusTitle(peer);
             const statusBadge = document.getElementById(`status-badge-${peer.id}`);
-            if (!statusBadge) return;
-
-            if (peer.is_online) {
-                statusBadge.className = "badge badge-success";
-                statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem; margin-right: 4px;"></i> Connected`;
-            } else {
-                statusBadge.className = "badge badge-inactive";
-                statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem; margin-right: 4px;"></i> Offline`;
+            if (statusBadge) {
+                statusBadge.className = `peer-status-bulb ${peer.is_online ? 'online' : 'offline'}`;
+                statusBadge.title = statusTitle;
             }
 
-            // Update VPN-Only state
+            const sidebarDot = document.getElementById(`sidebar-dot-${peer.id}`);
+            if (sidebarDot) {
+                sidebarDot.className = `peer-status-dot ${peer.is_online ? 'online' : 'offline'}`;
+                sidebarDot.title = statusTitle;
+            }
+
+            const sidebarItem = document.getElementById(`sidebar-peer-${peer.id}`);
+            if (sidebarItem) {
+                sidebarItem.title = `${peer.name || 'Edge Device'} (${statusTitle})`;
+            }
+
+            const sidebarSeen = document.getElementById(`sidebar-seen-${peer.id}`);
+            if (sidebarSeen) {
+                if (peer.is_online) {
+                    sidebarSeen.textContent = '';
+                    sidebarSeen.style.display = 'none';
+                } else {
+                    const dur = formatOfflineDuration(peer.last_seen);
+                    sidebarSeen.textContent = dur ? `${dur} ago` : '';
+                    sidebarSeen.style.display = dur ? '' : 'none';
+                }
+            }
+
+            // Update VPN-Only state if not currently modified by user
             const vpnToggle = document.getElementById(`vpn-only-toggle-${peer.id}`);
             const vpnText = document.getElementById(`vpn-only-text-${peer.id}`);
             if (vpnToggle && document.activeElement !== vpnToggle) {
-                vpnToggle.checked = !!peer.vpn_only;
-                vpnToggle.disabled = !peer.is_online;
-                if (vpnText) {
-                    vpnText.innerText = peer.vpn_only ? 'ON' : 'OFF';
+                const isDirty = originalPeerState[peer.id] && vpnToggle.checked !== originalPeerState[peer.id].vpn_only;
+                if (!isDirty) {
+                    vpnToggle.checked = !!peer.vpn_only;
+                    vpnToggle.disabled = !peer.is_online;
+                    if (vpnText) {
+                        vpnText.innerText = peer.vpn_only ? 'ON' : 'OFF';
+                    }
+                    if (originalPeerState[peer.id]) {
+                        originalPeerState[peer.id].vpn_only = !!peer.vpn_only;
+                    }
                 }
             }
 
-            // Update Control / Filtering button state
-            const filterLink = document.getElementById(`filter-link-${peer.id}`);
-            if (filterLink) {
-                if (peer.is_online) {
-                    filterLink.href = `/peers/${peer.id}/filtering`;
-                    filterLink.style.backgroundColor = "#00b06f";
-                    filterLink.style.borderColor = "#00b06f";
-                    filterLink.style.color = "white";
-                    filterLink.style.opacity = "1";
-                    filterLink.style.pointerEvents = "auto";
-                    filterLink.style.cursor = "pointer";
-                    filterLink.removeAttribute('onclick');
-                } else {
-                    filterLink.href = "javascript:void(0)";
-                    filterLink.style.backgroundColor = "#6c757d";
-                    filterLink.style.borderColor = "#6c757d";
-                    filterLink.style.color = "white";
-                    filterLink.style.opacity = "0.65";
-                    filterLink.style.pointerEvents = "none";
-                    filterLink.style.cursor = "not-allowed";
-                    filterLink.setAttribute('onclick', 'event.preventDefault()');
-                }
-            }
-
-            // Update Firewall button state
+            // Update Manage button state
             const firewallLink = document.getElementById(`firewall-link-${peer.id}`);
             if (firewallLink) {
                 if (peer.is_online) {
-                    firewallLink.href = `/peers/${peer.id}/firewall`;
+                    firewallLink.href = `/peers/${peer.id}`;
                     firewallLink.style.backgroundColor = "var(--nk-blue-primary)";
                     firewallLink.style.borderColor = "var(--nk-blue-primary)";
                     firewallLink.style.color = "white";
@@ -121,9 +153,25 @@
             return { valid: false, error: 'Name required' };
         }
         const trimmed = name.trim();
-        if (trimmed.length > 200) {
-            return { valid: false, error: 'Max 200 characters' };
+        
+        // Match backend DNS name validation: only letters, numbers, hyphens, max 63 chars
+        if (window.validateDNSName) {
+            const dnsRes = window.validateDNSName(trimmed, { allowDots: false, maxLength: 63 });
+            if (!dnsRes.valid) {
+                return dnsRes;
+            }
+        } else {
+            if (trimmed.length > 63) {
+                return { valid: false, error: 'Max 63 characters' };
+            }
+            if (!/^[a-zA-Z0-9-]+$/.test(trimmed)) {
+                return { valid: false, error: 'Only letters, numbers, and hyphens (-) allowed' };
+            }
+            if (trimmed.startsWith('-') || trimmed.endsWith('-')) {
+                return { valid: false, error: 'Cannot start or end with hyphen (-)' };
+            }
         }
+
         const rows = document.querySelectorAll('#peers-table-body tr[data-peer-id]');
         for (const r of rows) {
             const otherId = r.getAttribute('data-peer-id');
@@ -135,7 +183,7 @@
                 }
             }
         }
-        return { valid: true };
+        return { valid: true, normalized: trimmed };
     }
 
     function validatePeerDeviceRoute(route, peerId) {
@@ -168,7 +216,10 @@
     function setInlineError(inputId, errorMsg) {
         const inp = document.getElementById(inputId);
         const errDiv = document.getElementById(`${inputId}-error`);
-        if (inp) inp.classList.add('is-invalid');
+        if (inp) {
+            inp.classList.add('is-invalid');
+            inp.classList.remove('is-modified');
+        }
         if (errDiv) {
             errDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${errorMsg}`;
             errDiv.style.display = 'flex';
@@ -178,10 +229,313 @@
     function clearInlineError(inputId) {
         const inp = document.getElementById(inputId);
         const errDiv = document.getElementById(`${inputId}-error`);
-        if (inp) inp.classList.remove('is-invalid');
+        if (inp) {
+            inp.classList.remove('is-invalid');
+        }
         if (errDiv) {
             errDiv.textContent = '';
             errDiv.style.display = 'none';
+        }
+    }
+
+    function checkDirtyPeerChanges() {
+        let hasChanges = false;
+        let hasErrors = false;
+        const rows = document.querySelectorAll('#peers-table-body tr[data-peer-id]');
+
+        rows.forEach(r => {
+            const peerId = r.getAttribute('data-peer-id');
+            const orig = originalPeerState[peerId];
+            if (!orig) return;
+
+            const nameInp = document.getElementById(`inline-name-${peerId}`);
+            const routeInp = document.getElementById(`inline-route-${peerId}`);
+            const vpnToggle = document.getElementById(`vpn-only-toggle-${peerId}`);
+            const toggleContainer = vpnToggle ? vpnToggle.closest('.toggle-container') : null;
+
+            const currentName = nameInp ? nameInp.value.trim() : '';
+            const currentRoute = routeInp ? routeInp.value.trim() : '';
+            const currentVpn = vpnToggle ? vpnToggle.checked : false;
+
+            const nameChanged = currentName !== orig.name;
+            const routeChanged = currentRoute !== orig.route;
+            const vpnChanged = currentVpn !== orig.vpn_only;
+
+            if (nameChanged || routeChanged || vpnChanged) {
+                hasChanges = true;
+            }
+
+            // Real-time single input validation & golden aura for Name
+            if (nameInp) {
+                const nameRes = validatePeerDeviceName(nameInp.value, peerId);
+                if (!nameRes.valid) {
+                    hasErrors = true;
+                    setInlineError(`inline-name-${peerId}`, nameRes.error);
+                } else {
+                    clearInlineError(`inline-name-${peerId}`);
+                    if (nameChanged) {
+                        nameInp.classList.add('is-modified');
+                    } else {
+                        nameInp.classList.remove('is-modified');
+                    }
+                }
+            }
+
+            // Real-time single input validation & golden aura for Route
+            if (routeInp) {
+                const routeRes = validatePeerDeviceRoute(routeInp.value, peerId);
+                if (!routeRes.valid) {
+                    hasErrors = true;
+                    setInlineError(`inline-route-${peerId}`, routeRes.error);
+                } else {
+                    clearInlineError(`inline-route-${peerId}`);
+                    if (routeChanged) {
+                        routeInp.classList.add('is-modified');
+                    } else {
+                        routeInp.classList.remove('is-modified');
+                    }
+                }
+            }
+
+            // Golden aura for VPN toggle
+            if (toggleContainer) {
+                if (vpnChanged) {
+                    toggleContainer.classList.add('is-modified');
+                } else {
+                    toggleContainer.classList.remove('is-modified');
+                }
+            }
+        });
+
+        const bar = document.getElementById('peers-apply-bar');
+        const applyBtn = document.getElementById('btn-apply-peers');
+        if (bar) {
+            bar.style.display = hasChanges ? 'flex' : 'none';
+        }
+        if (applyBtn) {
+            applyBtn.disabled = hasErrors;
+            applyBtn.style.opacity = hasErrors ? '0.5' : '1';
+            applyBtn.style.cursor = hasErrors ? 'not-allowed' : 'pointer';
+        }
+    }
+
+    function discardAllPeerChanges() {
+        const rows = document.querySelectorAll('#peers-table-body tr[data-peer-id]');
+        rows.forEach(r => {
+            const peerId = r.getAttribute('data-peer-id');
+            const orig = originalPeerState[peerId];
+            if (!orig) return;
+
+            const nameInp = document.getElementById(`inline-name-${peerId}`);
+            const routeInp = document.getElementById(`inline-route-${peerId}`);
+            const vpnToggle = document.getElementById(`vpn-only-toggle-${peerId}`);
+            const vpnText = document.getElementById(`vpn-only-text-${peerId}`);
+            const toggleContainer = vpnToggle ? vpnToggle.closest('.toggle-container') : null;
+
+            if (nameInp) {
+                nameInp.value = orig.name;
+                nameInp.classList.remove('is-modified');
+            }
+            if (routeInp) {
+                routeInp.value = orig.route;
+                routeInp.classList.remove('is-modified');
+            }
+            if (vpnToggle) {
+                vpnToggle.checked = orig.vpn_only;
+            }
+            if (toggleContainer) {
+                toggleContainer.classList.remove('is-modified');
+            }
+            if (vpnText) vpnText.innerText = orig.vpn_only ? 'ON' : 'OFF';
+
+            clearInlineError(`inline-name-${peerId}`);
+            clearInlineError(`inline-route-${peerId}`);
+        });
+
+        const bar = document.getElementById('peers-apply-bar');
+        if (bar) {
+            bar.style.display = 'none';
+        }
+    }
+
+    async function applyAllPeerChanges() {
+        const rows = document.querySelectorAll('#peers-table-body tr[data-peer-id]');
+        const dirtyPeers = [];
+
+        // 1. Validation check across all modified rows
+        for (const r of rows) {
+            const peerId = r.getAttribute('data-peer-id');
+            const orig = originalPeerState[peerId];
+            if (!orig) continue;
+
+            const nameInp = document.getElementById(`inline-name-${peerId}`);
+            const routeInp = document.getElementById(`inline-route-${peerId}`);
+            const vpnToggle = document.getElementById(`vpn-only-toggle-${peerId}`);
+
+            const currentName = nameInp ? nameInp.value.trim() : '';
+            const currentRoute = routeInp ? routeInp.value.trim() : '';
+            const currentVpn = vpnToggle ? vpnToggle.checked : false;
+
+            const nameChanged = currentName !== orig.name;
+            const routeChanged = currentRoute !== orig.route;
+            const vpnChanged = currentVpn !== orig.vpn_only;
+
+            if (nameChanged || routeChanged || vpnChanged) {
+                clearInlineError(`inline-name-${peerId}`);
+                clearInlineError(`inline-route-${peerId}`);
+
+                // Validate Name
+                const nameRes = validatePeerDeviceName(currentName, peerId);
+                if (!nameRes.valid) {
+                    setInlineError(`inline-name-${peerId}`, nameRes.error);
+                    if (nameInp) nameInp.focus();
+                    if (window.showError) window.showError(nameRes.error);
+                    return;
+                }
+
+                // Validate Route
+                const routeRes = validatePeerDeviceRoute(currentRoute, peerId);
+                if (!routeRes.valid) {
+                    setInlineError(`inline-route-${peerId}`, routeRes.error);
+                    if (routeInp) routeInp.focus();
+                    if (window.showError) window.showError(routeRes.error);
+                    return;
+                }
+
+                const normalizedRoute = routeRes.normalized || '';
+                if (routeInp && normalizedRoute && routeInp.value !== normalizedRoute) {
+                    routeInp.value = normalizedRoute;
+                }
+
+                dirtyPeers.push({
+                    peerId,
+                    currentName,
+                    currentRoute: normalizedRoute,
+                    currentVpn,
+                    nameChanged,
+                    routeChanged,
+                    vpnChanged,
+                    existingRouteId: routeInp ? routeInp.getAttribute('data-route-id') : null,
+                    existingNetworkId: routeInp ? routeInp.getAttribute('data-route-network-id') : null
+                });
+            }
+        }
+
+        if (dirtyPeers.length === 0) {
+            const bar = document.getElementById('peers-apply-bar');
+            if (bar) bar.style.display = 'none';
+            return;
+        }
+
+        const applyBtn = document.getElementById('btn-apply-peers');
+        if (applyBtn) {
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Applying...`;
+        }
+
+        try {
+            for (const item of dirtyPeers) {
+                // 1. Save Name
+                if (item.nameChanged) {
+                    const nameResp = await fetch(`/peers/${item.peerId}/update`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: item.currentName })
+                    });
+                    const nameData = await nameResp.json();
+                    if (!nameResp.ok || nameData.error) {
+                        throw new Error(nameData.error || `Failed to update name for ${item.currentName}`);
+                    }
+                }
+
+                // 2. Save Route
+                if (item.routeChanged) {
+                    if (item.currentRoute) {
+                        const networkId = item.existingNetworkId || `route-${item.peerId.substring(0, 8)}`;
+                        const routeBody = {
+                            "description": `Route handled via inline dashboard for peer ${item.peerId}`,
+                            "network_id": networkId,
+                            "enabled": true,
+                            "peer": item.peerId,
+                            "network": item.currentRoute,
+                            "metric": 9999,
+                            "masquerade": false,
+                            "keep_route": true,
+                            "groups": []
+                        };
+
+                        if (item.existingRouteId && item.existingRouteId !== 'null' && item.existingRouteId !== 'undefined') {
+                            const routeRes = await fetch(`/api/v2/netbird/routes/${item.existingRouteId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(routeBody)
+                            });
+                            if (!routeRes.ok) {
+                                const errData = await routeRes.json().catch(() => ({}));
+                                throw new Error(errData.detail || errData.message || errData.error || 'Failed to update route');
+                            }
+                        } else {
+                            const createRes = await fetch('/api/v2/netbird/routes', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(routeBody)
+                            });
+                            if (!createRes.ok) {
+                                const errData = await createRes.json().catch(() => ({}));
+                                throw new Error(errData.detail || errData.message || errData.error || 'Failed to create route');
+                            }
+                        }
+                    } else if (item.existingRouteId) {
+                        await fetch(`/api/v2/netbird/routes/${item.existingRouteId}`, { method: 'DELETE' });
+                    }
+                }
+
+                // 3. Save VPN-Only mode
+                if (item.vpnChanged) {
+                    const action = item.currentVpn ? 'on' : 'off';
+                    const vpnResp = await fetch(`/api/peers/${item.peerId}/vpn-only`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ operation: action })
+                    });
+                    const vpnData = await vpnResp.json();
+                    if (!vpnResp.ok || (vpnData.ok !== true && vpnData.status !== 'success')) {
+                        throw new Error(vpnData.error || vpnData.detail || 'Failed to set VPN mode');
+                    }
+                }
+
+                // Update original state cache
+                if (originalPeerState[item.peerId]) {
+                    originalPeerState[item.peerId].name = item.currentName;
+                    originalPeerState[item.peerId].route = item.currentRoute;
+                    originalPeerState[item.peerId].vpn_only = item.currentVpn;
+                }
+            }
+
+            await fetchAndPopulateRoutes();
+
+            const tbody = document.getElementById('peers-table-body');
+            if (tbody) {
+                tbody.removeAttribute('data-loaded');
+            }
+            await fetchPeersStatus();
+
+            const bar = document.getElementById('peers-apply-bar');
+            if (bar) bar.style.display = 'none';
+
+            if (window.showSuccess) {
+                window.showSuccess('Changes applied successfully');
+            }
+        } catch (err) {
+            console.error('Apply changes error:', err);
+            if (window.showError) {
+                window.showError(err.message || 'Failed to apply changes');
+            }
+        } finally {
+            if (applyBtn) {
+                applyBtn.disabled = false;
+                applyBtn.innerHTML = `Apply changes`;
+            }
         }
     }
 
@@ -192,7 +546,7 @@
         if (!peers || peers.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
+                    <td colspan="4" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
                         No Peer devices found in this customer group.
                     </td>
                 </tr>
@@ -201,6 +555,8 @@
         }
 
         tbody.innerHTML = '';
+        originalPeerState = {};
+
         peers.forEach(peer => {
             const peerId = peer.id;
             const name = peer.name || '';
@@ -211,17 +567,7 @@
             const isDisabled = !peer.is_online ? 'disabled' : '';
             const disabledTitle = !peer.is_online ? 'title="Device is offline"' : '';
 
-            const badgeClass = peer.is_online ? 'badge-success' : 'badge-inactive';
-            const statusText = peer.is_online ? 'Connected' : 'Offline';
-
             const isOffline = !peer.is_online;
-            const filterUrl = `/peers/${peerId}/filtering`;
-            const controlHref = isOffline ? 'javascript:void(0)' : filterUrl;
-            const controlStyle = isOffline
-                ? 'background-color: #6c757d; border-color: #6c757d; color: white; opacity: 0.65; cursor: not-allowed; pointer-events: none;'
-                : 'background-color: #00b06f; border-color: #00b06f; color: white;';
-            const controlAttr = isOffline ? 'onclick="event.preventDefault()"' : '';
-
             const firewallUrl = `/peers/${peerId}`;
             const firewallHref = isOffline ? 'javascript:void(0)' : firewallUrl;
             const firewallStyle = isOffline
@@ -229,15 +575,29 @@
                 : 'background-color: var(--nk-blue-primary); border-color: var(--nk-blue-primary); color: white;';
             const firewallAttr = isOffline ? 'onclick="event.preventDefault()"' : '';
 
+            // Store initial state
+            originalPeerState[peerId] = {
+                name: name,
+                route: route,
+                vpn_only: !!peer.vpn_only,
+                route_id: null,
+                route_network_id: null
+            };
+
             const tr = document.createElement('tr');
             tr.setAttribute('data-peer-id', peerId);
-            tr.onclick = (event) => goToPeerDetails(peerId, name.replace(/'/g, "\\'"), event);
 
             tr.innerHTML = `
                 <td>
-                    <input style="min-width: 150px;" type="text" class="table-input" id="inline-name-${peerId}"
-                        value="${name}" placeholder="Device Name" maxlength="200">
-                    <div class="table-error-msg" id="inline-name-${peerId}-error" style="display: none;"></div>
+                    <div class="peer-name-cell">
+                        <span class="peer-status-bulb ${peer.is_online ? 'online' : 'offline'}"
+                            id="status-badge-${peerId}" title="${getPeerStatusTitle(peer)}"></span>
+                        <div class="peer-name-input-wrapper">
+                            <input style="min-width: 150px;" type="text" class="table-input" id="inline-name-${peerId}"
+                                value="${name}" placeholder="Device Name" maxlength="200">
+                            <div class="table-error-msg" id="inline-name-${peerId}-error" style="display: none;"></div>
+                        </div>
+                    </div>
                 </td>
                 <td>
                     <input style="min-width: 153px;" type="text" class="table-input inline-route-field"
@@ -250,7 +610,7 @@
                         <label class="switch">
                             <input type="checkbox" 
                                    id="vpn-only-toggle-${peerId}" 
-                                   onchange="toggleVpnOnly('${peerId}', this)"
+                                   onchange="onVpnOnlyToggleChange('${peerId}', this)"
                                    ${vpnOnlyChecked}
                                    ${isDisabled}>
                             <span class="slider"></span>
@@ -259,23 +619,11 @@
                     </div>
                 </td>
                 <td>
-                    <span class="badge ${badgeClass}"
-                        id="status-badge-${peerId}" data-peer-name="${name}"
-                        data-last-seen="${peer.last_seen || ''}">
-                        <i class="fas fa-circle" style="font-size: 0.5rem; margin-right: 4px;"></i>
-                        ${statusText}
-                    </span>
-                </td>
-                <td>
                     <div class="actions-cell">
-                        <button class="action-btn btn-save" id="btn-save-${peerId}" onclick="saveInlineChanges('${peerId}')">
-                            <i class="fas fa-save"></i> Save
-                        </button>
-
                         <a href="${firewallHref}"
                             id="firewall-link-${peerId}" class="action-btn"
                             style="${firewallStyle}" ${firewallAttr}>
-                            <i class="fas fa-shield-alt"></i> Manage
+                            Manage
                         </a>
                     </div>
                 </td>
@@ -283,33 +631,31 @@
 
             tbody.appendChild(tr);
 
-            // Bind live validation on name and route inputs
+            // Bind live validation & dirty tracking
             const nameInput = tr.querySelector(`#inline-name-${peerId}`);
             if (nameInput) {
                 nameInput.addEventListener('input', () => {
-                    const res = validatePeerDeviceName(nameInput.value, peerId);
-                    if (!res.valid) {
-                        setInlineError(`inline-name-${peerId}`, res.error);
-                    } else {
-                        clearInlineError(`inline-name-${peerId}`);
-                    }
+                    checkDirtyPeerChanges();
                 });
             }
 
             const routeInput = tr.querySelector(`#inline-route-${peerId}`);
             if (routeInput) {
                 routeInput.addEventListener('input', () => {
-                    const res = validatePeerDeviceRoute(routeInput.value, peerId);
-                    if (!res.valid) {
-                        setInlineError(`inline-route-${peerId}`, res.error);
-                    } else {
-                        clearInlineError(`inline-route-${peerId}`);
-                    }
+                    checkDirtyPeerChanges();
                 });
             }
         });
 
         fetchAndPopulateRoutes();
+    }
+
+    function onVpnOnlyToggleChange(peerId, checkbox) {
+        const vpnText = document.getElementById(`vpn-only-text-${peerId}`);
+        if (vpnText) {
+            vpnText.innerText = checkbox.checked ? 'ON' : 'OFF';
+        }
+        checkDirtyPeerChanges();
     }
 
     async function fetchPeersStatus() {
@@ -345,196 +691,10 @@
         peersPollingInterval = setInterval(fetchPeersStatus, 30000);
     }
 
-    async function saveInlineChanges(peerId) {
-        clearInlineError(`inline-name-${peerId}`);
-        clearInlineError(`inline-route-${peerId}`);
-
-        const nameInput = document.getElementById(`inline-name-${peerId}`);
-        const routeInput = document.getElementById(`inline-route-${peerId}`);
-        const saveBtn = document.getElementById(`btn-save-${peerId}`);
-
-        const newName = nameInput ? nameInput.value.trim() : '';
-        const rawRouteNetwork = routeInput ? routeInput.value.trim() : '';
-
-        // 1. Validate Name
-        const nameRes = validatePeerDeviceName(newName, peerId);
-        if (!nameRes.valid) {
-            setInlineError(`inline-name-${peerId}`, nameRes.error);
-            if (nameInput) nameInput.focus();
-            return;
-        }
-
-        // 2. Validate Route Network
-        const routeRes = validatePeerDeviceRoute(rawRouteNetwork, peerId);
-        if (!routeRes.valid) {
-            setInlineError(`inline-route-${peerId}`, routeRes.error);
-            if (routeInput) routeInput.focus();
-            return;
-        }
-
-        const newRouteNetwork = routeRes.normalized || '';
-        if (routeInput && newRouteNetwork && routeInput.value !== newRouteNetwork) {
-            routeInput.value = newRouteNetwork;
-        }
-
-        if (saveBtn) saveBtn.disabled = true;
-
-        try {
-            const nameResponse = await fetch(`/peers/${peerId}/update`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newName })
-            });
-
-            const nameData = await nameResponse.json();
-            if (!nameResponse.ok || nameData.error) {
-                throw new Error(nameData.error || 'Failed to save');
-            }
-
-            const existingRouteId = routeInput.getAttribute('data-route-id');
-            const existingNetworkId = routeInput.getAttribute('data-route-network-id');
-
-            if (newRouteNetwork) {
-                const networkId = existingNetworkId || `route-${peerId.substring(0, 8)}`;
-
-                const routeBody = {
-                    "description": `Route handled via inline dashboard for peer ${peerId}`,
-                    "network_id": networkId,
-                    "enabled": true,
-                    "peer": peerId,
-                    "network": newRouteNetwork,
-                    "metric": 9999,
-                    "masquerade": false,
-                    "keep_route": true,
-                    "groups": []
-                };
-
-                if (existingRouteId && existingRouteId !== 'null' && existingRouteId !== 'undefined') {
-                    const routeRes = await fetch(`/api/v2/netbird/routes/${existingRouteId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(routeBody)
-                    });
-
-                    if (!routeRes.ok) {
-                        const errData = await routeRes.json().catch(() => ({}));
-                        throw new Error(errData.detail || errData.message || errData.error || 'Failed to save');
-                    }
-                } else {
-                    const createRes = await fetch('/api/v2/netbird/routes', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(routeBody)
-                    });
-
-                    if (!createRes.ok) {
-                        const errData = await createRes.json().catch(() => ({}));
-                        throw new Error(errData.detail || errData.message || errData.error || 'Failed to save');
-                    }
-                }
-            } else if (existingRouteId) {
-                await fetch(`/api/v2/netbird/routes/${existingRouteId}`, { method: 'DELETE' });
-            }
-
-            await fetchAndPopulateRoutes();
-
-            const tbody = document.getElementById('peers-table-body');
-            if (tbody) {
-                tbody.removeAttribute('data-loaded');
-            }
-            await fetchPeersStatus();
-
-            if (window.showSuccess) {
-                window.showSuccess('Saved');
-            } else {
-                alert('Saved');
-            }
-        } catch (error) {
-            console.error('Save Error:', error);
-            let cleanMessage = error.message;
-            try {
-                const jsonMatch = cleanMessage.match(/\{.*\}/);
-                if (jsonMatch) {
-                    const parsed = JSON.parse(jsonMatch[0]);
-                    if (parsed.message) cleanMessage = parsed.message;
-                    if (parsed.error) cleanMessage = parsed.error;
-                }
-            } catch (e) { }
-            alert(cleanMessage || 'Failed to save');
-        } finally {
-            if (saveBtn) saveBtn.disabled = false;
-        }
-    }
-
-    async function toggleVpnOnly(peerId, checkbox) {
-        const action = checkbox.checked ? 'on' : 'off';
-        const statusText = document.getElementById(`vpn-only-text-${peerId}`);
-
-        checkbox.disabled = true;
-
-        try {
-            const response = await fetch(`/api/peers/${peerId}/vpn-only`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ operation: action })
-            });
-
-            const data = await response.json();
-
-            if (response.ok && (data.ok === true || data.status === 'success')) {
-                if (statusText) statusText.innerText = action.toUpperCase();
-            } else {
-                alert(data.error || data.detail || 'Failed to set VPN mode');
-                checkbox.checked = !checkbox.checked;
-            }
-        } catch (err) {
-            console.error('VPN-Only update error:', err);
-            alert('Failed to set VPN mode');
-            checkbox.checked = !checkbox.checked;
-        } finally {
-            checkbox.disabled = false;
-        }
-    }
-
-    function timeAgo(dateString) {
-        if (!dateString) return 'Never';
-        const now = new Date();
-        const past = new Date(dateString);
-
-        if (isNaN(past.getTime())) return 'Never';
-
-        const msPerMinute = 60 * 1000;
-        const msPerHour = msPerMinute * 60;
-        const msPerDay = msPerHour * 24;
-        const elapsed = now - past;
-
-        if (elapsed < msPerMinute) {
-            return 'Just now';
-        } else if (elapsed < msPerHour) {
-            return 'Since ' + Math.round(elapsed / msPerMinute) + 'm ago';
-        } else if (elapsed < msPerDay) {
-            return 'Since ' + Math.round(elapsed / msPerHour) + 'h ago';
-        } else {
-            return 'Since ' + Math.round(elapsed / msPerDay) + 'd ago';
-        }
-    }
-
-    function goToPeerDetails(peerId, name, event) {
-        if (event.target.closest('input') ||
-            event.target.closest('button') ||
-            event.target.closest('a') ||
-            event.target.closest('.switch') ||
-            event.target.closest('.actions-cell') ||
-            event.target.closest('.toggle-container')) {
-            return;
-        }
-        window.location.href = `/peers/${peerId}`;
-    }
-
     // Expose for HTML event listeners
-    window.saveInlineChanges = saveInlineChanges;
-    window.toggleVpnOnly = toggleVpnOnly;
-    window.goToPeerDetails = goToPeerDetails;
+    window.onVpnOnlyToggleChange = onVpnOnlyToggleChange;
+    window.discardAllPeerChanges = discardAllPeerChanges;
+    window.applyAllPeerChanges = applyAllPeerChanges;
 
     document.addEventListener("DOMContentLoaded", function () {
         initPeersPolling();

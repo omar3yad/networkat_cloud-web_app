@@ -151,20 +151,20 @@ class AdGuardService:
                 except Exception:
                     pass
 
-            text_err = exc.response.text if exc.response is not None else str(exc)
+            text_err = exc.response.text if exc.response is not None else "Invalid response"
             raise HTTPException(
                 status_code=status_code,
-                detail=f"AdGuard API error: {text_err}",
+                detail=f"DNS service error: {text_err}",
             )
         except requests.Timeout:
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail=f"AdGuard API on peer timed out after {ADGUARD_TIMEOUT}s",
+                detail="DNS service on device timed out",
             )
-        except requests.RequestException as exc:
+        except requests.RequestException:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Could not connect to AdGuard on peer: {str(exc)}",
+                detail="DNS service on device is unreachable",
             )
 
     @classmethod
