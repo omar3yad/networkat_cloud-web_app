@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# شبكة أمان: بعد أي git pull/merge نضمن إن devteam عنده كتابة على الملفات الجديدة.
+# لا يحتاج sudo — بيصلح بس الملفات اللي المستخدم الحالي يملكها؛ الباقي بيتصلح
+# من setgid + default ACL الموجودين أصلاً على المجلدات.
+ROOT="$(git rev-parse --show-toplevel)"
+"$ROOT/.githooks/_fix-perms-safe.sh" ORIG_HEAD HEAD 2>/dev/null || true

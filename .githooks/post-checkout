@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# نفس شبكة الأمان بعد checkout بين الفروع.
+# $1 = ref قبل، $2 = ref بعد، $3 = 1 لو checkout فرع (مش ملف)
+[ "${3:-0}" = "1" ] || exit 0
+ROOT="$(git rev-parse --show-toplevel)"
+"$ROOT/.githooks/_fix-perms-safe.sh" "$1" "$2" 2>/dev/null || true
