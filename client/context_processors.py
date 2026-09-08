@@ -34,14 +34,34 @@ def _format_offline_duration(last_seen_val):
         return ""
 
 
+def _is_offline_ge_7d(last_seen_val, is_connected):
+    if is_connected:
+        return False
+    if not last_seen_val:
+        return True
+    try:
+        if isinstance(last_seen_val, str):
+            clean_str = last_seen_val.replace('Z', '+00:00')
+            dt = datetime.datetime.fromisoformat(clean_str)
+        elif isinstance(last_seen_val, datetime.datetime):
+            dt = last_seen_val
+        else:
+            return True
+        now = datetime.datetime.now(datetime.timezone.utc) if dt.tzinfo else datetime.datetime.utcnow()
+        diff = now - dt
+        return diff.total_seconds() >= (7 * 86400)
+    except Exception:
+        return False
+
+
 def inject_client_sidebar():
     customer_id = session.get('client_customer_id')
     if not customer_id:
-        return dict(sidebar_peers=[])
+        return dict(sidebar_peers=[], sidebar_online_count=0, sidebar_offline_count=0)
 
     customer = Client.query.get(customer_id)
     if not customer:
-        return dict(sidebar_peers=[])
+        return dict(sidebar_peers=[], sidebar_online_count=0, sidebar_offline_count=0)
 
     try:
         # 1. Use the status cache from peer_api if available (contains true is_online handshake check)
@@ -56,6 +76,7 @@ def inject_client_sidebar():
                     is_online = p.get("connected", False)
                 is_connected = bool(is_online)
                 offline_dur = _format_offline_duration(p.get("last_seen")) if not is_connected else ""
+                offline_ge_7d = _is_offline_ge_7d(p.get("last_seen"), is_connected)
                 sidebar_peers.append({
                     "id": peer_id,
                     "name": pname,
@@ -63,11 +84,18 @@ def inject_client_sidebar():
                     "ip": p.get("ip"),
                     "last_seen": p.get("last_seen"),
                     "offline_duration": offline_dur,
+                    "offline_ge_7d": offline_ge_7d,
                     "last_seen_human": f"{offline_dur} ago" if offline_dur else "",
                     "status_title": f"Offline for {offline_dur}" if offline_dur else ("Connected" if is_connected else "Offline")
                 })
             sidebar_peers.sort(key=lambda p: (p.get("name") or "").lower())
-            return dict(sidebar_peers=sidebar_peers)
+            sidebar_online_count = sum(1 for p in sidebar_peers if p.get("connected"))
+            sidebar_offline_count = len(sidebar_peers) - sidebar_online_count
+            return dict(
+                sidebar_peers=sidebar_peers,
+                sidebar_online_count=sidebar_online_count,
+                sidebar_offline_count=sidebar_offline_count
+            )
 
         # 2. Fallback to NetBird cached peers list
         allowed_peer_ids = NetBirdService.get_cached_customer_peer_ids(customer)
@@ -82,6 +110,7 @@ def inject_client_sidebar():
             pname = get_name_override(peer_id) or p.get("name") or "Edge Device"
             is_connected = bool(p.get("connected", False))
             offline_dur = _format_offline_duration(p.get("last_seen")) if not is_connected else ""
+            offline_ge_7d = _is_offline_ge_7d(p.get("last_seen"), is_connected)
             sidebar_peers.append({
                 "id": peer_id,
                 "name": pname,
@@ -89,12 +118,19 @@ def inject_client_sidebar():
                 "ip": p.get("ip"),
                 "last_seen": p.get("last_seen"),
                 "offline_duration": offline_dur,
+                "offline_ge_7d": offline_ge_7d,
                 "last_seen_human": f"{offline_dur} ago" if offline_dur else "",
                 "status_title": f"Offline for {offline_dur}" if offline_dur else ("Connected" if is_connected else "Offline")
             })
 
         sidebar_peers.sort(key=lambda p: (p.get("name") or "").lower())
-        return dict(sidebar_peers=sidebar_peers)
+        sidebar_online_count = sum(1 for p in sidebar_peers if p.get("connected"))
+        sidebar_offline_count = len(sidebar_peers) - sidebar_online_count
+        return dict(
+            sidebar_peers=sidebar_peers,
+            sidebar_online_count=sidebar_online_count,
+            sidebar_offline_count=sidebar_offline_count
+        )
     except Exception as e:
         current_app.logger.error(f"Error in sidebar context processor: {e}")
-        return dict(sidebar_peers=[])
+        return dict(sidebar_peers=[], sidebar_online_count=0, sidebar_offline_count=0)

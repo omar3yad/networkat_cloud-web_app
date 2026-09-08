@@ -24,6 +24,9 @@ from utils.cache_manager import (
     get_name_override,
     get_active_route_overrides,
     set_route_override,
+    get_vpn_only_override,
+    set_vpn_only_override,
+    update_customer_status_vpn_only,
     is_revalidating,
     start_revalidating,
     stop_revalidating
@@ -434,16 +437,15 @@ def peer_vpn_only_proxy(peer_id):
                 resp_data = resp.json()
                 enabled = resp_data.get("enabled")
                 if enabled is not None:
-                    with cache_lock:
-                        vpn_only_cache[peer_id] = (bool(enabled), time.time())
+                    enabled = bool(enabled)
                 elif request.method == 'POST':
                     op = data.get("operation", "").lower()
                     enabled = op in ("enable", "on")
-                    with cache_lock:
-                        vpn_only_cache[peer_id] = (enabled, time.time())
-                
-                if request.method == 'POST':
-                    clear_all_netbird_caches(customer_id)
+
+                if enabled is not None:
+                    set_vpn_only_override(peer_id, enabled)
+                    if customer_id:
+                        update_customer_status_vpn_only(customer_id, peer_id, enabled)
             except Exception as cache_err:
                 current_app.logger.error(f"Error updating vpn-only cache: {cache_err}")
 

@@ -154,6 +154,57 @@ def get_active_route_overrides() -> dict:
     return overrides
 
 
+def get_vpn_only_override(peer_id: str):
+    """Returns the override VPN-only status for a peer if set within the last 45 seconds."""
+    path = f"/tmp/peer_vpn_only_{peer_id}.json"
+    try:
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                data = json.load(f)
+                enabled, ts = data[0], data[1]
+                if time.time() - ts < 45:
+                    return bool(enabled)
+                else:
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+    return None
+
+
+def set_vpn_only_override(peer_id: str, enabled: bool):
+    """Persists an override VPN-only status for a peer across all Gunicorn workers."""
+    path = f"/tmp/peer_vpn_only_{peer_id}.json"
+    temp_path = f"{path}.tmp"
+    try:
+        with open(temp_path, 'w') as f:
+            json.dump([bool(enabled), time.time()], f)
+        os.replace(temp_path, path)
+    except Exception:
+        pass
+    with cache_lock:
+        vpn_only_cache[peer_id] = (bool(enabled), time.time())
+
+
+def update_customer_status_vpn_only(customer_id: str, peer_id: str, enabled: bool):
+    """Atomically updates the vpn_only flag for a specific peer in the customer status cache file."""
+    if not customer_id:
+        return
+    payload, ts = read_file_cache(f"customer_status_{customer_id}")
+    if payload and isinstance(payload, dict):
+        peers = payload.get("peers", [])
+        updated = False
+        for p in peers:
+            if p.get("id") == peer_id:
+                p["vpn_only"] = bool(enabled)
+                updated = True
+                break
+        if updated:
+            write_file_cache(f"customer_status_{customer_id}", payload)
+
+
 def clear_all_netbird_caches(customer_id=None):
     # Remove shared cache files
     for key in ["netbird_peers", "netbird_routes"]:

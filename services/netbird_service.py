@@ -10,6 +10,8 @@ from utils.cache_manager import (
     read_file_cache,
     write_file_cache,
     get_name_override,
+    get_vpn_only_override,
+    set_vpn_only_override,
     is_revalidating,
     start_revalidating,
     stop_revalidating
@@ -159,7 +161,7 @@ class NetBirdService:
             hs_resp = requests.get(
                 f"{base_url}/api/v1/peers/{peer_id}/handshake",
                 headers=headers,
-                timeout=5.0
+                timeout=2.0
             )
             if hs_resp.ok:
                 is_reachable = hs_resp.json().get("is_reachable", False)
@@ -173,8 +175,14 @@ class NetBirdService:
 
     @classmethod
     def get_cached_peer_vpn_only(cls, peer_id: str, peer_ip: str, cache_ttl: int = 10) -> bool:
-        """Fetch peer VPN-only status from edge agent with in-memory TTL cache."""
+        """Fetch peer VPN-only status from edge agent with in-memory TTL cache and file override."""
         now = time.time()
+
+        ov_vpn = get_vpn_only_override(peer_id)
+        if ov_vpn is not None:
+            with cache_lock:
+                vpn_only_cache[peer_id] = (ov_vpn, now)
+            return ov_vpn
 
         with cache_lock:
             if peer_id in vpn_only_cache:
@@ -189,8 +197,7 @@ class NetBirdService:
             if resp.ok:
                 resp_data = resp.json()
                 enabled = bool(resp_data.get("enabled", False))
-                with cache_lock:
-                    vpn_only_cache[peer_id] = (enabled, now)
+                set_vpn_only_override(peer_id, enabled)
                 return enabled
         except Exception as e:
             logger.debug(f"Error fetching vpn-only for peer {peer_id}: {e}")
@@ -214,9 +221,13 @@ class NetBirdService:
         is_reachable = False
         vpn_only = False
 
+        ov_vpn = get_vpn_only_override(peer_id)
+        if ov_vpn is not None:
+            vpn_only = ov_vpn
+
         if is_connected:
             is_reachable = cls.get_cached_peer_handshake(peer_id, base_url, headers, cache_ttl=10)
-            if is_reachable and peer.get("ip"):
+            if is_reachable and peer.get("ip") and ov_vpn is None:
                 vpn_only = cls.get_cached_peer_vpn_only(peer_id, peer.get("ip"), cache_ttl=10)
 
         real_online = is_connected and is_reachable

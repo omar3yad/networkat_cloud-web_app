@@ -176,6 +176,7 @@ body {
     color: var(--sb-nav-text);
     border-radius: 10px;
     transition: var(--nk-transition);
+    background-color: var(--sb-submenu-bg);
 }
 
 .nav-item-collapsible:hover {
@@ -202,6 +203,77 @@ body {
     font-weight: 600;
     font-size: 1.05rem;
     flex-grow: 1;
+}
+
+/* Sidebar Online/Offline Status Badges (Squares with glowing pulse) */
+.sidebar-peer-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+    margin-right: 6px;
+}
+
+.sidebar-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar-count-badge:hover {
+    transform: scale(1.18);
+    filter: brightness(1.15);
+}
+
+.sidebar-count-badge.active {
+    outline: 2px solid #ffffff;
+    outline-offset: 1px;
+    transform: scale(1.15);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.8) !important;
+}
+
+.sidebar-count-badge.online {
+    background-color: #10b981;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+    animation: bulbPulseGreen 2s infinite ease-in-out;
+}
+
+.sidebar-count-badge.offline {
+    background-color: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+    animation: bulbPulseRed 2s infinite ease-in-out;
+    margin: 0px 0px 0px 6px;
+}
+
+@keyframes bulbPulseGreen {
+    0%, 100% {
+        box-shadow: 0 0 3px rgba(16, 185, 129, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.85);
+    }
+}
+
+@keyframes bulbPulseRed {
+    0%, 100% {
+        box-shadow: 0 0 3px rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.85);
+    }
 }
 
 .submenu-arrow {
@@ -311,14 +383,16 @@ body {
     flex-shrink: 0;
 }
 
-.peer-status-dot.online {
+/* .peer-status-dot.online {
     background-color: #10b981;
     box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
-}
+} */
 
-.peer-status-dot.offline {
+/* .peer-status-dot.offline {
     background-color: #ef4444;
-}
+    box-shadow: 0 0 8px rgb(185 16 16 / 60%);
+
+} */
 
 .submenu-empty {
     padding: 8px 12px;
@@ -336,19 +410,97 @@ body {
     flex-direction: column;
     gap: 16px;
 }
+/* تعريف أنيميشن النبض المتوهج */
+@keyframes peer-glow-green {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
 
+@keyframes peer-glow-red {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* تطبيق التوهج على النقطة الخضراء (أونلاين) */
+.peer-status-dot.online {
+    background-color: #10b981;
+    animation: peer-glow-green 2s infinite ease-in-out;
+}
+
+/* تطبيق التوهج على النقطة الحمراء (أوفلاين) */
+.peer-status-dot.offline {
+    background-color: #ef4444;
+    /* إضاءة ثابتة خفيفة مع وميض ناعم جداً */
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+    /* animation: peer-glow-red 3s infinite ease-in-out; */
+}
 .user-profile {
     display: flex;
     align-items: center;
     gap: 12px;
+    text-decoration: none;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background-color: #ffffff;
+    border: 1px solid var(--sb-border);
+    transition: var(--nk-transition);
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.user-profile:hover {
+    border-color: var(--nk-blue-primary);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1);
+    transform: translateY(-1px);
+}
+
+.user-profile:hover .user-avatar {
+    color: var(--nk-blue-primary);
+}
+
+.user-profile:hover .user-name {
+    color: var(--nk-blue-primary);
+}
+
+.user-profile.active {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border-color: transparent;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+}
+
+.user-profile.active .user-avatar {
+    color: #ffffff !important;
+}
+
+.user-profile.active .user-name {
+    color: #ffffff !important;
+}
+
+.user-profile.active .user-role {
+    color: rgba(255, 255, 255, 0.85) !important;
 }
 
 .user-avatar {
     font-size: 2.2rem;
-    color: var(--sb-user-avatar);
+    color: var(--nk-blue-primary);
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: var(--nk-transition);
 }
 
 .user-details {
@@ -358,18 +510,20 @@ body {
 }
 
 .user-name {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--sb-user-name);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: var(--nk-transition);
 }
 
 .user-role {
     font-size: 0.75rem;
     color: var(--sb-user-role);
     font-weight: 500;
+    transition: var(--nk-transition);
 }
 
 .signout-btn {

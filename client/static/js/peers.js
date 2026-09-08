@@ -6,6 +6,8 @@
 
     let peersPollingInterval = null;
     let originalPeerState = {};
+    let filterOnline = false;
+    let filterOffline = false;
 
     async function fetchAndPopulateRoutes() {
         try {
@@ -20,6 +22,17 @@
 
                 if (document.activeElement !== input) {
                     input.value = currentRoute;
+                }
+
+                // Update read-only route label
+                const routeLabel = document.getElementById(`peer-route-text-${peerId}`);
+                if (routeLabel) {
+                    routeLabel.textContent = currentRoute || '—';
+                    if (!currentRoute) {
+                        routeLabel.classList.add('is-empty');
+                    } else {
+                        routeLabel.classList.remove('is-empty');
+                    }
                 }
 
                 if (peerRoute) {
@@ -64,8 +77,61 @@
         return dur ? `Offline for ${dur}` : 'Offline';
     }
 
+    function isOfflineOver7Days(lastSeenVal, isOnline) {
+        if (isOnline) return false;
+        if (!lastSeenVal) return true;
+        try {
+            const dt = new Date(lastSeenVal);
+            if (isNaN(dt.getTime())) return true;
+            const now = new Date();
+            const diffMs = now - dt;
+            return diffMs >= (7 * 86400 * 1000);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function updatePeerCountDisplay(peersOrCount) {
+        let total = 0;
+        let online = 0;
+        let offline = 0;
+
+        if (Array.isArray(peersOrCount)) {
+            total = peersOrCount.length;
+            online = peersOrCount.filter(p => !!p.is_online).length;
+            offline = total - online;
+        } else if (typeof peersOrCount === 'number') {
+            total = peersOrCount;
+        } else {
+            return;
+        }
+
+        // Update page header elements
+        const pageEl = document.getElementById('peers-page-count');
+        if (pageEl) pageEl.textContent = total;
+        const pageOnlineEl = document.getElementById('peers-online-count');
+        if (pageOnlineEl && Array.isArray(peersOrCount)) pageOnlineEl.textContent = online;
+        const pageOfflineEl = document.getElementById('peers-offline-count');
+        if (pageOfflineEl && Array.isArray(peersOrCount)) pageOfflineEl.textContent = offline;
+
+        // Update sidebar badges
+        const sideEl = document.getElementById('sidebar-peers-count');
+        if (sideEl) sideEl.textContent = total;
+        const sideOnlineEl = document.getElementById('sidebar-online-count');
+        if (sideOnlineEl && Array.isArray(peersOrCount)) {
+            sideOnlineEl.textContent = online;
+            sideOnlineEl.title = `Online Peers (${online})`;
+        }
+        const sideOfflineEl = document.getElementById('sidebar-offline-count');
+        if (sideOfflineEl && Array.isArray(peersOrCount)) {
+            sideOfflineEl.textContent = offline;
+            sideOfflineEl.title = `Offline Peers (${offline})`;
+        }
+    }
+
     function updatePeerStatuses(data) {
         if (!data || !data.peers) return;
+        updatePeerCountDisplay(data.peers);
 
         data.peers.forEach(peer => {
             const statusTitle = getPeerStatusTitle(peer);
@@ -83,7 +149,23 @@
 
             const sidebarItem = document.getElementById(`sidebar-peer-${peer.id}`);
             if (sidebarItem) {
-                sidebarItem.title = `${peer.name || 'Edge Device'} (${statusTitle})`;
+                sidebarItem.setAttribute('data-sidebar-online', peer.is_online ? 'true' : 'false');
+                const isOver7d = isOfflineOver7Days(peer.last_seen, peer.is_online);
+                sidebarItem.setAttribute('data-over-7d', isOver7d ? 'true' : 'false');
+                if (isOver7d) {
+                    sidebarItem.style.display = 'none';
+                } else {
+                    sidebarItem.style.display = '';
+                    sidebarItem.title = `${peer.name || 'Edge Device'} (${statusTitle})`;
+                }
+            }
+
+            // Update read-only name label if not currently in edit mode
+            const nameLabel = document.getElementById(`peer-name-text-${peer.id}`);
+            const nameWrapper = document.getElementById(`name-input-wrapper-${peer.id}`);
+            const isEditing = nameWrapper && nameWrapper.style.display !== 'none';
+            if (nameLabel && !isEditing && peer.name) {
+                nameLabel.textContent = peer.name;
             }
 
             const sidebarSeen = document.getElementById(`sidebar-seen-${peer.id}`);
@@ -138,7 +220,17 @@
                     firewallLink.setAttribute('onclick', 'event.preventDefault()');
                 }
             }
+
+            const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peer.id}"]`);
+            if (tr) {
+                tr.setAttribute('data-peer-online', peer.is_online ? 'true' : 'false');
+            }
         });
+
+        applyPeerStatusFilter();
+        if (window.applySidebarSubmenuFilter) {
+            window.applySidebarSubmenuFilter();
+        }
     }
 
     function validateIpv4Cidr(cidr) {
@@ -265,35 +357,37 @@
                 hasChanges = true;
             }
 
-            // Real-time single input validation & golden aura for Name
+            // Real-time single input validation & golden aura for Name (only if modified)
             if (nameInp) {
-                const nameRes = validatePeerDeviceName(nameInp.value, peerId);
-                if (!nameRes.valid) {
-                    hasErrors = true;
-                    setInlineError(`inline-name-${peerId}`, nameRes.error);
+                if (nameChanged) {
+                    const nameRes = validatePeerDeviceName(nameInp.value, peerId);
+                    if (!nameRes.valid) {
+                        hasErrors = true;
+                        setInlineError(`inline-name-${peerId}`, nameRes.error);
+                    } else {
+                        clearInlineError(`inline-name-${peerId}`);
+                        nameInp.classList.add('is-modified');
+                    }
                 } else {
                     clearInlineError(`inline-name-${peerId}`);
-                    if (nameChanged) {
-                        nameInp.classList.add('is-modified');
-                    } else {
-                        nameInp.classList.remove('is-modified');
-                    }
+                    nameInp.classList.remove('is-modified');
                 }
             }
 
-            // Real-time single input validation & golden aura for Route
+            // Real-time single input validation & golden aura for Route (only if modified)
             if (routeInp) {
-                const routeRes = validatePeerDeviceRoute(routeInp.value, peerId);
-                if (!routeRes.valid) {
-                    hasErrors = true;
-                    setInlineError(`inline-route-${peerId}`, routeRes.error);
+                if (routeChanged) {
+                    const routeRes = validatePeerDeviceRoute(routeInp.value, peerId);
+                    if (!routeRes.valid) {
+                        hasErrors = true;
+                        setInlineError(`inline-route-${peerId}`, routeRes.error);
+                    } else {
+                        clearInlineError(`inline-route-${peerId}`);
+                        routeInp.classList.add('is-modified');
+                    }
                 } else {
                     clearInlineError(`inline-route-${peerId}`);
-                    if (routeChanged) {
-                        routeInp.classList.add('is-modified');
-                    } else {
-                        routeInp.classList.remove('is-modified');
-                    }
+                    routeInp.classList.remove('is-modified');
                 }
             }
 
@@ -319,10 +413,131 @@
         }
     }
 
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function setRowEditMode(peerId, isEditing) {
+        const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peerId}"]`);
+        const nameView = document.getElementById(`peer-name-view-${peerId}`);
+        const nameWrapper = document.getElementById(`name-input-wrapper-${peerId}`);
+        const routeView = document.getElementById(`peer-route-view-${peerId}`);
+        const routeWrapper = document.getElementById(`route-input-wrapper-${peerId}`);
+
+        if (tr) {
+            tr.classList.toggle('row-editing', isEditing);
+        }
+        if (nameView) {
+            nameView.style.display = isEditing ? 'none' : 'flex';
+        }
+        if (nameWrapper) {
+            nameWrapper.style.display = isEditing ? 'flex' : 'none';
+        }
+        if (routeView) {
+            routeView.style.display = isEditing ? 'none' : 'flex';
+        }
+        if (routeWrapper) {
+            routeWrapper.style.display = isEditing ? 'block' : 'none';
+        }
+    }
+
+    function enablePeerNameEditMode(peerId) {
+        const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peerId}"]`);
+        const nameView = document.getElementById(`peer-name-view-${peerId}`);
+        const nameWrapper = document.getElementById(`name-input-wrapper-${peerId}`);
+        if (tr) tr.classList.add('row-editing');
+        if (nameView) nameView.style.display = 'none';
+        if (nameWrapper) nameWrapper.style.display = 'flex';
+
+        const nameInp = document.getElementById(`inline-name-${peerId}`);
+        if (nameInp) {
+            nameInp.focus();
+            nameInp.select();
+        }
+    }
+
+    function cancelPeerNameEditMode(peerId) {
+        const orig = originalPeerState[peerId];
+        const nameInp = document.getElementById(`inline-name-${peerId}`);
+        if (orig && nameInp) {
+            nameInp.value = orig.name;
+            nameInp.classList.remove('is-modified', 'is-invalid');
+        }
+        clearInlineError(`inline-name-${peerId}`);
+
+        const nameView = document.getElementById(`peer-name-view-${peerId}`);
+        const nameWrapper = document.getElementById(`name-input-wrapper-${peerId}`);
+        if (nameView) nameView.style.display = 'flex';
+        if (nameWrapper) nameWrapper.style.display = 'none';
+
+        const routeWrapper = document.getElementById(`route-input-wrapper-${peerId}`);
+        const isRouteEditing = routeWrapper && routeWrapper.style.display !== 'none';
+        const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peerId}"]`);
+        if (tr && !isRouteEditing) {
+            tr.classList.remove('row-editing');
+        }
+        checkDirtyPeerChanges();
+    }
+
+    function enablePeerRouteEditMode(peerId) {
+        const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peerId}"]`);
+        const routeView = document.getElementById(`peer-route-view-${peerId}`);
+        const routeWrapper = document.getElementById(`route-input-wrapper-${peerId}`);
+        if (tr) tr.classList.add('row-editing');
+        if (routeView) routeView.style.display = 'none';
+        if (routeWrapper) routeWrapper.style.display = 'block';
+
+        const routeInp = document.getElementById(`inline-route-${peerId}`);
+        if (routeInp) {
+            routeInp.focus();
+            routeInp.select();
+        }
+    }
+
+    function cancelPeerRouteEditMode(peerId) {
+        const orig = originalPeerState[peerId];
+        const routeInp = document.getElementById(`inline-route-${peerId}`);
+        if (orig && routeInp) {
+            routeInp.value = orig.route;
+            routeInp.classList.remove('is-modified', 'is-invalid');
+        }
+        clearInlineError(`inline-route-${peerId}`);
+
+        const routeView = document.getElementById(`peer-route-view-${peerId}`);
+        const routeWrapper = document.getElementById(`route-input-wrapper-${peerId}`);
+        if (routeView) routeView.style.display = 'flex';
+        if (routeWrapper) routeWrapper.style.display = 'none';
+
+        const nameWrapper = document.getElementById(`name-input-wrapper-${peerId}`);
+        const isNameEditing = nameWrapper && nameWrapper.style.display !== 'none';
+        const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peerId}"]`);
+        if (tr && !isNameEditing) {
+            tr.classList.remove('row-editing');
+        }
+        checkDirtyPeerChanges();
+    }
+
+    function enablePeerEditMode(peerId) {
+        enablePeerNameEditMode(peerId);
+        enablePeerRouteEditMode(peerId);
+    }
+
+    function cancelPeerEditMode(peerId) {
+        cancelPeerNameEditMode(peerId);
+        cancelPeerRouteEditMode(peerId);
+    }
+
     function discardAllPeerChanges() {
         const rows = document.querySelectorAll('#peers-table-body tr[data-peer-id]');
         rows.forEach(r => {
             const peerId = r.getAttribute('data-peer-id');
+            setRowEditMode(peerId, false);
             const orig = originalPeerState[peerId];
             if (!orig) return;
 
@@ -384,27 +599,33 @@
                 clearInlineError(`inline-name-${peerId}`);
                 clearInlineError(`inline-route-${peerId}`);
 
-                // Validate Name
-                const nameRes = validatePeerDeviceName(currentName, peerId);
-                if (!nameRes.valid) {
-                    setInlineError(`inline-name-${peerId}`, nameRes.error);
-                    if (nameInp) nameInp.focus();
-                    if (window.showError) window.showError(nameRes.error);
-                    return;
+                // Validate Name only if changed
+                if (nameChanged) {
+                    const nameRes = validatePeerDeviceName(currentName, peerId);
+                    if (!nameRes.valid) {
+                        setInlineError(`inline-name-${peerId}`, nameRes.error);
+                        enablePeerNameEditMode(peerId);
+                        if (nameInp) nameInp.focus();
+                        if (window.showError) window.showError(nameRes.error);
+                        return;
+                    }
                 }
 
-                // Validate Route
-                const routeRes = validatePeerDeviceRoute(currentRoute, peerId);
-                if (!routeRes.valid) {
-                    setInlineError(`inline-route-${peerId}`, routeRes.error);
-                    if (routeInp) routeInp.focus();
-                    if (window.showError) window.showError(routeRes.error);
-                    return;
-                }
-
-                const normalizedRoute = routeRes.normalized || '';
-                if (routeInp && normalizedRoute && routeInp.value !== normalizedRoute) {
-                    routeInp.value = normalizedRoute;
+                // Validate Route only if changed
+                let normalizedRoute = currentRoute;
+                if (routeChanged) {
+                    const routeRes = validatePeerDeviceRoute(currentRoute, peerId);
+                    if (!routeRes.valid) {
+                        setInlineError(`inline-route-${peerId}`, routeRes.error);
+                        enablePeerRouteEditMode(peerId);
+                        if (routeInp) routeInp.focus();
+                        if (window.showError) window.showError(routeRes.error);
+                        return;
+                    }
+                    normalizedRoute = routeRes.normalized || '';
+                    if (routeInp && normalizedRoute && routeInp.value !== normalizedRoute) {
+                        routeInp.value = normalizedRoute;
+                    }
                 }
 
                 dirtyPeers.push({
@@ -510,14 +731,27 @@
                     originalPeerState[item.peerId].route = item.currentRoute;
                     originalPeerState[item.peerId].vpn_only = item.currentVpn;
                 }
+
+                // Reset edit modes and clean up modified styling
+                setRowEditMode(item.peerId, false);
+                const nameLabel = document.getElementById(`peer-name-text-${item.peerId}`);
+                if (nameLabel) nameLabel.textContent = item.currentName;
+                const routeLabel = document.getElementById(`peer-route-text-${item.peerId}`);
+                if (routeLabel) {
+                    routeLabel.textContent = item.currentRoute || '—';
+                    if (!item.currentRoute) routeLabel.classList.add('is-empty');
+                    else routeLabel.classList.remove('is-empty');
+                }
+                const nameInp = document.getElementById(`inline-name-${item.peerId}`);
+                if (nameInp) nameInp.classList.remove('is-modified');
+                const routeInp = document.getElementById(`inline-route-${item.peerId}`);
+                if (routeInp) routeInp.classList.remove('is-modified');
+                const vpnToggle = document.getElementById(`vpn-only-toggle-${item.peerId}`);
+                const toggleContainer = vpnToggle ? vpnToggle.closest('.toggle-container') : null;
+                if (toggleContainer) toggleContainer.classList.remove('is-modified');
             }
 
             await fetchAndPopulateRoutes();
-
-            const tbody = document.getElementById('peers-table-body');
-            if (tbody) {
-                tbody.removeAttribute('data-loaded');
-            }
             await fetchPeersStatus();
 
             const bar = document.getElementById('peers-apply-bar');
@@ -542,6 +776,8 @@
     function renderPeersTable(peers) {
         const tbody = document.getElementById('peers-table-body');
         if (!tbody) return;
+
+        updatePeerCountDisplay(peers || []);
 
         if (!peers || peers.length === 0) {
             tbody.innerHTML = `
@@ -586,24 +822,62 @@
 
             const tr = document.createElement('tr');
             tr.setAttribute('data-peer-id', peerId);
+            tr.setAttribute('data-peer-online', peer.is_online ? 'true' : 'false');
 
             tr.innerHTML = `
                 <td>
                     <div class="peer-name-cell">
                         <span class="peer-status-bulb ${peer.is_online ? 'online' : 'offline'}"
                             id="status-badge-${peerId}" title="${getPeerStatusTitle(peer)}"></span>
-                        <div class="peer-name-input-wrapper">
-                            <input style="min-width: 150px;" type="text" class="table-input" id="inline-name-${peerId}"
-                                value="${name}" placeholder="Device Name" maxlength="200">
+
+                        <!-- Read-only Name View -->
+                        <div class="peer-name-view" id="peer-name-view-${peerId}">
+                            <span class="peer-name-text" id="peer-name-text-${peerId}">${escapeHtml(name)}</span>
+                            <button type="button" class="btn-edit-peer" id="btn-edit-name-${peerId}"
+                                title="Edit device name" onclick="enablePeerNameEditMode('${peerId}')">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                        </div>
+
+                        <!-- Edit Mode Wrapper -->
+                        <div class="peer-name-input-wrapper" id="name-input-wrapper-${peerId}" style="display: none;">
+                            <div class="peer-input-row">
+                                <input style="min-width: 140px;" type="text" class="table-input" id="inline-name-${peerId}"
+                                    value="${escapeHtml(name)}" placeholder="Device Name" maxlength="200">
+                                <button type="button" class="btn-cancel-edit" title="Cancel edit"
+                                    onclick="cancelPeerNameEditMode('${peerId}')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                             <div class="table-error-msg" id="inline-name-${peerId}-error" style="display: none;"></div>
                         </div>
                     </div>
                 </td>
                 <td>
-                    <input style="min-width: 153px;" type="text" class="table-input inline-route-field"
-                        id="inline-route-${peerId}" data-peer-id="${peerId}"
-                        placeholder="e.g. 192.168.87.0/24" value="${route}">
-                    <div class="table-error-msg" id="inline-route-${peerId}-error" style="display: none;"></div>
+                    <!-- Read-only Route View -->
+                    <div class="peer-route-view" id="peer-route-view-${peerId}">
+                        <span class="peer-route-text ${route ? '' : 'is-empty'}" id="peer-route-text-${peerId}">
+                            ${escapeHtml(route) || '—'}
+                        </span>
+                        <button type="button" class="btn-edit-peer" id="btn-edit-route-${peerId}"
+                            title="Edit network route" onclick="enablePeerRouteEditMode('${peerId}')">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                    </div>
+
+                    <!-- Edit Mode Wrapper -->
+                    <div class="peer-route-input-wrapper" id="route-input-wrapper-${peerId}" style="display: none;">
+                        <div class="peer-input-row">
+                            <input style="min-width: 140px;" type="text" class="table-input inline-route-field"
+                                id="inline-route-${peerId}" data-peer-id="${peerId}"
+                                placeholder="e.g. 192.168.87.0/24" value="${escapeHtml(route)}">
+                            <button type="button" class="btn-cancel-edit" title="Cancel edit"
+                                onclick="cancelPeerRouteEditMode('${peerId}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="table-error-msg" id="inline-route-${peerId}-error" style="display: none;"></div>
+                    </div>
                 </td>
                 <td>
                     <div class="toggle-container" ${disabledTitle}>
@@ -631,11 +905,19 @@
 
             tbody.appendChild(tr);
 
-            // Bind live validation & dirty tracking
+            // Bind live validation & dirty tracking + keyboard shortcuts
             const nameInput = tr.querySelector(`#inline-name-${peerId}`);
             if (nameInput) {
                 nameInput.addEventListener('input', () => {
                     checkDirtyPeerChanges();
+                });
+                nameInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        cancelPeerNameEditMode(peerId);
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        enablePeerRouteEditMode(peerId);
+                    }
                 });
             }
 
@@ -644,10 +926,19 @@
                 routeInput.addEventListener('input', () => {
                     checkDirtyPeerChanges();
                 });
+                routeInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        cancelPeerRouteEditMode(peerId);
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyAllPeerChanges();
+                    }
+                });
             }
         });
 
         fetchAndPopulateRoutes();
+        applyPeerStatusFilter();
     }
 
     function onVpnOnlyToggleChange(peerId, checkbox) {
@@ -685,7 +976,75 @@
         }
     }
 
+    function togglePeerStatusFilter(status) {
+        if (status === 'online') {
+            filterOnline = !filterOnline;
+        } else if (status === 'offline') {
+            filterOffline = !filterOffline;
+        }
+        applyPeerStatusFilter();
+    }
+
+    function applyPeerStatusFilter() {
+        const btnOnline = document.getElementById('filter-btn-online');
+        const btnOffline = document.getElementById('filter-btn-offline');
+
+        if (btnOnline) btnOnline.classList.toggle('active', filterOnline);
+        if (btnOffline) btnOffline.classList.toggle('active', filterOffline);
+
+        const rows = document.querySelectorAll('#peers-table-body tr[data-peer-id]');
+        let visibleCount = 0;
+
+        rows.forEach(tr => {
+            const isOnline = tr.getAttribute('data-peer-online') === 'true';
+            let show = true;
+
+            if (filterOnline && !filterOffline) {
+                show = isOnline;
+            } else if (!filterOnline && filterOffline) {
+                show = !isOnline;
+            } else {
+                // Both active or neither active -> show all
+                show = true;
+            }
+
+            tr.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        // Dynamic empty state row for filter results
+        let emptyRow = document.getElementById('peers-filter-empty-row');
+        if (visibleCount === 0 && rows.length > 0) {
+            if (!emptyRow) {
+                const tbody = document.getElementById('peers-table-body');
+                emptyRow = document.createElement('tr');
+                emptyRow.id = 'peers-filter-empty-row';
+                tbody.appendChild(emptyRow);
+            }
+            const label = (filterOnline && !filterOffline) ? 'online' : 'offline';
+            emptyRow.innerHTML = `
+                <td colspan="4" style="text-align: center; padding: 3.5rem; color: var(--nk-text-muted);">
+                    <i class="fas fa-filter" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.4;"></i>
+                    No ${label} peers found matching filter.
+                </td>
+            `;
+            emptyRow.style.display = '';
+        } else if (emptyRow) {
+            emptyRow.style.display = 'none';
+        }
+    }
+
     function initPeersPolling() {
+        // Read URL query parameter if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterParam = urlParams.get('filter');
+        if (filterParam === 'online') {
+            filterOnline = true;
+        } else if (filterParam === 'offline') {
+            filterOffline = true;
+        }
+        applyPeerStatusFilter();
+
         fetchPeersStatus();
         if (peersPollingInterval) clearInterval(peersPollingInterval);
         peersPollingInterval = setInterval(fetchPeersStatus, 30000);
@@ -695,6 +1054,13 @@
     window.onVpnOnlyToggleChange = onVpnOnlyToggleChange;
     window.discardAllPeerChanges = discardAllPeerChanges;
     window.applyAllPeerChanges = applyAllPeerChanges;
+    window.enablePeerEditMode = enablePeerEditMode;
+    window.cancelPeerEditMode = cancelPeerEditMode;
+    window.enablePeerNameEditMode = enablePeerNameEditMode;
+    window.cancelPeerNameEditMode = cancelPeerNameEditMode;
+    window.enablePeerRouteEditMode = enablePeerRouteEditMode;
+    window.cancelPeerRouteEditMode = cancelPeerRouteEditMode;
+    window.togglePeerStatusFilter = togglePeerStatusFilter;
 
     document.addEventListener("DOMContentLoaded", function () {
         initPeersPolling();

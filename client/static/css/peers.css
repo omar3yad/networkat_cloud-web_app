@@ -14,11 +14,113 @@
     gap: 0.5rem;
 }
 
+.page-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+}
+
 .page-header h1 {
     font-size: 2.2rem;
     font-weight: 800;
     letter-spacing: -0.75px;
     color: var(--nk-navy);
+    margin: 0;
+}
+
+/* Header Status Indicators (Live bulbs with counts) */
+.header-status-indicators {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.5rem 1.15rem;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1.5px solid var(--nk-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    user-select: none;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header-status-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.header-status-pill:active {
+    transform: translateY(0);
+}
+
+.header-status-pill.online {
+    border-color: #a7f3d0;
+    background: #f0fdf4;
+    color: #065f46;
+}
+
+.header-status-pill.online:hover {
+    border-color: #34d399;
+    background: #ecfdf5;
+}
+
+.header-status-pill.online.active {
+    background: #10b981;
+    border-color: #059669;
+    color: #ffffff;
+    box-shadow: 0 0 0 3.5px rgba(16, 185, 129, 0.3), 0 4px 14px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+}
+
+.header-status-pill.online.active .peer-status-bulb.online {
+    background-color: #ffffff;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 0 10px rgba(255, 255, 255, 0.9);
+    animation: none;
+}
+
+.header-status-pill.offline {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.header-status-pill.offline:hover {
+    border-color: #f87171;
+    background: #fff1f2;
+}
+
+.header-status-pill.offline.active {
+    background: #ef4444;
+    border-color: #dc2626;
+    color: #ffffff;
+    box-shadow: 0 0 0 3.5px rgba(239, 68, 68, 0.3), 0 4px 14px rgba(239, 68, 68, 0.4);
+    transform: translateY(-1px);
+}
+
+.header-status-pill.offline.active .peer-status-bulb.offline {
+    background-color: #ffffff;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 0 10px rgba(255, 255, 255, 0.9);
+    animation: none;
+}
+
+.header-status-pill .peer-status-bulb {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.status-pill-text strong {
+    font-weight: 800;
 }
 
 .page-header p {
@@ -63,12 +165,13 @@
 
 table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
 }
 
 th {
     text-align: left;
-    padding: 1.25rem 2rem;
+    padding: 1.25rem 1.75rem;
     background: #fafbfc;
     color: var(--nk-text-muted);
     font-weight: 700;
@@ -79,11 +182,46 @@ th {
 }
 
 td {
-    padding: 1.25rem 2rem;
+    padding: 1.15rem 1.75rem;
     border-bottom: 1px solid var(--nk-border);
     color: var(--nk-text-main);
     vertical-align: middle;
     font-weight: 500;
+}
+
+/* Explicit Column Widths (Reduced Networks Column) */
+th:nth-child(1), td:nth-child(1) {
+    width: 40%;
+}
+
+th:nth-child(2), td:nth-child(2) {
+    width: 22%; /* Reduced Network Route Column */
+}
+
+th:nth-child(3), td:nth-child(3) {
+    width: 22%;
+}
+
+th:nth-child(4), td:nth-child(4) {
+    width: 16%;
+}
+
+/* Distinct Column Separation & Contrast */
+th:not(:last-child), td:not(:last-child) {
+    border-right: 1px solid #eef2f6;
+}
+
+/* Alternating Column Shading for Network Route */
+th:nth-child(2) {
+    background-color: #fafbfc;
+}
+
+td:nth-child(2) {
+    background-color: #ffffff;
+}
+
+tr:hover td:nth-child(2) {
+    background-color: #f1f5f9;
 }
 
 tr:last-child td {
@@ -103,13 +241,140 @@ tbody tr {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-height: 38px;
 }
 
+/* Read-Only State for Peer Name */
+.peer-name-view {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;
+    min-width: 0;
+    gap: 12px;
+}
+
+.peer-name-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--nk-navy, #0f172a);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: text;
+}
+
+/* Pencil Edit Button */
+.btn-edit-peer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #64748b;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.05rem;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 0;
+}
+
+.btn-edit-peer:hover {
+    color: var(--nk-blue-primary, #0284c7);
+    background: #f0f9ff;
+    border-color: #bae6fd;
+    transform: translateY(-1px);
+}
+
+.btn-edit-peer:active {
+    transform: translateY(0);
+}
+
+/* Edit Mode Wrapper for Peer Name */
 .peer-name-input-wrapper {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
+}
+
+.peer-input-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.peer-input-row .table-input {
+    flex: 1;
+    min-width: 140px;
+}
+
+.btn-cancel-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--nk-border, #e2e8f0);
+    background: #ffffff;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.btn-cancel-edit:hover {
+    background: #fee2e2;
+    color: #ef4444;
+    border-color: #fca5a5;
+}
+
+/* Read-Only State for Network Route */
+.peer-route-view {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 38px;
+    gap: 12px;
+}
+
+.peer-route-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #334155;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    letter-spacing: 0.2px;
+    user-select: text;
+}
+
+.peer-route-text.is-empty {
+    color: var(--nk-text-muted, #94a3b8);
+    font-weight: 500;
+    font-style: normal;
+    letter-spacing: normal;
+    font-family: inherit;
+}
+
+/* Edit Mode Wrapper for Route */
+.peer-route-input-wrapper {
+    width: 100%;
+}
+
+.peer-route-input-wrapper .peer-input-row .table-input {
+    flex: 1;
+    min-width: 140px;
+}
+
+tbody tr.row-editing td {
+    background-color: #fafcff;
 }
 
 /* Peer Status Bulb */
@@ -124,13 +389,13 @@ tbody tr {
 }
 
 .peer-status-bulb.online {
-    background: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2), 0 0 8px rgba(16, 185, 129, 0.6);
+    background-color: #10b981;
+    animation: peer-glow-green 2s infinite ease-in-out;
 }
 
 .peer-status-bulb.offline {
-    background: #ef4444;
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2), 0 0 8px rgba(239, 68, 68, 0.5);
+    background-color: #ef4444;
+    /* animation: peer-glow-red 2s infinite ease-in-out; */
 }
 
 /* Floating Save / Apply Bar */

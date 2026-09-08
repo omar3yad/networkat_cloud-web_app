@@ -1,0 +1,180 @@
+{% extends "client_base.html" %}
+
+{% block title %}Account Profile · {{ client.client_name if client else 'Profile' }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <a href="{{ url_for('client.dashboard') }}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+
+    <div class="header-section">
+        <div class="title-area">
+            <h1>Account Profile</h1>
+            <p>Manage your client details, organization settings, and credentials</p>
+        </div>
+        <div>
+            {% if client and client.active %}
+            <span class="badge-status badge-online">
+                <i class="fas fa-check-circle"></i> Active Account
+            </span>
+            {% else %}
+            <span class="badge-status badge-offline">
+                <i class="fas fa-times-circle"></i> Disabled
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Overview Hero Card -->
+    <div class="profile-hero-card">
+        <div class="hero-left">
+            <div class="hero-avatar">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <div class="hero-info">
+                <h2>{{ client.client_name if client else 'Client User' }}</h2>
+                <div class="hero-meta-row">
+                    <span class="meta-pill username" title="Username">
+                        <i class="fas fa-at"></i> {{ client.username if client else 'user' }}
+                    </span>
+                    {% if client and client.client_company_name %}
+                    <span class="meta-pill company" title="Company">
+                        <i class="fas fa-building"></i> {{ client.client_company_name }}
+                    </span>
+                    {% endif %}
+                    <span class="meta-pill email" title="Email">
+                        <i class="fas fa-envelope"></i> {{ client.client_email if client else '' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {% set total_peers_count = sidebar_peers|length if sidebar_peers is defined else 0 %}
+        {% set online_peers_count = sidebar_peers | selectattr('connected', 'equalto', true) | list | length if sidebar_peers is defined else 0 %}
+
+        <div class="hero-stats">
+            <div class="stat-box">
+                <span class="stat-num" style="text-transform: capitalize;">{{ client.subscription if (client and client.subscription) else 'Basic' }}</span>
+                <span class="stat-label">Plan Tier</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num">{{ total_peers_count }}</span>
+                <span class="stat-label">Total Peers</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num" style="color: var(--success-color);">{{ online_peers_count }}</span>
+                <span class="stat-label">Online</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num">
+                    {% if client and client.created_at %}
+                        {{ client.created_at.strftime('%b %Y') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </span>
+                <span class="stat-label">Member Since</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Profile Grid -->
+    <div class="profile-grid">
+        <!-- Card 1: Personal & Company Details -->
+        <div class="profile-card">
+            <h3 class="card-title">
+                <i class="fas fa-id-card"></i> Profile Details
+            </h3>
+
+            <form method="POST" action="{{ url_for('client.profile') }}" id="form-profile-details">
+                <div class="form-group">
+                    <label class="form-label" for="client_name">Full Name / Display Name</label>
+                    <div class="form-control-wrap">
+                        <i class="fas fa-user field-icon"></i>
+                        <input type="text" class="form-input" id="client_name" name="client_name"
+                            value="{{ client.client_name if client else '' }}" required maxlength="100">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="username">
+                        Username
+                        <span class="badge-readonly"><i class="fas fa-lock"></i> Fixed</span>
+                    </label>
+                    <div class="form-control-wrap">
+                        <i class="fas fa-hashtag field-icon"></i>
+                        <input type="text" class="form-input is-readonly" id="username"
+                            value="{{ client.username if client else '' }}" readonly tabindex="-1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="client_email">
+                        Email Address
+                        <span class="badge-readonly"><i class="fas fa-shield-alt"></i> Verified</span>
+                    </label>
+                    <div class="form-control-wrap">
+                        <i class="fas fa-envelope field-icon"></i>
+                        <input type="email" class="form-input is-readonly" id="client_email"
+                            value="{{ client.client_email if client else '' }}" readonly tabindex="-1">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="client_company_name">Company / Organization</label>
+                    <div class="form-control-wrap">
+                        <i class="fas fa-building field-icon"></i>
+                        <input type="text" class="form-input" id="client_company_name" name="client_company_name"
+                            value="{{ client.client_company_name if (client and client.client_company_name) else '' }}"
+                            placeholder="e.g. Acme Corp" maxlength="150">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="client_phone_number">Phone Number</label>
+                    <div class="form-control-wrap">
+                        <i class="fas fa-phone field-icon"></i>
+                        <input type="text" class="form-input" id="client_phone_number" name="client_phone_number"
+                            value="+{{ client.client_phone_number if (client and client.client_phone_number) else '' }}"
+                            placeholder="e.g. +20 100 000 0000" maxlength="20">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="client_country">Country</label>
+                    <div class="form-control-wrap">
+                        <i class="fas fa-globe-americas field-icon"></i>
+                        <input type="text" class="form-input" id="client_country" name="client_country"
+                            value="{{ client.client_country if (client and client.client_country) else '' }}"
+                            placeholder="e.g. Egypt" maxlength="100">
+                    </div>
+                </div>
+
+                <div class="card-actions">
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div id="flash-messages-data" style="display: none;">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash-msg-item" data-category="{{ category }}" data-message="{{ message }}"></div>
+        {% endfor %}
+    {% endwith %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+{% endblock %}

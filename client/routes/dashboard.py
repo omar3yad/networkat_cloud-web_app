@@ -1,7 +1,9 @@
 from datetime import datetime
 import requests
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
+from werkzeug.security import check_password_hash, generate_password_hash
 
+from config.database import db
 from client.blueprint import client_bp
 from client.decorators import login_required, verify_peer_access
 from models import Client, Token
@@ -242,3 +244,98 @@ def get_customer_setup_keys():
         return jsonify({"tokens": tokens_data}), 200
     except Exception as e:
         return jsonify({"error": "Database error", "details": str(e)}), 500
+
+
+@client_bp.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    customer_id = session.get('client_customer_id')
+    if not customer_id:
+        flash("Customer not found", "error")
+        return redirect(url_for('client.login'))
+
+    client_record = Client.query.get(customer_id)
+    if not client_record:
+        flash("Account not found", "error")
+        return redirect(url_for('client.login'))
+
+    if request.method == 'POST':
+        client_name = (request.form.get('client_name') or '').strip()
+        client_company_name = (request.form.get('client_company_name') or '').strip()
+        client_phone_number = (request.form.get('client_phone_number') or '').strip()
+        client_country = (request.form.get('client_country') or '').strip()
+
+        if not client_name:
+            flash("Full Name is required.", "error")
+            return redirect(url_for('client.profile'))
+
+        client_record.client_name = client_name
+        client_record.client_company_name = client_company_name or None
+        client_record.client_phone_number = client_phone_number or None
+        client_record.client_country = client_country or None
+
+        try:
+            db.session.commit()
+            session['client_customer_name'] = client_record.client_name
+            flash("Profile updated successfully!", "success")
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating profile for client {customer_id}: {e}")
+            flash("Failed to update profile. Please try again.", "error")
+
+        return redirect(url_for('client.profile'))
+
+    total_edges = edge_service.edge_repo.count_by_customer(customer_id)
+
+    return render_template(
+        'profile.html',
+        client=client_record,
+        total_edges=total_edges,
+        customer_name=client_record.client_name
+    )
+
+
+@client_bp.route('/profile/change-password', methods=['POST'])
+@login_required
+def change_password():
+    customer_id = session.get('client_customer_id')
+    if not customer_id:
+        flash("Customer not found", "error")
+        return redirect(url_for('client.login'))
+
+    client_record = Client.query.get(customer_id)
+    if not client_record:
+        flash("Account not found", "error")
+        return redirect(url_for('client.login'))
+
+    current_password = request.form.get('current_password', '')
+    new_password = request.form.get('new_password', '')
+    confirm_password = request.form.get('confirm_password', '')
+
+    if not current_password or not new_password or not confirm_password:
+        flash("All password fields are required.", "error")
+        return redirect(url_for('client.profile'))
+
+    if not check_password_hash(client_record.password_hashed, current_password):
+        flash("Current password is incorrect.", "error")
+        return redirect(url_for('client.profile'))
+
+    if len(new_password) < 8:
+        flash("New password must be at least 8 characters long.", "error")
+        return redirect(url_for('client.profile'))
+
+    if new_password != confirm_password:
+        flash("New passwords do not match.", "error")
+        return redirect(url_for('client.profile'))
+
+    try:
+        client_record.password_hashed = generate_password_hash(new_password)
+        db.session.commit()
+        flash("Password updated successfully!", "success")
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error changing password for client {customer_id}: {e}")
+        flash("Failed to update password. Please try again.", "error")
+
+    return redirect(url_for('client.profile'))
+

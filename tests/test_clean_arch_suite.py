@@ -33,6 +33,7 @@ templates_tests = [
     ('firewall.html', {'peer_id': 'p1', 'peer_name': 'Edge Router 1', 'customer_name': 'Acme Corp', 'is_online': True, 'vpn_only': False}),
     ('web_filter.html', {'peer_id': 'p1', 'peer_name': 'Edge Router 1', 'customer_name': 'Acme Corp', 'is_online': True, 'vpn_only': False}),
     ('filtering.html', {'peer_id': 'p1', 'peer_name': 'Edge Router 1', 'customer_name': 'Acme Corp', 'is_online': True}),
+    ('profile.html', {'client': {'client_name': 'Acme User', 'username': 'acme', 'client_email': 'user@acme.com', 'client_company_name': 'Acme Corp', 'subscription': 'Basic', 'active': True}}),
 ]
 
 with app.test_request_context('/'):
@@ -56,17 +57,19 @@ static_files = [
     'css/peer_details.css',
     'css/firewall.css',
     'css/aliases.css',
-    'css/web_filter.css',
-    'css/filtering.css',
-    'js/network_math.js',
-    'js/toast.js',
-    'js/dashboard.js',
-    'js/peers.js',
-    'js/peer_details.js',
-    'js/firewall.js',
-    'js/aliases.js',
-    'js/web_filter.js',
-    'js/filtering.js',
+    ('css/web_filter.css'),
+    ('css/filtering.css'),
+    ('css/profile.css'),
+    ('js/network_math.js'),
+    ('js/toast.js'),
+    ('js/dashboard.js'),
+    ('js/peers.js'),
+    ('js/peer_details.js'),
+    ('js/firewall.js'),
+    ('js/aliases.js'),
+    ('js/web_filter.js'),
+    ('js/filtering.js'),
+    ('js/profile.js'),
 ]
 
 for sf in static_files:
@@ -102,6 +105,8 @@ with app.test_request_context('/'):
         ('client.proxy_peers', {}, '/api/peers'),
         ('client.get_peers_status_api', {}, '/api/peers/status'),
         ('client.proxy_get_routes', {}, '/api/v2/netbird/routes'),
+        ('client.profile', {}, '/profile'),
+        ('client.change_password', {}, '/profile/change-password'),
     ]
 
     for ep, kwargs, expected_url in endpoints_to_test:

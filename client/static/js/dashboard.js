@@ -58,7 +58,7 @@
     }
 
     function copyInstallCommand(buttonElement) {
-        const cmd = "curl -fsSL https://api.networkat.cloud/install.sh | sudo bash";
+        const cmd = "curl -fsSL https://pkgs.networkat.cloud/install.sh | sudo bash";
         navigator.clipboard.writeText(cmd).then(() => {
             const icon = buttonElement.querySelector('i');
             const span = buttonElement.querySelector('span');
@@ -122,6 +122,7 @@
 
                         const sidebarItem = document.getElementById(`sidebar-peer-${peer.id}`);
                         if (sidebarItem) {
+                            sidebarItem.setAttribute('data-sidebar-online', peer.is_online ? 'true' : 'false');
                             sidebarItem.title = `${peer.name || 'Edge Device'} (${statusTitle})`;
                         }
 
@@ -137,6 +138,10 @@
                             }
                         }
                     });
+
+                    if (window.applySidebarSubmenuFilter) {
+                        window.applySidebarSubmenuFilter();
+                    }
                 }
             }
         } catch (err) {

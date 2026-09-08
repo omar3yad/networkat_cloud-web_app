@@ -36,12 +36,20 @@
                     <span class="nav-label">Dashboard</span>
                 </a>
 
-                <!-- Peer Devices Collapsible Group -->
+                <!-- Peers List Collapsible Group -->
                 <div class="nav-group open" id="nav-group-peers">
                     <div class="nav-item-collapsible {% if request.endpoint == 'client.peers_page' or 'peer_' in request.endpoint or 'filtering' in request.endpoint or 'firewall' in request.endpoint or 'aliases' in request.endpoint %}active{% endif %}">
                         <a href="{{ url_for('client.peers_page') }}" class="nav-item-link">
                             <i class="fas fa-desktop nav-icon"></i>
-                            <span class="nav-label">Peer Devices</span>
+                            <span class="nav-label">Peers List (<span id="sidebar-peers-count">{{ sidebar_peers|length if sidebar_peers is defined else 0 }}</span>)</span>
+                            <span class="sidebar-peer-badges">
+                                <span class="sidebar-count-badge online" id="sidebar-online-count"
+                                    title="Online Peers ({{ sidebar_online_count if sidebar_online_count is defined else 0 }}) - Click to filter"
+                                    onclick="handleSidebarStatusFilter(event, 'online')">{{ sidebar_online_count if sidebar_online_count is defined else 0 }}</span>
+                                <span class="sidebar-count-badge offline" id="sidebar-offline-count"
+                                    title="Offline Peers ({{ sidebar_offline_count if sidebar_offline_count is defined else 0 }}) - Click to filter"
+                                    onclick="handleSidebarStatusFilter(event, 'offline')">{{ sidebar_offline_count if sidebar_offline_count is defined else 0 }}</span>
+                            </span>
                         </a>
                         <span class="submenu-arrow" onclick="togglePeerSubmenu(event)" title="Toggle Peers">
                             <i class="fas fa-chevron-down"></i>
@@ -52,28 +60,30 @@
                     <div class="sidebar-submenu" id="peer-submenu">
                         {% if sidebar_peers %}
                             {% for p in sidebar_peers %}
-                                {% set is_current_peer = (peer_id is defined and peer_id == p.id) or (selected_peer_id is defined and selected_peer_id == p.id) %}
-                                {% if p.connected %}
-                                    {% if request.endpoint == 'client.peer_web_filter' %}
-                                        {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}
-                                    {% elif request.endpoint == 'client.peer_firewall' %}
-                                        {% set target_url = url_for('client.peer_firewall', peer_id=p.id) %}
-                                    {% elif request.endpoint in ['client.peer_aliases', 'client.aliases_page'] %}
-                                        {% set target_url = url_for('client.peer_aliases', peer_id=p.id) %}
+                                {% if not p.offline_ge_7d %}
+                                    {% set is_current_peer = (peer_id is defined and peer_id == p.id) or (selected_peer_id is defined and selected_peer_id == p.id) %}
+                                    {% if p.connected %}
+                                        {% if request.endpoint == 'client.peer_web_filter' %}
+                                            {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}
+                                        {% elif request.endpoint == 'client.peer_firewall' %}
+                                            {% set target_url = url_for('client.peer_firewall', peer_id=p.id) %}
+                                        {% elif request.endpoint in ['client.peer_aliases', 'client.aliases_page'] %}
+                                            {% set target_url = url_for('client.peer_aliases', peer_id=p.id) %}
+                                        {% else %}
+                                            {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
+                                        {% endif %}
+                                        <a href="{{ target_url }}" id="sidebar-peer-{{ p.id }}" data-sidebar-online="true" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} (Connected)">
+                                            <span class="peer-status-dot online" id="sidebar-dot-{{ p.id }}" title="Connected"></span>
+                                            <span class="submenu-label">{{ p.name }}</span>
+                                            <span class="submenu-last-seen" id="sidebar-seen-{{ p.id }}" style="display: none;"></span>
+                                        </a>
                                     {% else %}
-                                        {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
+                                        <a href="{{ url_for('client.peer_details', peer_id=p.id) }}" id="sidebar-peer-{{ p.id }}" data-sidebar-online="false" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} ({{ p.status_title }})">
+                                            <span class="peer-status-dot offline" id="sidebar-dot-{{ p.id }}" title="{{ p.status_title }}"></span>
+                                            <span class="submenu-label">{{ p.name }}</span>
+                                            <span class="submenu-last-seen" id="sidebar-seen-{{ p.id }}">{% if p.last_seen_human %}{{ p.last_seen_human }}{% endif %}</span>
+                                        </a>
                                     {% endif %}
-                                    <a href="{{ target_url }}" id="sidebar-peer-{{ p.id }}" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} (Connected)">
-                                        <span class="peer-status-dot online" id="sidebar-dot-{{ p.id }}" title="Connected"></span>
-                                        <span class="submenu-label">{{ p.name }}</span>
-                                        <span class="submenu-last-seen" id="sidebar-seen-{{ p.id }}" style="display: none;"></span>
-                                    </a>
-                                {% else %}
-                                    <a href="{{ url_for('client.peer_details', peer_id=p.id) }}" id="sidebar-peer-{{ p.id }}" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} ({{ p.status_title }})">
-                                        <span class="peer-status-dot offline" id="sidebar-dot-{{ p.id }}" title="{{ p.status_title }}"></span>
-                                        <span class="submenu-label">{{ p.name }}</span>
-                                        <span class="submenu-last-seen" id="sidebar-seen-{{ p.id }}">{% if p.last_seen_human %}{{ p.last_seen_human }}{% endif %}</span>
-                                    </a>
                                 {% endif %}
                             {% endfor %}
                         {% else %}
@@ -89,7 +99,7 @@
             </nav>
             
             <div class="sidebar-footer">
-                <div class="user-profile">
+                <a href="{{ url_for('client.profile') }}" class="user-profile {% if request.endpoint == 'client.profile' %}active{% endif %}" title="View Account Profile">
                     <div class="user-avatar">
                         <i class="fas fa-user-circle"></i>
                     </div>
@@ -97,7 +107,7 @@
                         <span class="user-name">{{ customer_name if customer_name else 'Administrator' }}</span>
                         <span class="user-role">Client Group</span>
                     </div>
-                </div>
+                </a>
                 <a href="{{ url_for('client.logout') }}" class="signout-btn">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Sign Out</span>
@@ -146,6 +156,81 @@
     <!-- Core Scripts -->
     <script src="{{ url_for('static', filename='js/network_math.js') }}"></script>
     <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
+    <script>
+        let sidebarFilterOnline = false;
+        let sidebarFilterOffline = false;
+
+        function handleSidebarStatusFilter(e, status) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            // Ensure submenu is expanded
+            const navGroup = document.getElementById('nav-group-peers');
+            if (navGroup && !navGroup.classList.contains('open')) {
+                navGroup.classList.add('open');
+            }
+
+            if (status === 'online') {
+                sidebarFilterOnline = !sidebarFilterOnline;
+            } else if (status === 'offline') {
+                sidebarFilterOffline = !sidebarFilterOffline;
+            }
+            applySidebarSubmenuFilter();
+        }
+
+        function applySidebarSubmenuFilter() {
+            const sideOnline = document.getElementById('sidebar-online-count');
+            const sideOffline = document.getElementById('sidebar-offline-count');
+
+            if (sideOnline) sideOnline.classList.toggle('active', sidebarFilterOnline);
+            if (sideOffline) sideOffline.classList.toggle('active', sidebarFilterOffline);
+
+            const items = document.querySelectorAll('#peer-submenu .submenu-item');
+            let visibleCount = 0;
+
+            items.forEach(item => {
+                const isOnline = item.getAttribute('data-sidebar-online') === 'true';
+                let show = true;
+
+                if (sidebarFilterOnline && !sidebarFilterOffline) {
+                    show = isOnline;
+                } else if (!sidebarFilterOnline && sidebarFilterOffline) {
+                    show = !isOnline;
+                } else {
+                    // Both active or neither active -> show all
+                    show = true;
+                }
+
+                // If flagged as offline >= 7d, keep hidden
+                if (item.getAttribute('data-over-7d') === 'true') {
+                    show = false;
+                }
+
+                item.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
+            });
+
+            let emptyEl = document.getElementById('sidebar-filter-empty');
+            if (visibleCount === 0 && items.length > 0) {
+                if (!emptyEl) {
+                    const submenu = document.getElementById('peer-submenu');
+                    emptyEl = document.createElement('div');
+                    emptyEl.id = 'sidebar-filter-empty';
+                    emptyEl.className = 'submenu-empty';
+                    submenu.appendChild(emptyEl);
+                }
+                const label = (sidebarFilterOnline && !sidebarFilterOffline) ? 'online' : 'offline';
+                emptyEl.textContent = `No ${label} peers`;
+                emptyEl.style.display = 'block';
+            } else if (emptyEl) {
+                emptyEl.style.display = 'none';
+            }
+        }
+
+        window.handleSidebarStatusFilter = handleSidebarStatusFilter;
+        window.applySidebarSubmenuFilter = applySidebarSubmenuFilter;
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 
