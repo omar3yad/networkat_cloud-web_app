@@ -415,7 +415,7 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
 
         if (rule.packets !== undefined && rule.packets !== null) {
             const formattedBytes = formatBytes(rule.bytes);
-            tdCounters.innerHTML = `<span class="badge-counter"><i class="" style="margin-right: 4px;"></i>${rule.packets} p / ${formattedBytes}</span>`;
+            tdCounters.innerHTML = `<span class="badge-counter">${rule.packets} p / ${formattedBytes}</span>`;
         } else {
             tdCounters.innerHTML = `<span style="opacity: 0.5;">-</span>`;
         }

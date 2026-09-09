@@ -84,32 +84,37 @@ def api_get_setup_key():
     customer_id = res.get("customer_id")
 
     try:
-        from repositories.token_repository import TokenRepository
-        tokens = TokenRepository.get_by_client(customer_id)
-        active_tokens = [t for t in tokens if t.is_active]
+        from repositories.client_repository import ClientRepository
+        from services.subscription_service import SubscriptionService
+
+        client_repo = ClientRepository()
+        client = client_repo.get_by_id(customer_id)
+        if not client:
+            return jsonify({
+                "error": "Not Found",
+                "message": "Client record not found."
+            }), 404
+
+        sub_service = SubscriptionService()
+        key_success, key_data = sub_service.create_installation_setup_key(client)
+
+        if not key_success:
+            status_code = 403 if key_data.get("error") == "Forbidden" else (key_data.get("status_code") or 500)
+            return jsonify(key_data), status_code
+
+        current_app.logger.info(
+            f"[setup-key-api] Dynamic one-off setup key generated — user='{username}' plan='{key_data.get('plan')}' "
+            f"remaining={key_data.get('remaining_peers')} ip={client_ip}"
+        )
+
+        return jsonify(key_data), 200
+
     except Exception as exc:
-        current_app.logger.error(f"[setup-key-api] Token fetch error for customer '{customer_id}': {exc}")
+        current_app.logger.error(f"[setup-key-api] Error generating setup key for '{username}': {exc}")
         return jsonify({
             "error": "Internal Server Error",
-            "message": "Could not retrieve setup key. Please contact support."
+            "message": "An error occurred while generating setup key. Please try again later."
         }), 500
-
-    if not active_tokens:
-        return jsonify({
-            "error": "Not Found",
-            "message": "No active setup key found for this account. Please contact your administrator."
-        }), 404
-
-    setup_key = active_tokens[0].token
-
-    current_app.logger.info(
-        f"[setup-key-api] Setup key retrieved — user='{username}' ip={client_ip}"
-    )
-
-    return jsonify({
-        "setup_key": setup_key,
-        "username": username
-    }), 200
 
 
 # --------------------------------------------------------------------------

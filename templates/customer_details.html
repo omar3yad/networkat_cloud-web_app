@@ -18,6 +18,72 @@
             color: #065f46;
         }
 
+        /* Subscription Status Badges & Progress */
+        .badge-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: capitalize;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-status-pill.status-active {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .badge-status-pill.status-grace_period {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .badge-status-pill.status-limit_control {
+            background: #ffedd5;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
+
+        .badge-status-pill.status-inactive {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+        }
+
+        .quota-progress-track {
+            width: 100%;
+            height: 8px;
+            background-color: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .quota-progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.4s ease;
+            width: 0%;
+        }
+
+        .quota-progress-fill.fill-primary {
+            background: #0078d4;
+        }
+
+        .quota-progress-fill.fill-warning {
+            background: #f59e0b;
+        }
+
+        .quota-progress-fill.fill-danger {
+            background: #ef4444;
+        }
+
+
         * {
             margin: 0;
             padding: 0;
@@ -559,8 +625,18 @@
                             <i class="fas fa-calendar"></i>
                             <span>Created: <strong>{{ customer.created_at or 'Unknown' }}</strong></span>
                         </div>
+                        <div class="meta-item">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Plan: <strong>{{ subscription_info.plan_display if (subscription_info and subscription_info.plan_display) else (customer.subscription or 'Starter') }}</strong></span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="badge-status-pill status-{{ subscription_info.status if (subscription_info and subscription_info.status) else (customer.subscription_status or 'active') }}">
+                                {{ subscription_info.status if (subscription_info and subscription_info.status) else (customer.subscription_status or 'active') }}
+                            </span>
+                        </div>
                     </div>
                 </div>
+
                 <button class="btn-danger" onclick="deleteCustomer('{{ customer.user_id }}')">
                     <i class="fas fa-trash"></i> Delete
                 </button>
@@ -572,6 +648,7 @@
                 <button class="tab active" onclick="showTab('edges')">Edges </button>
                 <button class="tab" onclick="showTab('tokens')">Tokens ({{ tokens|length }})</button>
                 <button class="tab" onclick="showTab('users')">Portal Users</button>
+                <button class="tab" onclick="showTab('subscription')"><i class="fas fa-file-invoice-dollar"></i> Subscription</button>
             </div>
 
             <!-- Edges Tab -->
@@ -747,7 +824,153 @@
                 </div>
             </div>
 
+            <!-- Subscription Tab -->
+            <div id="subscription-tab" class="tab-content">
+                <!-- Status & Metrics Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <!-- Card: Current Status & Plan -->
+                    <div class="card" style="margin-bottom: 0; padding: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase;">Current Status</span>
+                            <span class="badge-status-pill status-{{ subscription_info.status if subscription_info else 'active' }}" id="badge-sub-status">
+                                {{ subscription_info.status if subscription_info else 'active' }}
+                            </span>
+                        </div>
+                        <h3 style="font-size: 1.5rem; color: var(--gray-800); margin-bottom: 0.5rem;" id="sub-card-plan-display">
+                            {{ subscription_info.plan_display if subscription_info else 'Starter Plan' }}
+                        </h3>
+                        <div style="font-size: 0.9rem; color: var(--gray-600); display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-calendar-check" style="color: var(--primary);"></i>
+                            <span>Cycle: <strong id="sub-card-cycle" style="text-transform: capitalize;">{{ subscription_info.billing_cycle if subscription_info else 'Monthly' }}</strong></span>
+                        </div>
+                    </div>
 
+                    <!-- Card: Peer Quota -->
+                    <div class="card" style="margin-bottom: 0; padding: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase;">Peer Quota Allocation</span>
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);" id="sub-card-remaining">
+                                {{ subscription_info.remaining_peers if subscription_info else 0 }} slots available
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                            <span style="font-size: 1.8rem; font-weight: 800; color: var(--gray-800);" id="sub-card-peers-val">
+                                {{ subscription_info.current_peers if subscription_info else 0 }} <span style="font-size: 1rem; font-weight: 500; color: var(--gray-600);">/ {{ subscription_info.peer_limit if subscription_info else 5 }}</span>
+                            </span>
+                            {% set cur = subscription_info.current_peers if subscription_info else 0 %}
+                            {% set lim = [subscription_info.peer_limit if subscription_info else 5, 1]|max %}
+                            {% set pct = [((cur / lim) * 100)|round|int, 100]|min %}
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600);" id="sub-card-pct">
+                                {{ pct }}% Used
+                            </span>
+                        </div>
+                        <div class="quota-progress-track">
+                            <div class="quota-progress-fill {% if pct >= 100 %}fill-danger{% elif pct >= 80 %}fill-warning{% else %}fill-primary{% endif %}" id="sub-progress-fill" data-width="{{ pct }}"></div>
+                        </div>
+                    </div>
+
+                    <!-- Card: Renewal Date -->
+                    <div class="card" style="margin-bottom: 0; padding: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <span style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase;">Next Renewal</span>
+                            {% if subscription_info and subscription_info.grace_expires_at and subscription_info.status == 'grace_period' %}
+                            <span class="badge-status-pill status-grace_period"><i class="fas fa-clock"></i> Grace Active</span>
+                            {% endif %}
+                        </div>
+                        <h3 style="font-size: 1.5rem; color: var(--gray-800); margin-bottom: 0.5rem;" id="sub-card-renewal-val">
+                            {% if subscription_info and subscription_info.renewal_date %}
+                                {{ subscription_info.renewal_date[:10] }}
+                            {% elif customer and customer.renewal_date %}
+                                {{ customer.renewal_date.strftime('%Y-%m-%d') }}
+                            {% else %}
+                                Not set
+                            {% endif %}
+                        </h3>
+                        <div style="font-size: 0.85rem; color: var(--gray-600);">
+                            {% if subscription_info and subscription_info.grace_expires_at and subscription_info.status == 'grace_period' %}
+                            <span style="color: #b45309;"><i class="fas fa-exclamation-circle"></i> Grace Expires: <strong>{{ subscription_info.grace_expires_at[:10] }}</strong></span>
+                            {% else %}
+                            <span>Automated checker runs every 6 hours</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Settings Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-cog"></i> Subscription Configuration</h3>
+                    </div>
+                    <div style="padding: 2rem;">
+                        <form id="form-subscription-config" onsubmit="event.preventDefault(); updateSubscription();">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                                <!-- Plan Selection -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="display: block; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem;">Assigned Plan</label>
+                                    <select id="sub-select-plan" style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;">
+                                        {% for plan in plans %}
+                                        <option value="{{ plan.id }}" {% if (subscription_info and subscription_info.plan_id == plan.id) or (customer.plan_id == plan.id) %}selected{% endif %}>
+                                            {{ plan.display_name }} ({{ plan.peer_limit }} Peers - ${{ plan.price_monthly }}/mo)
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Billing Cycle -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="display: block; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem;">Billing Cycle</label>
+                                    <select id="sub-select-cycle" style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;">
+                                        <option value="monthly" {% if (subscription_info and subscription_info.billing_cycle == 'monthly') or (customer.billing_cycle == 'monthly') %}selected{% endif %}>Monthly</option>
+                                        <option value="yearly" {% if (subscription_info and subscription_info.billing_cycle == 'yearly') or (customer.billing_cycle == 'yearly') %}selected{% endif %}>Yearly</option>
+                                    </select>
+                                </div>
+
+                                <!-- Renewal Date -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="display: block; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem;">Renewal Date</label>
+                                    <input type="date" id="sub-input-renewal" style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;"
+                                        value="{% if subscription_info and subscription_info.renewal_date %}{{ subscription_info.renewal_date[:10] }}{% elif customer and customer.renewal_date %}{{ customer.renewal_date.strftime('%Y-%m-%d') }}{% endif %}">
+                                </div>
+
+                                <!-- Lifecycle Status Override -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="display: block; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem;">Status State</label>
+                                    <select id="sub-select-status" style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;">
+                                        <option value="active" {% if (subscription_info and subscription_info.status == 'active') or (customer.subscription_status == 'active') %}selected{% endif %}>Active (Full Mesh + Full Control)</option>
+                                        <option value="grace_period" {% if (subscription_info and subscription_info.status == 'grace_period') or (customer.subscription_status == 'grace_period') %}selected{% endif %}>Grace Period (3 Days Temporary)</option>
+                                        <option value="limit_control" {% if (subscription_info and subscription_info.status == 'limit_control') or (customer.subscription_status == 'limit_control') %}selected{% endif %}>Limit Control (Read-Only Mode)</option>
+                                        <option value="inactive" {% if (subscription_info and subscription_info.status == 'inactive') or (customer.subscription_status == 'inactive') %}selected{% endif %}>Inactive (Mesh Disconnected + Controllers Blocked)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center; border-top: 1px solid var(--gray-200); padding-top: 1.5rem;">
+                                <button type="submit" class="btn btn-primary" id="btn-save-sub" style="padding: 0.75rem 1.75rem;">
+                                    <i class="fas fa-save"></i> Save Subscription Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Fast Lifecycle Action Controls -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-bolt"></i> Quick Lifecycle Actions</h3>
+                    </div>
+                    <div style="padding: 1.5rem 2rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center;">
+                        <button class="btn btn-success" onclick="quickActivate()" style="padding: 0.75rem 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-check-circle"></i> Activate & Restore Mesh
+                        </button>
+                        <button class="btn btn-danger" onclick="quickSuspend()" style="padding: 0.75rem 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-ban"></i> Suspend (Isolate Mesh)
+                        </button>
+                        <button class="btn-sm" onclick="sendRenewalReminderEmail()" style="padding: 0.75rem 1.5rem; border-color: var(--gray-200); font-weight: 600; display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-envelope"></i> Send Renewal Reminder Email
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -791,6 +1014,11 @@
 
             if (tabName === 'users') {
                 loadUsers();
+            } else if (tabName === 'subscription') {
+                document.querySelectorAll('.quota-progress-fill[data-width]').forEach(function (el) {
+                    const w = el.getAttribute('data-width');
+                    if (w) el.style.width = w + '%';
+                });
             }
         }
 
@@ -1149,6 +1377,126 @@
                 alert('An error occurred while attempting to delete the peer.');
             }
         }
+
+        // ======================================================================
+        // Subscription Management Actions
+        // ======================================================================
+        const CUSTOMER_ID = "{{ customer.user_id if customer.user_id else customer.id }}";
+
+        async function updateSubscription() {
+            const planId = document.getElementById('sub-select-plan').value;
+            const billingCycle = document.getElementById('sub-select-cycle').value;
+            const renewalDate = document.getElementById('sub-input-renewal').value;
+            const status = document.getElementById('sub-select-status').value;
+            const saveBtn = document.getElementById('btn-save-sub');
+
+            const origText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            saveBtn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plan_id: planId,
+                        billing_cycle: billingCycle,
+                        renewal_date: renewalDate,
+                        status: status
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showNotification('✓ Subscription updated successfully');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    alert('Error updating subscription: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error updating subscription:', err);
+                alert('An error occurred while updating subscription.');
+            } finally {
+                saveBtn.innerHTML = origText;
+                saveBtn.disabled = false;
+            }
+        }
+
+        async function quickActivate() {
+            if (!confirm("Activate this customer's subscription and restore NetBird Mesh connectivity and controller access?")) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/activate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showNotification('✓ Subscription activated & Mesh restored');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    alert('Error activating subscription: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error activating subscription:', err);
+                alert('An error occurred while activating subscription.');
+            }
+        }
+
+        async function quickSuspend() {
+            if (!confirm("⚠️ Suspend this customer's subscription? This will disable the NetBird Mesh policy and disconnect peers from controllers.")) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/suspend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showNotification('✓ Customer suspended & Mesh disconnected');
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    alert('Error suspending subscription: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error suspending subscription:', err);
+                alert('An error occurred while suspending subscription.');
+            }
+        }
+
+        async function sendRenewalReminderEmail() {
+            if (!confirm('Send a renewal reminder email to the customer now?')) return;
+
+            try {
+                const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/send-reminder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showNotification('✓ ' + (data.message || 'Renewal reminder sent successfully'));
+                } else {
+                    alert('Error sending reminder: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Error sending reminder email:', err);
+                alert('An error occurred while sending reminder email.');
+            }
+        }
+
+        // Animate quota progress bar on load
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.quota-progress-fill[data-width]').forEach(function (el) {
+                const w = el.getAttribute('data-width');
+                if (w) setTimeout(() => { el.style.width = w + '%'; }, 150);
+            });
+        });
+
     </script>
 </body>
 

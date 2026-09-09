@@ -9,6 +9,7 @@ from models.token import Token
 from models.system_user import SystemUser
 from models.command_log import CommandLog
 from models.group_peer import GroupPeer
+from models.subscription_plan import SubscriptionPlan
 
 __all__ = [
     "BaseModel",
@@ -19,6 +20,7 @@ __all__ = [
     "Policy",
     "Token",
     "SystemUser",
-    "CommandLog",  # <--- أضف هذا السطر هنا
+    "CommandLog",
     "GroupPeer",
+    "SubscriptionPlan",
 ]

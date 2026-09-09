@@ -33,5 +33,15 @@
                 Toast.show(msg, cat === 'error' ? 'error' : 'success');
             }
         });
+
+        // Initialize quota progress bars
+        document.querySelectorAll('.quota-progress-fill[data-width]').forEach(function (el) {
+            const w = el.getAttribute('data-width');
+            if (w !== null && w !== '') {
+                setTimeout(function () {
+                    el.style.width = w + '%';
+                }, 100);
+            }
+        });
     });
 })();

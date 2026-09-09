@@ -6,7 +6,7 @@ import requests
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
 from client.blueprint import client_bp
-from client.decorators import login_required, verify_peer_access
+from client.decorators import login_required, verify_peer_access, subscription_write_required
 from models import Client
 from services.netbird_service import (
     get_cached_all_netbird_peers,
@@ -178,6 +178,7 @@ def get_peer_firewall_rules(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/firewall/rules', methods=['POST'])
 @login_required
+@subscription_write_required
 def add_peer_firewall_rule(peer_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -305,6 +306,7 @@ def add_peer_firewall_rule(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/firewall/rules/<int:rule_id>/toggle', methods=['POST'])
 @login_required
+@subscription_write_required
 def toggle_peer_firewall_rule(peer_id, rule_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -352,6 +354,7 @@ def toggle_peer_firewall_rule(peer_id, rule_id):
 
 @client_bp.route('/api/peers/<peer_id>/firewall/rules/<int:rule_id>', methods=['PUT'])
 @login_required
+@subscription_write_required
 def edit_peer_firewall_rule(peer_id, rule_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -488,6 +491,7 @@ def edit_peer_firewall_rule(peer_id, rule_id):
 
 @client_bp.route('/api/peers/<peer_id>/firewall/rules/<int:rule_id>', methods=['DELETE'])
 @login_required
+@subscription_write_required
 def delete_peer_firewall_rule(peer_id, rule_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -529,6 +533,7 @@ def delete_peer_firewall_rule(peer_id, rule_id):
 
 @client_bp.route('/api/peers/<peer_id>/firewall/rules/bulk', methods=['POST'])
 @login_required
+@subscription_write_required
 def bulk_peer_firewall_rules(peer_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -602,6 +607,7 @@ def bulk_peer_firewall_rules(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/firewall/rules/reorder', methods=['POST'])
 @login_required
+@subscription_write_required
 def reorder_peer_firewall_rules(peer_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -656,6 +662,7 @@ def reorder_peer_firewall_rules(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/firewall/rules/sync', methods=['POST'])
 @login_required
+@subscription_write_required
 def sync_peer_firewall_rules(peer_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -683,6 +690,7 @@ def sync_peer_firewall_rules(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/firewall/rules/<int:rule_id>/reset-counter', methods=['POST'])
 @login_required
+@subscription_write_required
 def reset_peer_firewall_rule_counter(peer_id, rule_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None

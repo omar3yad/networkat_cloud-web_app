@@ -67,6 +67,41 @@ class Client(BaseModel):
         default=True
     )
 
+    # --- Subscription Lifecycle Fields ---
+    plan_id = db.Column(
+        db.Integer,
+        db.ForeignKey("subscription_plans.id"),
+        nullable=True
+    )
+
+    subscription_status = db.Column(
+        db.String(20),
+        nullable=False,
+        default="active"
+        # القيم: 'active', 'grace_period', 'limit_control', 'inactive'
+    )
+
+    billing_cycle = db.Column(
+        db.String(10),
+        nullable=True
+        # القيم: 'monthly', 'yearly'
+    )
+
+    renewal_date = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
+    grace_expires_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
+    renewal_notified_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
     last_login = db.Column(
         db.DateTime(timezone=True),
         nullable=True
@@ -79,6 +114,11 @@ class Client(BaseModel):
     )
 
     # --- Relationships ---
+    plan = db.relationship(
+        "SubscriptionPlan",
+        backref="clients"
+    )
+
     tokens = db.relationship(
         "Token",
         back_populates="client",
@@ -108,3 +148,26 @@ class Client(BaseModel):
         back_populates="client",
         cascade="all, delete-orphan"
     )
+
+    # --- Subscription Helper Properties ---
+    @property
+    def is_subscription_active(self):
+        """Returns True if client has full control (active or grace_period)."""
+        return self.subscription_status in ("active", "grace_period")
+
+    @property
+    def is_subscription_readonly(self):
+        """Returns True if client is in limit_control (read-only mode)."""
+        return self.subscription_status == "limit_control"
+
+    @property
+    def is_subscription_inactive(self):
+        """Returns True if client subscription is inactive."""
+        return self.subscription_status == "inactive"
+
+    @property
+    def peer_limit(self):
+        """Returns peer limit from associated plan, defaulting to Starter (5) if no plan."""
+        if self.plan:
+            return self.plan.peer_limit
+        return 5

@@ -287,7 +287,7 @@ class AdGuardService:
             resp = await run_in_threadpool(do_get)
             if resp.status_code == 200:
                 data = resp.json()
-                lists = data.get("lists", [])
+                lists = data.get("lists", []) 
                 alias = next((l for l in lists if str(l.get("id")) == str(alias_name) or str(l.get("slug")) == str(alias_name)), None)
                 if alias:
                     ids = []

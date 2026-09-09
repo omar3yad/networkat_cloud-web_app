@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import request, session, jsonify, current_app
 
 from client.blueprint import client_bp
-from client.decorators import login_required, no_cache_json, verify_peer_access
+from client.decorators import login_required, no_cache_json, verify_peer_access, subscription_write_required
 from models import Client
 from services.netbird_service import (
     get_cached_customer_peer_ids,
@@ -156,6 +156,7 @@ def proxy_get_routes():
 
 @client_bp.route('/api/v2/netbird/routes', methods=['POST'])
 @login_required
+@subscription_write_required
 def proxy_post_route():
     headers = get_api_headers({"Content-Type": "application/json"})
     try:
@@ -207,6 +208,7 @@ def proxy_post_route():
 
 @client_bp.route('/api/v2/netbird/routes/<route_id>', methods=['PUT'])
 @login_required
+@subscription_write_required
 def proxy_put_route(route_id):
     headers = get_api_headers({"Content-Type": "application/json"})
     try:
@@ -252,6 +254,7 @@ def proxy_put_route(route_id):
 
 @client_bp.route('/api/v2/netbird/routes/<route_id>', methods=['DELETE'])
 @login_required
+@subscription_write_required
 def proxy_delete_route(route_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -409,6 +412,7 @@ def get_peers_status_api():
 
 @client_bp.route('/api/peers/<peer_id>/vpn-only', methods=['GET', 'POST'])
 @login_required
+@subscription_write_required
 def peer_vpn_only_proxy(peer_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None

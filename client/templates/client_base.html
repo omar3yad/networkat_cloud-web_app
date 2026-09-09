@@ -129,6 +129,19 @@
                 <div style="width: 24px;"></div>
             </nav>
 
+            <!-- Subscription Notification Banner -->
+            {% if subscription_banner %}
+            <div class="subscription-alert-banner banner-{{ subscription_banner.type }}" id="subscription-alert-banner">
+                <div class="banner-icon-wrap">
+                    <i class="{{ subscription_banner.icon }}"></i>
+                </div>
+                <div class="banner-text-wrap">
+                    <strong class="banner-title">{{ subscription_banner.title }}</strong>
+                    <span class="banner-message">{{ subscription_banner.message }}</span>
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Page Content Block -->
             {% block content %}{% endblock %}
         </div>

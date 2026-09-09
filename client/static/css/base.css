@@ -829,3 +829,180 @@ body {
     background: #f1f5f9;
     color: var(--nk-navy);
 }
+
+/* ==========================================================================
+   SUBSCRIPTION ALERT BANNERS & STATUS PILLS
+   ========================================================================== */
+.subscription-alert-banner {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.95rem 1.6rem;
+    margin: 1.25rem 2.5rem 0.5rem;
+    border-radius: var(--nk-radius-md);
+    box-shadow: var(--nk-shadow-sm);
+    font-size: 0.92rem;
+    position: relative;
+    z-index: 10;
+    animation: fadeInSlideDown 0.3s ease-out;
+}
+
+@keyframes fadeInSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.subscription-alert-banner .banner-icon-wrap {
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.subscription-alert-banner .banner-text-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.subscription-alert-banner .banner-title {
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
+
+.subscription-alert-banner .banner-message {
+    font-weight: 500;
+    opacity: 0.95;
+    line-height: 1.4;
+}
+
+/* Grace Period: Warning */
+.subscription-alert-banner.banner-warning {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1.5px solid #fcd34d;
+    color: #92400e;
+}
+.subscription-alert-banner.banner-warning .banner-icon-wrap {
+    color: #d97706;
+}
+
+/* Read-Only Limit Control: Danger */
+.subscription-alert-banner.banner-danger {
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+    border: 1.5px solid #fecdd3;
+    color: #9f1239;
+}
+.subscription-alert-banner.banner-danger .banner-icon-wrap {
+    color: #e11d48;
+}
+
+/* Inactive: Critical */
+.subscription-alert-banner.banner-critical {
+    background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+    border: 1.5px solid #dc2626;
+    color: #fef2f2;
+}
+.subscription-alert-banner.banner-critical .banner-icon-wrap {
+    color: #f87171;
+}
+
+/* Status Badges */
+.badge-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+}
+
+.badge-status-pill.status-active {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.badge-status-pill.status-grace_period {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.badge-status-pill.status-limit_control {
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+.badge-status-pill.status-inactive {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+}
+
+.badge-status-pill.status-warning {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+/* Read-only notification banner inside specific views (e.g. peers table) */
+.readonly-notice-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.35rem;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: var(--nk-radius-sm);
+    color: #c2410c;
+    font-size: 0.88rem;
+    margin-bottom: 1.25rem;
+}
+
+.readonly-notice-banner i {
+    font-size: 1.1rem;
+    color: #ea580c;
+    flex-shrink: 0;
+}
+
+/* Quota Progress Track & Fill (used across dashboard & profile) */
+.quota-progress-track {
+    width: 100%;
+    height: 7px;
+    background-color: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.quota-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0%;
+}
+
+.quota-progress-fill.fill-primary {
+    background: linear-gradient(90deg, var(--nk-blue-primary), #38bdf8);
+}
+
+.quota-progress-fill.fill-warning {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.quota-progress-fill.fill-danger {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+

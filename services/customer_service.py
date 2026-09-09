@@ -111,7 +111,6 @@ class CustomerService:
                     for p in netbird_peers:
                         if isinstance(p, dict) and "adguard_password" not in p:
                             p["adguard_password"] = "adguard-api"
-
         return {
             'customer': client,
             'edges': edges,
@@ -123,8 +122,10 @@ class CustomerService:
         """
         data: dict يحتوي على جميع الحقول القادمة من الـ Request
         """
-        FASTAPI_BASE_URL = "https://api.networkat.cloud/api/v2/netbird" 
+        FASTAPI_BASE_URL = "https://api.networkat.cloud/api/v2/netbird"
         ALL_PEERS_GROUP_ID = "d9gc0fsm4sls73cgjl6g"  # ID Group all-peers
+        CONTROLLERS_GROUP_ID = "d9gc4c4m4sls73cgjmfg"   # networkat_controllers
+        PKGS_SERVERS_GROUP_ID = "dafif2pttloc73fghbi0"  # networkat_pkgs_servers
 
         # 1. إضافة Bearer Token في الـ Headers
         token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
@@ -138,6 +139,10 @@ class CustomerService:
         password = data.get('password')
         client_name = data.get('client_name')
 
+        created_group_id = None
+        created_setup_key_id = None
+        created_policy_ids = []
+
         try:
             # 2. إنشاء العميل في جدول public.clients
             client = self.client_repo.create(
@@ -148,9 +153,43 @@ class CustomerService:
                 client_email=data.get('client_email', f"{username}@networkat.local"),
                 client_phone_number=data.get('client_phone_number'),
                 client_country=data.get('client_country'),
-                subscription=data.get('subscription', 'basic'),
+                subscription=data.get('subscription', 'starter'),
                 active=True
             )
+
+            # Link subscription plan and cycle
+            from models.subscription_plan import SubscriptionPlan
+            from datetime import datetime, timedelta
+
+            plan_id = data.get('plan_id')
+            if not plan_id:
+                sub_name = (data.get('subscription') or 'starter').lower()
+                if sub_name == 'basic':
+                    sub_name = 'starter'
+                plan_rec = SubscriptionPlan.query.filter_by(name=sub_name).first()
+                if not plan_rec:
+                    plan_rec = SubscriptionPlan.query.filter_by(name='starter').first()
+                if plan_rec:
+                    plan_id = plan_rec.id
+
+            billing_cycle = data.get('billing_cycle', 'monthly')
+            renewal_date_val = data.get('renewal_date')
+            if renewal_date_val:
+                try:
+                    if isinstance(renewal_date_val, str):
+                        renewal_date = datetime.fromisoformat(renewal_date_val.split('T')[0])
+                    else:
+                        renewal_date = renewal_date_val
+                except Exception:
+                    renewal_date = datetime.utcnow() + timedelta(days=365 if billing_cycle == 'yearly' else 30)
+            else:
+                renewal_date = datetime.utcnow() + timedelta(days=365 if billing_cycle == 'yearly' else 30)
+
+            client.plan_id = plan_id
+            client.billing_cycle = billing_cycle
+            client.renewal_date = renewal_date
+            client.subscription_status = 'active'
+
             self.client_repo.flush()
             
             # 3. أتمتة NetBird عبر الـ API (إنشاء الـ Group)
@@ -162,14 +201,15 @@ class CustomerService:
             
             group_data = group_res.json()
             group_id = group_data.get("id")
-            
-            if group_id:
-                client.netbird_group_id = group_id
+
+            if not group_id:
+                raise Exception("NetBird group creation returned no id")
+
+            client.netbird_group_id = group_id
+            created_group_id = group_id
 
             # 4. إنشاء Setup Key (تصحيح قاموس الحقول)
-            auto_groups_list = [ALL_PEERS_GROUP_ID]
-            if group_id:
-                auto_groups_list.append(group_id)
+            auto_groups_list = [ALL_PEERS_GROUP_ID, group_id]
 
             setup_key_payload = {
                 "name": f"{username}",
@@ -187,7 +227,8 @@ class CustomerService:
             
             setup_key_data = sk_res.json()
             netbird_plain_key = setup_key_data.get("key")
-            
+            created_setup_key_id = setup_key_data.get("id")
+
             if netbird_plain_key:
                 self.token_repo.create(
                     token_value=netbird_plain_key, 
@@ -195,35 +236,84 @@ class CustomerService:
                     is_active=True
                 )
 
-            # 5. إنشاء الـ Policy
-            policy_payload = {
-                "name": f"{username}",
-                "description": f"Default policy for customer {username}",
-                "enabled": True,
-                "rules": [
-                    {
-                        "name": f"{username}",
-                        "description": f"Allow communication within group-{username}",
-                        "action": "accept",
-                        "enabled": True,
-                        "bidirectional": True,
-                        "protocol": "all",
-                        "sources": [group_id] if group_id else [f"{username}"],
-                        "destinations": [group_id] if group_id else [f"{username}"]
-                    }
-                ]
-            }
-            policy_res = requests.post(f"{FASTAPI_BASE_URL}/policies", json=policy_payload, headers=headers)
-            
-            if policy_res.status_code not in [200, 201]:
-                raise Exception(f"Failed to create NetBird policy: {policy_res.text}")
+            # 5. إنشاء الـ Policies (3 ACLs منفصلة، بادئة {username}-)
+            policy_defs = [
+                {
+                    "suffix": "allow_mesh",
+                    "description": "Allow peers to reach each other",
+                    "destinations": [group_id],
+                },
+                {
+                    "suffix": "allow_controllers",
+                    "description": "Allow peers to reach the controllers",
+                    "destinations": [CONTROLLERS_GROUP_ID],
+                },
+                {
+                    "suffix": "allow_pkgs_servers",
+                    "description": "Allow peers to fetch updates from package servers",
+                    "destinations": [PKGS_SERVERS_GROUP_ID],
+                },
+            ]
+
+            for pdef in policy_defs:
+                pname = f"{username}-{pdef['suffix']}"
+                policy_payload = {
+                    "name": pname,
+                    "description": pdef["description"],
+                    "enabled": True,
+                    "rules": [
+                        {
+                            "name": pname,
+                            "description": pdef["description"],
+                            "action": "accept",
+                            "enabled": True,
+                            "bidirectional": True,
+                            "protocol": "all",
+                            "sources": [group_id],
+                            "destinations": pdef["destinations"],
+                        }
+                    ]
+                }
+                policy_res = requests.post(f"{FASTAPI_BASE_URL}/policies", json=policy_payload, headers=headers)
+
+                if policy_res.status_code not in [200, 201]:
+                    raise Exception(f"Failed to create NetBird policy {pname}: {policy_res.text}")
+
+                pid = policy_res.json().get("id")
+                if pid:
+                    created_policy_ids.append(pid)
 
             self.client_repo.commit()
             return True, {'id': client.user_id, 'token': netbird_plain_key, 'netbird_group_id': client.netbird_group_id}
 
         except Exception as e:
             self.client_repo.rollback()
+            self._rollback_netbird(
+                FASTAPI_BASE_URL, headers,
+                policy_ids=created_policy_ids,
+                setup_key_id=created_setup_key_id,
+                group_id=created_group_id,
+            )
             return False, str(e)
+
+    def _rollback_netbird(self, base_url, headers, *, policy_ids=None, setup_key_id=None, group_id=None):
+        """تنظيف ما تم إنشاؤه في NetBird عند فشل create_customer."""
+        for pid in (policy_ids or []):
+            try:
+                requests.delete(f"{base_url}/policies/{pid}", headers=headers, timeout=5)
+            except Exception:
+                pass
+        if setup_key_id:
+            try:
+                requests.delete(f"{base_url}/setup-keys/{setup_key_id}", headers=headers, timeout=5)
+            except Exception:
+                pass
+        if group_id:
+            try:
+                requests.delete(f"{base_url}/groups/{group_id}", headers=headers, timeout=5)
+            except Exception:
+                pass
+
     def generate_token(self, customer_id):
         token_value = secrets.token_urlsafe(32)
         try:
@@ -327,7 +417,8 @@ class CustomerService:
                 policies_res = requests.get(f"{FASTAPI_BASE_URL}/policies", headers=headers, timeout=5)
                 if policies_res.status_code == 200:
                     for policy in policies_res.json():
-                        if policy.get("name") == username:
+                        pname = policy.get("name", "")
+                        if pname == username or pname.startswith(f"{username}-"):
                             requests.delete(f"{FASTAPI_BASE_URL}/policies/{policy.get('id')}", headers=headers, timeout=5)
             except Exception as e:
                 print(f"Warning: Failed to delete NetBird policy for {username}: {str(e)}")

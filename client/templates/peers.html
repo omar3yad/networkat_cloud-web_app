@@ -16,6 +16,11 @@
         <div class="page-header-row">
             <h1>Peers List (<span id="peers-page-count">{{ sidebar_peers|length if sidebar_peers is defined else 0 }}</span>)</h1>
             <div class="header-status-indicators">
+                <div class="header-status-pill quota-badge" id="peers-quota-badge"
+                    title="Peer Quota: {{ subscription_info.current_peers if subscription_info else 0 }}/{{ subscription_info.peer_limit if subscription_info else 5 }} used ({{ subscription_info.remaining_peers if subscription_info else 0 }} remaining)">
+                    <i class="fas fa-cubes" style="color: var(--nk-blue-primary);"></i>
+                    <span class="status-pill-text"><strong id="peers-quota-count">{{ subscription_info.current_peers if subscription_info else 0 }}/{{ subscription_info.peer_limit if subscription_info else 5 }}</strong> Peers</span>
+                </div>
                 <button type="button" class="header-status-pill online" id="filter-btn-online"
                     title="Click to filter by Online peers" onclick="togglePeerStatusFilter('online')">
                     <span class="peer-status-bulb online"></span>
@@ -29,6 +34,13 @@
             </div>
         </div>
     </div>
+
+    {% if is_readonly_subscription %}
+    <div class="readonly-notice-banner">
+        <i class="fas fa-lock"></i>
+        <span><strong>Read-Only Mode:</strong> Modifying network routes and VPN-Only mode is locked until your subscription is renewed.</span>
+    </div>
+    {% endif %}
 
     <div class="card">
         <div class="table-responsive">
@@ -57,7 +69,7 @@
 <div id="peers-apply-bar" class="floating-save-bar" style="display: none;">
     <span class="save-bar-text"><i class="fas fa-sync-alt"></i> Unsaved changes</span>
     <button class="btn-cancel" onclick="discardAllPeerChanges()">Discard</button>
-    <button class="btn-apply" id="btn-apply-peers" onclick="applyAllPeerChanges()">Apply changes</button>
+    <button class="btn-apply" id="btn-apply-peers" onclick="applyAllPeerChanges()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>Apply changes</button>
 </div>
 {% endblock %}
 

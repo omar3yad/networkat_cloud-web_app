@@ -180,46 +180,27 @@
                 }
             }
 
-            // Update VPN-Only state if not currently modified by user
+            // VPN-Only applies immediately on click, so always mirror server state
+            // (unless a toggle request is in flight). When the peer is offline the real
+            // value is unknowable, so hide the switch and show "—" instead of ON/OFF.
             const vpnToggle = document.getElementById(`vpn-only-toggle-${peer.id}`);
             const vpnText = document.getElementById(`vpn-only-text-${peer.id}`);
-            if (vpnToggle && document.activeElement !== vpnToggle) {
-                const isDirty = originalPeerState[peer.id] && vpnToggle.checked !== originalPeerState[peer.id].vpn_only;
-                if (!isDirty) {
-                    vpnToggle.checked = !!peer.vpn_only;
-                    vpnToggle.disabled = !peer.is_online;
-                    if (vpnText) {
-                        vpnText.innerText = peer.vpn_only ? 'ON' : 'OFF';
-                    }
-                    if (originalPeerState[peer.id]) {
-                        originalPeerState[peer.id].vpn_only = !!peer.vpn_only;
-                    }
+            const vpnContainer = document.getElementById(`vpn-only-container-${peer.id}`);
+            if (vpnToggle && document.activeElement !== vpnToggle && vpnToggle.dataset.pending !== 'true') {
+                vpnToggle.checked = !!peer.vpn_only;
+                vpnToggle.disabled = !peer.is_online;
+                if (vpnContainer) {
+                    vpnContainer.classList.toggle('vpn-only-unknown', !peer.is_online);
+                }
+                if (vpnText) {
+                    vpnText.innerText = peer.is_online ? (peer.vpn_only ? 'ON' : 'OFF') : '—';
+                }
+                if (originalPeerState[peer.id]) {
+                    originalPeerState[peer.id].vpn_only = !!peer.vpn_only;
                 }
             }
 
-            // Update Manage button state
-            const firewallLink = document.getElementById(`firewall-link-${peer.id}`);
-            if (firewallLink) {
-                if (peer.is_online) {
-                    firewallLink.href = `/peers/${peer.id}`;
-                    firewallLink.style.backgroundColor = "var(--nk-blue-primary)";
-                    firewallLink.style.borderColor = "var(--nk-blue-primary)";
-                    firewallLink.style.color = "white";
-                    firewallLink.style.opacity = "1";
-                    firewallLink.style.pointerEvents = "auto";
-                    firewallLink.style.cursor = "pointer";
-                    firewallLink.removeAttribute('onclick');
-                } else {
-                    firewallLink.href = "javascript:void(0)";
-                    firewallLink.style.backgroundColor = "#6c757d";
-                    firewallLink.style.borderColor = "#6c757d";
-                    firewallLink.style.color = "white";
-                    firewallLink.style.opacity = "0.65";
-                    firewallLink.style.pointerEvents = "none";
-                    firewallLink.style.cursor = "not-allowed";
-                    firewallLink.setAttribute('onclick', 'event.preventDefault()');
-                }
-            }
+            // Manage is always available, regardless of peer online state
 
             const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peer.id}"]`);
             if (tr) {
@@ -342,18 +323,14 @@
 
             const nameInp = document.getElementById(`inline-name-${peerId}`);
             const routeInp = document.getElementById(`inline-route-${peerId}`);
-            const vpnToggle = document.getElementById(`vpn-only-toggle-${peerId}`);
-            const toggleContainer = vpnToggle ? vpnToggle.closest('.toggle-container') : null;
 
             const currentName = nameInp ? nameInp.value.trim() : '';
             const currentRoute = routeInp ? routeInp.value.trim() : '';
-            const currentVpn = vpnToggle ? vpnToggle.checked : false;
 
             const nameChanged = currentName !== orig.name;
             const routeChanged = currentRoute !== orig.route;
-            const vpnChanged = currentVpn !== orig.vpn_only;
 
-            if (nameChanged || routeChanged || vpnChanged) {
+            if (nameChanged || routeChanged) {
                 hasChanges = true;
             }
 
@@ -391,14 +368,6 @@
                 }
             }
 
-            // Golden aura for VPN toggle
-            if (toggleContainer) {
-                if (vpnChanged) {
-                    toggleContainer.classList.add('is-modified');
-                } else {
-                    toggleContainer.classList.remove('is-modified');
-                }
-            }
         });
 
         const bar = document.getElementById('peers-apply-bar');
@@ -543,9 +512,6 @@
 
             const nameInp = document.getElementById(`inline-name-${peerId}`);
             const routeInp = document.getElementById(`inline-route-${peerId}`);
-            const vpnToggle = document.getElementById(`vpn-only-toggle-${peerId}`);
-            const vpnText = document.getElementById(`vpn-only-text-${peerId}`);
-            const toggleContainer = vpnToggle ? vpnToggle.closest('.toggle-container') : null;
 
             if (nameInp) {
                 nameInp.value = orig.name;
@@ -555,13 +521,6 @@
                 routeInp.value = orig.route;
                 routeInp.classList.remove('is-modified');
             }
-            if (vpnToggle) {
-                vpnToggle.checked = orig.vpn_only;
-            }
-            if (toggleContainer) {
-                toggleContainer.classList.remove('is-modified');
-            }
-            if (vpnText) vpnText.innerText = orig.vpn_only ? 'ON' : 'OFF';
 
             clearInlineError(`inline-name-${peerId}`);
             clearInlineError(`inline-route-${peerId}`);
@@ -585,17 +544,14 @@
 
             const nameInp = document.getElementById(`inline-name-${peerId}`);
             const routeInp = document.getElementById(`inline-route-${peerId}`);
-            const vpnToggle = document.getElementById(`vpn-only-toggle-${peerId}`);
 
             const currentName = nameInp ? nameInp.value.trim() : '';
             const currentRoute = routeInp ? routeInp.value.trim() : '';
-            const currentVpn = vpnToggle ? vpnToggle.checked : false;
 
             const nameChanged = currentName !== orig.name;
             const routeChanged = currentRoute !== orig.route;
-            const vpnChanged = currentVpn !== orig.vpn_only;
 
-            if (nameChanged || routeChanged || vpnChanged) {
+            if (nameChanged || routeChanged) {
                 clearInlineError(`inline-name-${peerId}`);
                 clearInlineError(`inline-route-${peerId}`);
 
@@ -632,10 +588,8 @@
                     peerId,
                     currentName,
                     currentRoute: normalizedRoute,
-                    currentVpn,
                     nameChanged,
                     routeChanged,
-                    vpnChanged,
                     existingRouteId: routeInp ? routeInp.getAttribute('data-route-id') : null,
                     existingNetworkId: routeInp ? routeInp.getAttribute('data-route-network-id') : null
                 });
@@ -711,25 +665,10 @@
                     }
                 }
 
-                // 3. Save VPN-Only mode
-                if (item.vpnChanged) {
-                    const action = item.currentVpn ? 'on' : 'off';
-                    const vpnResp = await fetch(`/api/peers/${item.peerId}/vpn-only`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ operation: action })
-                    });
-                    const vpnData = await vpnResp.json();
-                    if (!vpnResp.ok || (vpnData.ok !== true && vpnData.status !== 'success')) {
-                        throw new Error(vpnData.error || vpnData.detail || 'Failed to set VPN mode');
-                    }
-                }
-
                 // Update original state cache
                 if (originalPeerState[item.peerId]) {
                     originalPeerState[item.peerId].name = item.currentName;
                     originalPeerState[item.peerId].route = item.currentRoute;
-                    originalPeerState[item.peerId].vpn_only = item.currentVpn;
                 }
 
                 // Reset edit modes and clean up modified styling
@@ -746,9 +685,6 @@
                 if (nameInp) nameInp.classList.remove('is-modified');
                 const routeInp = document.getElementById(`inline-route-${item.peerId}`);
                 if (routeInp) routeInp.classList.remove('is-modified');
-                const vpnToggle = document.getElementById(`vpn-only-toggle-${item.peerId}`);
-                const toggleContainer = vpnToggle ? vpnToggle.closest('.toggle-container') : null;
-                if (toggleContainer) toggleContainer.classList.remove('is-modified');
             }
 
             await fetchAndPopulateRoutes();
@@ -798,18 +734,14 @@
             const name = peer.name || '';
             const route = peer.route || '';
             const vpnOnlyChecked = peer.vpn_only ? 'checked' : '';
-            const vpnOnlyText = peer.vpn_only ? 'ON' : 'OFF';
+            const vpnOnlyText = peer.is_online ? (peer.vpn_only ? 'ON' : 'OFF') : '—';
 
             const isDisabled = !peer.is_online ? 'disabled' : '';
             const disabledTitle = !peer.is_online ? 'title="Device is offline"' : '';
+            const vpnUnknownCls = !peer.is_online ? ' vpn-only-unknown' : '';
 
-            const isOffline = !peer.is_online;
-            const firewallUrl = `/peers/${peerId}`;
-            const firewallHref = isOffline ? 'javascript:void(0)' : firewallUrl;
-            const firewallStyle = isOffline
-                ? 'background-color: #6c757d; border-color: #6c757d; color: white; opacity: 0.65; cursor: not-allowed; pointer-events: none;'
-                : 'background-color: var(--nk-blue-primary); border-color: var(--nk-blue-primary); color: white;';
-            const firewallAttr = isOffline ? 'onclick="event.preventDefault()"' : '';
+            // Manage is always available, regardless of peer online state
+            const firewallHref = `/peers/${peerId}`;
 
             // Store initial state
             originalPeerState[peerId] = {
@@ -880,10 +812,10 @@
                     </div>
                 </td>
                 <td>
-                    <div class="toggle-container" ${disabledTitle}>
+                    <div class="toggle-container${vpnUnknownCls}" id="vpn-only-container-${peerId}" ${disabledTitle}>
                         <label class="switch">
-                            <input type="checkbox" 
-                                   id="vpn-only-toggle-${peerId}" 
+                            <input type="checkbox"
+                                   id="vpn-only-toggle-${peerId}"
                                    onchange="onVpnOnlyToggleChange('${peerId}', this)"
                                    ${vpnOnlyChecked}
                                    ${isDisabled}>
@@ -896,8 +828,8 @@
                     <div class="actions-cell">
                         <a href="${firewallHref}"
                             id="firewall-link-${peerId}" class="action-btn"
-                            style="${firewallStyle}" ${firewallAttr}>
-                            Manage
+                            style="background-color: var(--nk-blue-primary); border-color: var(--nk-blue-primary); color: white;">
+                            Open
                         </a>
                     </div>
                 </td>
@@ -941,12 +873,39 @@
         applyPeerStatusFilter();
     }
 
-    function onVpnOnlyToggleChange(peerId, checkbox) {
+    async function onVpnOnlyToggleChange(peerId, checkbox) {
         const vpnText = document.getElementById(`vpn-only-text-${peerId}`);
-        if (vpnText) {
-            vpnText.innerText = checkbox.checked ? 'ON' : 'OFF';
+        const desired = checkbox.checked;
+        const orig = originalPeerState[peerId];
+
+        if (vpnText) vpnText.innerText = desired ? 'ON' : 'OFF';
+        checkbox.disabled = true;
+        checkbox.dataset.pending = 'true';
+
+        try {
+            const resp = await fetch(`/api/peers/${peerId}/vpn-only`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ operation: desired ? 'on' : 'off' })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || (data.ok !== true && data.status !== 'success')) {
+                throw new Error(data.error || data.detail || 'Failed to set VPN mode');
+            }
+            if (orig) orig.vpn_only = desired;
+            if (window.showSuccess) window.showSuccess(desired ? 'VPN-Only on' : 'VPN-Only off');
+        } catch (err) {
+            console.error('VPN-Only toggle error:', err);
+            const revert = orig ? orig.vpn_only : !desired;
+            checkbox.checked = revert;
+            if (vpnText) vpnText.innerText = revert ? 'ON' : 'OFF';
+            if (window.showError) window.showError(err.message || 'Failed to set VPN mode');
+        } finally {
+            delete checkbox.dataset.pending;
+            const row = document.querySelector(`#peers-table-body tr[data-peer-id="${peerId}"]`);
+            const isOnline = !row || row.getAttribute('data-peer-online') === 'true';
+            checkbox.disabled = !isOnline;
         }
-        checkDirtyPeerChanges();
     }
 
     async function fetchPeersStatus() {

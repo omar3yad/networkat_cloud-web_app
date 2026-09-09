@@ -476,3 +476,77 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================================================
+   Subscription Card in Profile
+   ========================================================================== */
+.sub-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--nk-border);
+}
+
+.subscription-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.sub-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.sub-detail-row:last-of-type {
+    border-bottom: none;
+}
+
+.sub-detail-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--nk-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sub-detail-label i {
+    color: var(--nk-blue-primary);
+    width: 16px;
+    text-align: center;
+}
+
+.sub-detail-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--nk-navy);
+}
+
+.plan-name-badge {
+    background: #e0f2fe;
+    color: var(--nk-blue-primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    border: 1px solid #bae6fd;
+}
+
+.sub-detail-row.grace-notice-row {
+    background: #fffbeb;
+    padding: 0.65rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid #fde68a;
+}
+
+.sub-quota-section {
+    margin-top: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--nk-border);
+}
+

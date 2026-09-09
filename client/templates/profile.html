@@ -60,12 +60,12 @@
 
         <div class="hero-stats">
             <div class="stat-box">
-                <span class="stat-num" style="text-transform: capitalize;">{{ client.subscription if (client and client.subscription) else 'Basic' }}</span>
+                <span class="stat-num" style="text-transform: capitalize;">{{ subscription_info.plan_display if (subscription_info and subscription_info.plan_display) else (client.subscription if (client and client.subscription) else 'Starter') }}</span>
                 <span class="stat-label">Plan Tier</span>
             </div>
             <div class="stat-box">
-                <span class="stat-num">{{ total_peers_count }}</span>
-                <span class="stat-label">Total Peers</span>
+                <span class="stat-num">{{ subscription_info.current_peers if subscription_info else total_peers_count }} <span style="font-size: 0.9rem; font-weight: normal; color: var(--nk-text-muted);">/ {{ subscription_info.peer_limit if subscription_info else 5 }}</span></span>
+                <span class="stat-label">Peer Quota</span>
             </div>
             <div class="stat-box">
                 <span class="stat-num" style="color: var(--success-color);">{{ online_peers_count }}</span>
@@ -73,13 +73,17 @@
             </div>
             <div class="stat-box">
                 <span class="stat-num">
-                    {% if client and client.created_at %}
+                    {% if subscription_info and subscription_info.renewal_date %}
+                        {{ subscription_info.renewal_date[:10] }}
+                    {% elif client and client.renewal_date %}
+                        {{ client.renewal_date.strftime('%d %b %Y') }}
+                    {% elif client and client.created_at %}
                         {{ client.created_at.strftime('%b %Y') }}
                     {% else %}
                         —
                     {% endif %}
                 </span>
-                <span class="stat-label">Member Since</span>
+                <span class="stat-label">{% if subscription_info and subscription_info.renewal_date %}Next Renewal{% else %}Member Since{% endif %}</span>
             </div>
         </div>
     </div>
@@ -162,6 +166,98 @@
                     </button>
                 </div>
             </form>
+        </div>
+
+        <!-- Card 2: Subscription & Licensing Details -->
+        <div class="profile-card subscription-card">
+            <div class="sub-card-header">
+                <h3 class="card-title" style="margin: 0; padding: 0; border: none;">
+                    <i class="fas fa-file-invoice-dollar" style="color: var(--nk-blue-primary);"></i> Subscription Plan
+                </h3>
+                {% if subscription_info and subscription_info.status %}
+                <span class="badge-status-pill status-{{ subscription_info.status }}">
+                    {% if subscription_info.status == 'active' %}
+                    <i class="fas fa-check-circle"></i>
+                    {% elif subscription_info.status == 'grace_period' %}
+                    <i class="fas fa-clock"></i>
+                    {% elif subscription_info.status == 'limit_control' %}
+                    <i class="fas fa-lock"></i>
+                    {% else %}
+                    <i class="fas fa-ban"></i>
+                    {% endif %}
+                    {{ subscription_info.status }}
+                </span>
+                {% endif %}
+            </div>
+
+            <div class="subscription-details-list">
+                <div class="sub-detail-row">
+                    <span class="sub-detail-label"><i class="fas fa-layer-group"></i> Current Plan</span>
+                    <span class="sub-detail-value plan-name-badge">
+                        {{ subscription_info.plan_display if (subscription_info and subscription_info.plan_display) else 'Starter Plan' }}
+                    </span>
+                </div>
+
+                <div class="sub-detail-row">
+                    <span class="sub-detail-label"><i class="fas fa-calendar-alt"></i> Billing Cycle</span>
+                    <span class="sub-detail-value" style="text-transform: capitalize;">
+                        {{ subscription_info.billing_cycle if (subscription_info and subscription_info.billing_cycle) else 'Monthly' }}
+                    </span>
+                </div>
+
+                <div class="sub-detail-row">
+                    <span class="sub-detail-label"><i class="fas fa-hourglass-half"></i> Renewal Date</span>
+                    <span class="sub-detail-value">
+                        {% if subscription_info and subscription_info.renewal_date %}
+                            {{ subscription_info.renewal_date[:10] }}
+                        {% elif client and client.renewal_date %}
+                            {{ client.renewal_date.strftime('%Y-%m-%d') }}
+                        {% else %}
+                            <span style="color: var(--nk-text-muted);">Not scheduled</span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                {% if subscription_info and subscription_info.grace_expires_at and subscription_info.status == 'grace_period' %}
+                <div class="sub-detail-row grace-notice-row">
+                    <span class="sub-detail-label" style="color: #92400e;"><i class="fas fa-exclamation-triangle"></i> Grace Expires</span>
+                    <span class="sub-detail-value" style="color: #b45309; font-weight: 700;">
+                        {{ subscription_info.grace_expires_at[:10] }}
+                    </span>
+                </div>
+                {% endif %}
+
+                <!-- Peer Quota Section -->
+                <div class="sub-quota-section">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                        <span class="sub-detail-label" style="font-weight: 700; color: var(--nk-text-main);">
+                            <i class="fas fa-cubes" style="color: var(--nk-blue-primary);"></i> Peer Quota Allocation
+                        </span>
+                        <span style="font-size: 0.95rem; font-weight: 800; color: var(--nk-navy);">
+                            {{ subscription_info.current_peers if subscription_info else 0 }} / {{ subscription_info.peer_limit if subscription_info else 5 }} Peers
+                        </span>
+                    </div>
+
+                    <div class="quota-progress-track">
+                        {% set cur = subscription_info.current_peers if subscription_info else 0 %}
+                        {% set lim = [subscription_info.peer_limit if subscription_info else 5, 1]|max %}
+                        {% set pct = [((cur / lim) * 100)|round|int, 100]|min %}
+                        <div class="quota-progress-fill {% if pct >= 100 %}fill-danger{% elif pct >= 80 %}fill-warning{% else %}fill-primary{% endif %}" data-width="{{ pct }}"></div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.82rem; color: var(--nk-text-muted);">
+                        <span>Usage: <strong>{{ pct }}%</strong></span>
+                        <span><strong>{{ subscription_info.remaining_peers if subscription_info else 0 }}</strong> slots available</span>
+                    </div>
+                </div>
+
+                {% if is_readonly_subscription %}
+                <div class="readonly-notice-banner" style="margin-top: 1.25rem; margin-bottom: 0;">
+                    <i class="fas fa-lock"></i>
+                    <span>Your subscription requires renewal. Changes to firewall, web filter, and network routes are temporarily locked.</span>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>

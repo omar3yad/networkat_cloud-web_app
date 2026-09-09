@@ -41,14 +41,14 @@
             </span>
             <div style="width: 1px; height: 20px; background: var(--nk-border);"></div>
             <button class="btn-cancel" onclick="fetchRules()">Discard</button>
-            <button class="btn-apply" onclick="submitReorder()">
+            <button class="btn-apply" onclick="submitReorder()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>
                 Apply order
             </button>
         </div>
 
         <div class="control-bar">
             <div class="control-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddModal()">
+                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddModal()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
                 <button class="btn-action btn-icon-only" id="refresh-rules-btn" title="Refresh" onclick="handleManualRefresh(event)">
@@ -86,6 +86,7 @@
                                 onclick="toggleSelectAllRules(this)"></th>
                         <th style="width: 30px; text-align: center;"></th>
                         <th style="width: 60px; text-align: center;">Order</th>
+                        <th>Name</th>
                         <th>In Interface</th>
                         <th>Sources</th>
                         <th>Src Port</th>

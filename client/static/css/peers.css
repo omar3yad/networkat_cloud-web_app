@@ -64,6 +64,18 @@
     transform: translateY(0);
 }
 
+.header-status-pill.quota-badge {
+    cursor: default;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: var(--nk-text-main);
+}
+
+.header-status-pill.quota-badge:hover {
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
 .header-status-pill.online {
     border-color: #a7f3d0;
     background: #f0fdf4;
@@ -591,6 +603,16 @@ input:disabled+.slider {
     font-weight: 700;
     color: var(--nk-text-muted);
     min-width: 30px;
+}
+
+/* Peer offline: the real VPN-Only value is unknowable, so hide the switch */
+.toggle-container.vpn-only-unknown .switch {
+    display: none;
+}
+
+.toggle-container.vpn-only-unknown .toggle-status-text {
+    font-weight: 500;
+    opacity: 0.6;
 }
 
 .badge {

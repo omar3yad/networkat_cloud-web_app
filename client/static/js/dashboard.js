@@ -154,6 +154,16 @@
     window.copyInstallCommand = copyInstallCommand;
 
     document.addEventListener("DOMContentLoaded", function () {
+        // Initialize quota progress bars
+        document.querySelectorAll('.quota-progress-fill[data-width]').forEach(function (el) {
+            const w = el.getAttribute('data-width');
+            if (w !== null && w !== '') {
+                setTimeout(function () {
+                    el.style.width = w + '%';
+                }, 100);
+            }
+        });
+
         fetchSetupKeys();
         fetchDashboardStats();
         setInterval(fetchDashboardStats, 30000);

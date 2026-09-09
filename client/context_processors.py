@@ -134,3 +134,78 @@ def inject_client_sidebar():
     except Exception as e:
         current_app.logger.error(f"Error in sidebar context processor: {e}")
         return dict(sidebar_peers=[], sidebar_online_count=0, sidebar_offline_count=0)
+
+
+def inject_subscription_context():
+    customer_id = session.get('client_customer_id') or session.get('client_user_id')
+    if not customer_id:
+        return dict(
+            subscription_info={},
+            subscription_banner=None,
+            is_readonly_subscription=False
+        )
+
+    try:
+        from models.client import Client
+        from services.subscription_service import SubscriptionService
+
+        customer = Client.query.get(customer_id)
+        if not customer:
+            return dict(
+                subscription_info={},
+                subscription_banner=None,
+                is_readonly_subscription=False
+            )
+
+        sub_service = SubscriptionService()
+        sub_info = sub_service.get_subscription_info(customer)
+        status = customer.subscription_status
+
+        # Create alert banner for non-active states
+        banner = None
+        if status == 'grace_period':
+            days_msg = "A grace period is active."
+            if customer.grace_expires_at:
+                now_utc = datetime.datetime.utcnow()
+                exp = customer.grace_expires_at.replace(tzinfo=None) if customer.grace_expires_at.tzinfo else customer.grace_expires_at
+                days_rem = max(0, (exp - now_utc).days)
+                days_msg = f"{days_rem} day(s) remaining in grace period."
+            banner = {
+                "type": "warning",
+                "icon": "fas fa-exclamation-triangle",
+                "title": "Subscription Expired — Grace Period Active",
+                "message": f"Your plan has expired. {days_msg} Full control is temporarily maintained. Please renew soon.",
+                "status": "grace_period"
+            }
+        elif status == 'limit_control':
+            banner = {
+                "type": "danger",
+                "icon": "fas fa-lock",
+                "title": "Account Restricted — Read-Only Mode",
+                "message": "Your subscription is expired and grace period ended. Modifying rules, routes, and adding peers are locked.",
+                "status": "limit_control"
+            }
+        elif status == 'inactive':
+            banner = {
+                "type": "critical",
+                "icon": "fas fa-ban",
+                "title": "Subscription Inactive — Mesh Disconnected",
+                "message": "Your subscription is inactive. Peer mesh connectivity and controller access are disabled.",
+                "status": "inactive"
+            }
+
+        is_readonly = (status in ('limit_control', 'inactive'))
+
+        return dict(
+            subscription_info=sub_info,
+            subscription_banner=banner,
+            is_readonly_subscription=is_readonly
+        )
+    except Exception as exc:
+        logger.error(f"Error in subscription context processor: {exc}")
+        return dict(
+            subscription_info={},
+            subscription_banner=None,
+            is_readonly_subscription=False
+        )
+

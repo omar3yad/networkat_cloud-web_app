@@ -34,7 +34,7 @@
     <div id="rules-tab-content">
         <div class="control-bar">
             <div class="control-actions">
-                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddRuleModal()">
+                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddRuleModal()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
             </div>
