@@ -21,14 +21,14 @@ class SubscriptionPlanRepository:
             return None
         return SubscriptionPlan.query.filter_by(name=name).first()
 
-    def create(self, name, display_name, peer_limit, billing_cycles="monthly,yearly", price_monthly=None, price_yearly=None, is_active=True):
+    def create(self, name, display_name, allowed_peers_count, billing_cycle="monthly,yearly", price_monthly=None, price_annual=None, is_active=True):
         plan = SubscriptionPlan(
             name=name,
             display_name=display_name,
-            peer_limit=peer_limit,
-            billing_cycles=billing_cycles,
+            allowed_peers_count=allowed_peers_count,
+            billing_cycle=billing_cycle,
             price_monthly=price_monthly,
-            price_yearly=price_yearly,
+            price_annual=price_annual,
             is_active=is_active
         )
         db.session.add(plan)

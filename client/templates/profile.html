@@ -64,7 +64,7 @@
                 <span class="stat-label">Plan Tier</span>
             </div>
             <div class="stat-box">
-                <span class="stat-num">{{ subscription_info.current_peers if subscription_info else total_peers_count }} <span style="font-size: 0.9rem; font-weight: normal; color: var(--nk-text-muted);">/ {{ subscription_info.peer_limit if subscription_info else 5 }}</span></span>
+                <span class="stat-num">{{ subscription_info.installed_peers_count if subscription_info else total_peers_count }} <span style="font-size: 0.9rem; font-weight: normal; color: var(--nk-text-muted);">/ {{ subscription_info.allowed_peers_count if subscription_info else 5 }}</span></span>
                 <span class="stat-label">Peer Quota</span>
             </div>
             <div class="stat-box">
@@ -234,20 +234,20 @@
                             <i class="fas fa-cubes" style="color: var(--nk-blue-primary);"></i> Peer Quota Allocation
                         </span>
                         <span style="font-size: 0.95rem; font-weight: 800; color: var(--nk-navy);">
-                            {{ subscription_info.current_peers if subscription_info else 0 }} / {{ subscription_info.peer_limit if subscription_info else 5 }} Peers
+                            {{ subscription_info.installed_peers_count if subscription_info else 0 }} / {{ subscription_info.allowed_peers_count if subscription_info else 5 }} Peers
                         </span>
                     </div>
 
                     <div class="quota-progress-track">
-                        {% set cur = subscription_info.current_peers if subscription_info else 0 %}
-                        {% set lim = [subscription_info.peer_limit if subscription_info else 5, 1]|max %}
+                        {% set cur = subscription_info.installed_peers_count if subscription_info else 0 %}
+                        {% set lim = [subscription_info.allowed_peers_count if subscription_info else 5, 1]|max %}
                         {% set pct = [((cur / lim) * 100)|round|int, 100]|min %}
                         <div class="quota-progress-fill {% if pct >= 100 %}fill-danger{% elif pct >= 80 %}fill-warning{% else %}fill-primary{% endif %}" data-width="{{ pct }}"></div>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.82rem; color: var(--nk-text-muted);">
                         <span>Usage: <strong>{{ pct }}%</strong></span>
-                        <span><strong>{{ subscription_info.remaining_peers if subscription_info else 0 }}</strong> slots available</span>
+                        <span><strong>{{ subscription_info.remaining_peers_count if subscription_info else 0 }}</strong> slots available</span>
                     </div>
                 </div>
 

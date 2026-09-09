@@ -645,8 +645,8 @@
 
             <!-- Tabs -->
             <div class="tabs">
-                <button class="tab active" onclick="showTab('edges')">Edges </button>
-                <button class="tab" onclick="showTab('tokens')">Tokens ({{ tokens|length }})</button>
+                <button class="tab active" onclick="showTab('edges')">Peers List </button>
+                <!-- <button class="tab" onclick="showTab('tokens')">Tokens ({{ tokens|length }})</button> -->
                 <button class="tab" onclick="showTab('users')">Portal Users</button>
                 <button class="tab" onclick="showTab('subscription')"><i class="fas fa-file-invoice-dollar"></i> Subscription</button>
             </div>
@@ -850,15 +850,15 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <span style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase;">Peer Quota Allocation</span>
                             <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);" id="sub-card-remaining">
-                                {{ subscription_info.remaining_peers if subscription_info else 0 }} slots available
+                                {{ subscription_info.remaining_peers_count if subscription_info else 0 }} slots available
                             </span>
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                             <span style="font-size: 1.8rem; font-weight: 800; color: var(--gray-800);" id="sub-card-peers-val">
-                                {{ subscription_info.current_peers if subscription_info else 0 }} <span style="font-size: 1rem; font-weight: 500; color: var(--gray-600);">/ {{ subscription_info.peer_limit if subscription_info else 5 }}</span>
+                                {{ subscription_info.installed_peers_count if subscription_info else 0 }} <span style="font-size: 1rem; font-weight: 500; color: var(--gray-600);">/ {{ subscription_info.allowed_peers_count if subscription_info else 5 }}</span>
                             </span>
-                            {% set cur = subscription_info.current_peers if subscription_info else 0 %}
-                            {% set lim = [subscription_info.peer_limit if subscription_info else 5, 1]|max %}
+                            {% set cur = subscription_info.installed_peers_count if subscription_info else 0 %}
+                            {% set lim = [subscription_info.allowed_peers_count if subscription_info else 5, 1]|max %}
                             {% set pct = [((cur / lim) * 100)|round|int, 100]|min %}
                             <span style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600);" id="sub-card-pct">
                                 {{ pct }}% Used
@@ -910,7 +910,7 @@
                                     <select id="sub-select-plan" style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;">
                                         {% for plan in plans %}
                                         <option value="{{ plan.id }}" {% if (subscription_info and subscription_info.plan_id == plan.id) or (customer.plan_id == plan.id) %}selected{% endif %}>
-                                            {{ plan.display_name }} ({{ plan.peer_limit }} Peers - ${{ plan.price_monthly }}/mo)
+                                            {{ plan.display_name }} ({{ plan.allowed_peers_count }} Peers - ${{ plan.price_monthly }}/mo)
                                         </option>
                                         {% endfor %}
                                     </select>

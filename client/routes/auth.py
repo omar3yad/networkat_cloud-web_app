@@ -1,7 +1,6 @@
 import time
 import random
 import requests
-from threading import Lock
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
 from client.blueprint import client_bp
@@ -9,113 +8,6 @@ from services.customer_service import CustomerService
 from utils.email import send_verification_email, send_password_reset_email
 
 customer_service = CustomerService()
-
-# --------------------------------------------------------------------------
-# Public REST API — Setup Key Retrieval
-# --------------------------------------------------------------------------
-_SETUP_KEY_RATE_LIMIT: dict = {}
-_SETUP_KEY_RATE_LOCK = Lock()
-_SETUP_KEY_MAX_REQUESTS = 5    # max attempts
-_SETUP_KEY_WINDOW_SEC = 60     # per 60 seconds
-
-
-def _check_rate_limit(ip: str) -> bool:
-    """Returns True if the request is allowed, False if rate-limited."""
-    now = time.time()
-    with _SETUP_KEY_RATE_LOCK:
-        hits = _SETUP_KEY_RATE_LIMIT.get(ip, [])
-        hits = [t for t in hits if now - t < _SETUP_KEY_WINDOW_SEC]
-        if len(hits) >= _SETUP_KEY_MAX_REQUESTS:
-            return False
-        hits.append(now)
-        _SETUP_KEY_RATE_LIMIT[ip] = hits
-    return True
-
-
-@client_bp.route('/api/v1/auth/setup-key', methods=['POST'])
-def api_get_setup_key():
-    """
-    Secure API endpoint to retrieve the NetBird Setup Key for a client.
-    """
-    if not request.is_json:
-        return jsonify({
-            "error": "Unsupported Media Type",
-            "message": "Content-Type must be application/json"
-        }), 415
-
-    client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip()
-    if not _check_rate_limit(client_ip):
-        return jsonify({
-            "error": "Too Many Requests",
-            "message": f"Maximum {_SETUP_KEY_MAX_REQUESTS} attempts per {_SETUP_KEY_WINDOW_SEC} seconds exceeded. Please wait."
-        }), 429
-
-    body = request.get_json(silent=True) or {}
-    username = (body.get("username") or "").strip()
-    password = (body.get("password") or "")
-
-    if not username or not password:
-        return jsonify({
-            "error": "Bad Request",
-            "message": "Both 'username' and 'password' fields are required."
-        }), 400
-
-    if len(username) > 128 or len(password) > 256:
-        return jsonify({
-            "error": "Bad Request",
-            "message": "Input exceeds maximum allowed length."
-        }), 400
-
-    try:
-        success, res = customer_service.authenticate_client_user(username, password)
-    except Exception as exc:
-        current_app.logger.error(f"[setup-key-api] Auth exception for '{username}': {exc}")
-        return jsonify({
-            "error": "Internal Server Error",
-            "message": "An unexpected error occurred. Please try again later."
-        }), 500
-
-    if not success:
-        return jsonify({
-            "error": "Unauthorized",
-            "message": "Invalid credentials or account is not active."
-        }), 401
-
-    customer_id = res.get("customer_id")
-
-    try:
-        from repositories.client_repository import ClientRepository
-        from services.subscription_service import SubscriptionService
-
-        client_repo = ClientRepository()
-        client = client_repo.get_by_id(customer_id)
-        if not client:
-            return jsonify({
-                "error": "Not Found",
-                "message": "Client record not found."
-            }), 404
-
-        sub_service = SubscriptionService()
-        key_success, key_data = sub_service.create_installation_setup_key(client)
-
-        if not key_success:
-            status_code = 403 if key_data.get("error") == "Forbidden" else (key_data.get("status_code") or 500)
-            return jsonify(key_data), status_code
-
-        current_app.logger.info(
-            f"[setup-key-api] Dynamic one-off setup key generated — user='{username}' plan='{key_data.get('plan')}' "
-            f"remaining={key_data.get('remaining_peers')} ip={client_ip}"
-        )
-
-        return jsonify(key_data), 200
-
-    except Exception as exc:
-        current_app.logger.error(f"[setup-key-api] Error generating setup key for '{username}': {exc}")
-        return jsonify({
-            "error": "Internal Server Error",
-            "message": "An error occurred while generating setup key. Please try again later."
-        }), 500
-
 
 # --------------------------------------------------------------------------
 # Auth Routes

@@ -18,7 +18,7 @@ class SubscriptionService:
     """
 
     NETBIRD_API_URL = os.getenv("FASTAPI_BASE_URL", "https://api.networkat.cloud/api/v2/netbird")
-    ALL_PEERS_GROUP_ID = "d9gc0fsm4sls73cgjl6g"  # ID Group 'all-peers'
+    ALL_PEERS_GROUP_ID = os.getenv("NETBIRD_ALL_PEERS_GROUP_ID")  # ID Group 'all-peers'
 
     def __init__(self):
         self.client_repo = ClientRepository()
@@ -70,18 +70,18 @@ class SubscriptionService:
     def get_remaining_peers(self, client) -> int:
         """
         حساب عدد الأجهزة المتبقية المسموح للعميل بإضافتها:
-        remaining = peer_limit - current_peers
+        remaining = allowed_peers_count - installed_peers_count
         """
         if not client:
             return 0
 
-        peer_limit = client.peer_limit
-        if peer_limit is None:
+        allowed_peers_count = client.allowed_peers_count
+        if allowed_peers_count is None:
             starter = self.plan_repo.get_by_name("starter")
-            peer_limit = starter.peer_limit if starter else 5
+            allowed_peers_count = starter.allowed_peers_count if starter else 5
 
         current_count = self.get_client_peer_count(client)
-        return max(0, peer_limit - current_count)
+        return max(0, allowed_peers_count - current_count)
 
     def can_install_peer(self, client) -> tuple[bool, str, dict]:
         """
@@ -102,15 +102,15 @@ class SubscriptionService:
         # التحقق من حالة الاشتراك
         if not client.is_subscription_active:
             status_desc = {
-                "limit_control": "Subscription is in read-only mode (limit_control). Adding peers is prohibited.",
-                "inactive": "Subscription is inactive. Adding peers is prohibited."
+                "limit_control": "Subscription is currently restricted. Renew your plan to enroll new peers.",
+                "inactive": "Subscription inactive. Renew your plan."
             }.get(client.subscription_status, f"Subscription status '{client.subscription_status}' does not allow adding new peers.")
 
             return False, status_desc, {
                 "subscription_status": client.subscription_status,
-                "current_peers": self.get_client_peer_count(client),
-                "peer_limit": client.peer_limit or 0,
-                "remaining_peers": 0
+                "installed_peers_count": self.get_client_peer_count(client),
+                "allowed_peers_count": client.allowed_peers_count or 0,
+                "remaining_peers_count": 0
             }
 
         # تحديد حد الخطة
@@ -123,23 +123,23 @@ class SubscriptionService:
                 db.session.commit()
                 plan = starter
 
-        peer_limit = plan.peer_limit if plan else 5
-        current_peers = self.get_client_peer_count(client)
+        allowed_peers_count = plan.allowed_peers_count if plan else 5
+        installed_peers_count = self.get_client_peer_count(client)
 
-        if current_peers >= peer_limit:
-            return False, f"Peer limit reached for this subscription ({current_peers}/{peer_limit}).", {
+        if installed_peers_count >= allowed_peers_count:
+            return False, f"Peer limit reached ({installed_peers_count}/{allowed_peers_count}). Upgrade plan to add more.", {
                 "subscription_status": client.subscription_status,
-                "current_peers": current_peers,
-                "peer_limit": peer_limit,
-                "remaining_peers": 0
+                "installed_peers_count": installed_peers_count,
+                "allowed_peers_count": allowed_peers_count,
+                "remaining_peers_count": 0
             }
 
-        remaining_peers = max(0, peer_limit - current_peers)
+        remaining_peers_count = max(0, allowed_peers_count - installed_peers_count)
         return True, "Allowed", {
             "subscription_status": client.subscription_status,
-            "current_peers": current_peers,
-            "peer_limit": peer_limit,
-            "remaining_peers": remaining_peers
+            "installed_peers_count": installed_peers_count,
+            "allowed_peers_count": allowed_peers_count,
+            "remaining_peers_count": remaining_peers_count
         }
 
     # ----------------------------------------------------------------------
@@ -171,7 +171,7 @@ class SubscriptionService:
             "name": f"install-{client.username}-{int(time.time())}",
             "type": "one-off",
             "usage_limit": 1,
-            "expires_in": 86400,  # 24 hours
+            "expires_in": 1200,  # 20 minutes
             "auto_groups": auto_groups,
             "ephemeral": False,
             "allow_extra_dns_labels": False
@@ -183,16 +183,16 @@ class SubscriptionService:
             if resp.status_code in (200, 201):
                 key_data = resp.json()
                 plain_key = key_data.get("key")
-                remaining_after = max(0, quota_info["remaining_peers"] - 1)
+                remaining_after = max(0, quota_info["remaining_peers_count"] - 1)
 
                 return True, {
                     "setup_key": plain_key,
                     "username": client.username,
                     "plan": client.plan.name if client.plan else "starter",
-                    "peer_limit": quota_info["peer_limit"],
-                    "current_peers": quota_info["current_peers"],
-                    "remaining_peers": remaining_after,
-                    "expires_in": 86400,
+                    "allowed_peers_count": quota_info["allowed_peers_count"],
+                    "installed_peers_count": quota_info["installed_peers_count"],
+                    "remaining_peers_count": remaining_after,
+                    "expires_in": 1200,
                     "subscription_status": client.subscription_status
                 }
             else:
@@ -523,9 +523,9 @@ class SubscriptionService:
             return {}
 
         plan = client.plan
-        peer_limit = plan.peer_limit if plan else 5
-        current_peers = self.get_client_peer_count(client)
-        remaining = max(0, peer_limit - current_peers)
+        allowed_peers_count = plan.allowed_peers_count if plan else 5
+        installed_peers_count = self.get_client_peer_count(client)
+        remaining_peers_count = max(0, allowed_peers_count - installed_peers_count)
 
         return {
             "username": client.username,
@@ -535,9 +535,9 @@ class SubscriptionService:
             "is_inactive": client.is_subscription_inactive,
             "plan_name": plan.name if plan else "starter",
             "plan_display": plan.display_name if plan else "Starter",
-            "peer_limit": peer_limit,
-            "current_peers": current_peers,
-            "remaining_peers": remaining,
+            "allowed_peers_count": allowed_peers_count,
+            "installed_peers_count": installed_peers_count,
+            "remaining_peers_count": remaining_peers_count,
             "billing_cycle": client.billing_cycle or "monthly",
             "renewal_date": client.renewal_date.isoformat() if client.renewal_date else None,
             "grace_expires_at": client.grace_expires_at.isoformat() if client.grace_expires_at else None,

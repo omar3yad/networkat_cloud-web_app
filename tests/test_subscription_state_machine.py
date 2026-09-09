@@ -146,16 +146,16 @@ class TestSubscriptionStateMachine(unittest.TestCase):
         plan = MagicMock()
         plan.name = "pro"
         plan.display_name = "Professional"
-        plan.peer_limit = 15
+        plan.allowed_peers_count = 15
         client.plan = plan
 
         info = self.service.get_subscription_info(client)
         self.assertEqual(info["username"], "testuser")
         self.assertEqual(info["status"], "active")
         self.assertEqual(info["plan_name"], "pro")
-        self.assertEqual(info["peer_limit"], 15)
-        self.assertEqual(info["current_peers"], 3)
-        self.assertEqual(info["remaining_peers"], 12)
+        self.assertEqual(info["allowed_peers_count"], 15)
+        self.assertEqual(info["installed_peers_count"], 3)
+        self.assertEqual(info["remaining_peers_count"], 12)
         self.assertEqual(info["billing_cycle"], "monthly")
         self.assertEqual(info["renewal_date"], "2026-10-01T00:00:00")
         self.assertIsNone(info["grace_expires_at"])

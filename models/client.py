@@ -166,8 +166,8 @@ class Client(BaseModel):
         return self.subscription_status == "inactive"
 
     @property
-    def peer_limit(self):
-        """Returns peer limit from associated plan, defaulting to Starter (5) if no plan."""
+    def allowed_peers_count(self):
+        """Returns allowed peer count from associated plan, defaulting to Starter (5) if no plan."""
         if self.plan:
-            return self.plan.peer_limit
+            return self.plan.allowed_peers_count
         return 5

@@ -2,11 +2,11 @@
 Pydantic schemas for the public client authentication API.
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional
 
 
-class SetupKeyRequest(BaseModel):
-    """Request body for retrieving a client's NetBird Setup Key."""
+class InstallPeerRequest(BaseModel):
+    """Request body for installing a new peer (mints a one-off setup key)."""
     username: str = Field(
         ...,
         min_length=1,
@@ -30,55 +30,46 @@ class SetupKeyRequest(BaseModel):
     }
 
 
+class SubscriptionMeta(BaseModel):
+    """Subscription quota snapshot for the account."""
+    plan:                  Optional[str] = Field(None, description="Current subscription plan (e.g. starter, pro).")
+    allowed_peers_count:   int = Field(0, description="Maximum peers allowed under the current plan.")
+    remaining_peers_count: int = Field(0, description="Peer slots still free (allowed - installed).")
+    installed_peers_count: int = Field(0, description="Peers currently enrolled.")
+
+
 class AccountMeta(BaseModel):
-    """Non-sensitive account metadata returned alongside the Setup Key."""
+    """Non-sensitive account metadata returned alongside the setup key."""
     full_name:    Optional[str] = Field(None, description="Client full name.")
     company_name: Optional[str] = Field(None, description="Client company / organisation name.")
-    email:        Optional[str] = Field(None, description="Account email address.")
     country:      Optional[str] = Field(None, description="Country associated with the account.")
-    subscription: Optional[str] = Field(None, description="Current subscription plan (e.g. basic, pro).")
-    member_since: Optional[str] = Field(None, description="Account creation date (ISO 8601 UTC).")
-    active_keys:  int            = Field(0,    description="Number of active setup keys on this account.")
+    subscription: SubscriptionMeta = Field(default_factory=SubscriptionMeta, description="Subscription quota snapshot.")
 
 
-class ClientSetupKeyInfo(BaseModel):
-    """Details of a single NetBird Setup Key linked to the client."""
-    valid:          bool           = Field(..., description="Whether the key is valid.")
-    used_times:     int            = Field(..., description="Number of times this key has been used.")
-    usage_limit:    int            = Field(..., description="Maximum number of times this key can be used.")
-    remaining_uses: Optional[int]  = Field(None, description="Remaining uses left for this key.")
-    key:            str            = Field(..., description="The setup key token value (masked or prefix).")
-
-
-class SetupKeyResponse(BaseModel):
-    """Successful response containing the account metadata and all client setup keys."""
-    username:   str                     = Field(..., description="The authenticated username.")
-    account:    AccountMeta             = Field(..., description="Non-sensitive metadata about the account.")
-    setup_keys: List[ClientSetupKeyInfo] = Field(default=[], description="All NetBird Setup Keys linked to this account.")
-    download_token: Optional[str]        = Field(None, description="Short-lived token to fetch the installer tarball.")
+class InstallPeerResponse(BaseModel):
+    """Successful response: account metadata plus a fresh one-off setup key."""
+    username:      str = Field(..., description="The authenticated username.")
+    account:       AccountMeta = Field(..., description="Non-sensitive metadata about the account.")
+    setup_key:     str = Field(..., description="One-off NetBird setup key to enroll the new peer.")
+    install_token: str = Field(..., description="Short-lived token to fetch the installer tarball.")
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "username":  "john_doe",
+                "username": "omar3yad",
                 "account": {
-                    "full_name":    "John Doe",
-                    "company_name": "Acme Corp",
-                    "email":        "john@acme.com",
-                    "country":      "Egypt",
-                    "subscription": "pro",
-                    "member_since": "2025-01-15T10:30:00",
-                    "active_keys":  1
-                },
-                "setup_keys": [
-                    {
-                        "valid": True,
-                        "used_times": 17,
-                        "usage_limit": 20,
-                        "remaining_uses": 3,
-                        "key": "DC78D-XXXX-XXXX-XXXX-XXXX"
+                    "full_name": "Omar Ahmed",
+                    "company_name": "3yad",
+                    "country": "Egypt",
+                    "subscription": {
+                        "plan": "pro",
+                        "allowed_peers_count": 5,
+                        "remaining_peers_count": 3,
+                        "installed_peers_count": 2
                     }
-                ]
+                },
+                "setup_key": "CC7D51F4-4F6F-4D8F-B542-51891E5F2CC4",
+                "install_token": "b21hcjN5YWQ..."
             }
         }
     }

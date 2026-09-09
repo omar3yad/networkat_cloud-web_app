@@ -1,10 +1,10 @@
 """
 Short-lived, stateless download token for the peer-installer tarball.
 
-The bootstrap script (install.sh) signs the customer in to the portal BEFORE it
-downloads https://api.networkat.cloud/peer-installer.tar.gz. That 200 login
-response now carries a `download_token` minted here; install.sh presents it as a
-Bearer header on the tarball request, and nginx `auth_request` calls
+The bootstrap script (install.sh) calls POST /api/v1/auth/install-peer BEFORE it
+downloads https://api.networkat.cloud/peer-installer.tar.gz. That 200 response
+carries an `install_token` minted here; install.sh presents it as a Bearer
+header on the tarball request, and nginx `auth_request` calls
 /api/v1/auth/verify-download (which uses verify_token below) to gate the file.
 
 The token is a signed HMAC blob — no DB, no nonce store, nothing to persist —

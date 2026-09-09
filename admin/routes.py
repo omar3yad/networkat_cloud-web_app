@@ -80,7 +80,7 @@ def customer_details(customer_id):
     if err:
         return jsonify({'success': False, 'error': err}), 404
 
-    plans = SubscriptionPlan.query.order_by(SubscriptionPlan.peer_limit.asc()).all()
+    plans = SubscriptionPlan.query.order_by(SubscriptionPlan.allowed_peers_count.asc()).all()
     customer = data.get('customer')
     sub_info = subscription_service.get_subscription_info(customer) if customer else {}
 

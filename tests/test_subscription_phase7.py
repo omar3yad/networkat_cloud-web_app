@@ -47,9 +47,9 @@ class TestSubscriptionAdminPhase7(unittest.TestCase):
             'plan_name': 'starter',
             'plan_display': 'Starter Plan',
             'status': 'active',
-            'peer_limit': 5,
-            'current_peers': 2,
-            'remaining_peers': 3
+            'allowed_peers_count': 5,
+            'installed_peers_count': 2,
+            'remaining_peers_count': 3
         }
 
         with self.client.session_transaction() as sess:
@@ -60,7 +60,7 @@ class TestSubscriptionAdminPhase7(unittest.TestCase):
         data = resp.get_json()
         self.assertTrue(data['success'])
         self.assertEqual(data['subscription']['plan_name'], 'starter')
-        self.assertEqual(data['subscription']['peer_limit'], 5)
+        self.assertEqual(data['subscription']['allowed_peers_count'], 5)
 
     @patch('extensions.db.session.commit')
     @patch('models.subscription_plan.SubscriptionPlan.query')
@@ -83,7 +83,7 @@ class TestSubscriptionAdminPhase7(unittest.TestCase):
             'plan_name': 'pro',
             'plan_display': 'Pro Plan',
             'status': 'active',
-            'peer_limit': 15,
+            'allowed_peers_count': 15,
             'billing_cycle': 'yearly'
         }
 

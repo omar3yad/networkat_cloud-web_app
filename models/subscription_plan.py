@@ -5,10 +5,7 @@ from models.base import BaseModel
 
 
 class SubscriptionPlan(BaseModel):
-    """
-    جدول الخطط الثابتة — يحدد peer_limit و billing_cycle لكل خطة.
-    الأدمن يضيف/يعدل الخطط، والعميل يُربط بخطة عبر Client.plan_id.
-    """
+
     __tablename__ = "subscription_plans"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -26,13 +23,13 @@ class SubscriptionPlan(BaseModel):
     )
     # مثال: "Starter Plan", "Professional", "Enterprise"
 
-    peer_limit = db.Column(
+    allowed_peers_count = db.Column(
         db.Integer,
         nullable=False
     )
     # الحد الأقصى للأجهزة المسموح بها في هذه الخطة
 
-    billing_cycles = db.Column(
+    billing_cycle = db.Column(
         db.String(20),
         nullable=False,
         default="monthly,yearly"
@@ -44,7 +41,7 @@ class SubscriptionPlan(BaseModel):
         nullable=True
     )
 
-    price_yearly = db.Column(
+    price_annual = db.Column(
         db.Numeric(10, 2),
         nullable=True
     )
@@ -56,17 +53,18 @@ class SubscriptionPlan(BaseModel):
     # لإخفاء خطط قديمة بدون حذفها
 
     def __repr__(self):
-        return f"<SubscriptionPlan {self.name} (limit={self.peer_limit})>"
+        return f"<SubscriptionPlan {self.name} (limit={self.allowed_peers_count})>"
 
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
             "display_name": self.display_name,
-            "peer_limit": self.peer_limit,
-            "billing_cycles": self.billing_cycles.split(",") if self.billing_cycles else [],
+            "allowed_peers_count": self.allowed_peers_count,
+            "billing_cycle": self.billing_cycle.split(",") if self.billing_cycle else [],
             "price_monthly": float(self.price_monthly) if self.price_monthly is not None else None,
-            "price_yearly": float(self.price_yearly) if self.price_yearly is not None else None,
+            "price_annual": float(self.price_annual) if self.price_annual is not None else None,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+

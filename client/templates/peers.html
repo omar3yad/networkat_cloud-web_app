@@ -17,9 +17,9 @@
             <h1>Peers List (<span id="peers-page-count">{{ sidebar_peers|length if sidebar_peers is defined else 0 }}</span>)</h1>
             <div class="header-status-indicators">
                 <div class="header-status-pill quota-badge" id="peers-quota-badge"
-                    title="Peer Quota: {{ subscription_info.current_peers if subscription_info else 0 }}/{{ subscription_info.peer_limit if subscription_info else 5 }} used ({{ subscription_info.remaining_peers if subscription_info else 0 }} remaining)">
+                    title="Peer Quota: {{ subscription_info.installed_peers_count if subscription_info else 0 }}/{{ subscription_info.allowed_peers_count if subscription_info else 5 }} used ({{ subscription_info.remaining_peers_count if subscription_info else 0 }} remaining)">
                     <i class="fas fa-cubes" style="color: var(--nk-blue-primary);"></i>
-                    <span class="status-pill-text"><strong id="peers-quota-count">{{ subscription_info.current_peers if subscription_info else 0 }}/{{ subscription_info.peer_limit if subscription_info else 5 }}</strong> Peers</span>
+                    <span class="status-pill-text"><strong id="peers-quota-count">{{ subscription_info.installed_peers_count if subscription_info else 0 }}/{{ subscription_info.allowed_peers_count if subscription_info else 5 }}</strong> Peers</span>
                 </div>
                 <button type="button" class="header-status-pill online" id="filter-btn-online"
                     title="Click to filter by Online peers" onclick="togglePeerStatusFilter('online')">

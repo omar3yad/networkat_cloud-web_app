@@ -162,10 +162,6 @@ res = client.get('/forgot-password')
 assert res.status_code == 200, f"Expected 200 on /forgot-password, got {res.status_code}"
 print("  ✓ GET /forgot-password -> HTTP 200 OK")
 
-res = client.get('/api/v1/auth/setup-key')
-assert res.status_code == 415 or res.status_code == 405, f"Expected 415/405 on GET /api/v1/auth/setup-key, got {res.status_code}"
-print("  ✓ GET /api/v1/auth/setup-key -> Handled correctly")
-
 print("\n=================================================================")
 print("  ALL TESTS PASSED WITH 100% SUCCESS AND ZERO REGRESSIONS!      ")
 print("=================================================================")
