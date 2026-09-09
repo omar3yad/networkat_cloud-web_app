@@ -174,14 +174,36 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
         allowed_peers_count = plan_peer_limit or (15 if plan_name == "pro" else (50 if plan_name == "enterprise" else 5))
         subscription_status = subscription_status or "active"
 
+        # Account snapshot returned alongside the setup key on 200, and alongside
+        # the notice on a quota / subscription 403 so the installer can show the
+        # customer their plan next to it. `installed` defaults to the DB edge
+        # count; the quota check overwrites it with the live NetBird figure.
+        def _account_meta(installed: int) -> dict:
+            return AccountMeta(
+                full_name    = client_name,
+                company_name = client_company_name,
+                country      = client_country,
+                subscription = SubscriptionMeta(
+                    plan                  = plan_name,
+                    allowed_peers_count   = allowed_peers_count,
+                    remaining_peers_count = max(0, allowed_peers_count - installed),
+                    installed_peers_count = installed,
+                ),
+            ).model_dump()
+
         # ── 4. Enforce subscription status ─────────────────────────────────
         if subscription_status in ("limit_control", "inactive"):
             logger.warning(f"[install-peer-api] Account in read-only status='{subscription_status}' user='{username}'")
+            edge_cnt = db.execute(
+                text("SELECT COUNT(*) FROM edges WHERE client_id = :uid"),
+                {"uid": str(user_id)}
+            ).scalar()
             return JSONResponse(
                 status_code=403,
                 content={
                     "error": "Forbidden",
                     "message": "Subscription is currently restricted. Renew your plan to enroll new peers.",
+                    "account": _account_meta(edge_cnt or 0),
                 }
             )
 
@@ -256,7 +278,8 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                 status_code=403,
                 content={
                     "error": "Forbidden",
-                    "message": f"Peer limit reached ({current_peers}/{allowed_peers_count}). Upgrade plan to add more.",
+                    "message": f"Cannot add more peers\nlimit exceeded ({current_peers}/{allowed_peers_count}). Upgrade plan to connect more.",
+                    "account": _account_meta(current_peers),
                 }
             )
 
