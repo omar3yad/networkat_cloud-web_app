@@ -62,23 +62,38 @@
                             {% for p in sidebar_peers %}
                                 {% if not p.offline_ge_7d %}
                                     {% set is_current_peer = (peer_id is defined and peer_id == p.id) or (selected_peer_id is defined and selected_peer_id == p.id) %}
-                                    {% if p.connected %}
-                                        {% if request.endpoint == 'client.peer_web_filter' %}
-                                            {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}
-                                        {% elif request.endpoint == 'client.peer_firewall' %}
-                                            {% set target_url = url_for('client.peer_firewall', peer_id=p.id) %}
-                                        {% elif request.endpoint in ['client.peer_aliases', 'client.aliases_page'] %}
-                                            {% set target_url = url_for('client.peer_aliases', peer_id=p.id) %}
+                                    {% if is_current_peer %}
+                                        {% if request.endpoint == 'client.peer_details' %}
+                                            {% set target_url = 'javascript:void(0);' %}
+                                            {% set click_handler = 'onclick="event.preventDefault();"' %}
+                                        {% else %}
+                                            {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
+                                            {% set click_handler = '' %}
+                                        {% endif %}
+                                    {% else %}
+                                        {% set click_handler = '' %}
+                                        {% if p.connected %}
+                                            {% if request.endpoint in ['client.peer_web_filter', 'client.peer_filtering'] %}
+                                                {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}
+                                            {% elif request.endpoint == 'client.peer_firewall' %}
+                                                {% set target_url = url_for('client.peer_firewall', peer_id=p.id) %}
+                                            {% elif request.endpoint in ['client.peer_aliases', 'client.aliases_page'] %}
+                                                {% set target_url = url_for('client.peer_aliases', peer_id=p.id) %}
+                                            {% else %}
+                                                {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
+                                            {% endif %}
                                         {% else %}
                                             {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
                                         {% endif %}
-                                        <a href="{{ target_url }}" id="sidebar-peer-{{ p.id }}" data-sidebar-online="true" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} (Connected)">
+                                    {% endif %}
+                                    {% if p.connected %}
+                                        <a href="{{ target_url }}" {{ click_handler|safe }} id="sidebar-peer-{{ p.id }}" data-sidebar-online="true" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} (Connected)">
                                             <span class="peer-status-dot online" id="sidebar-dot-{{ p.id }}" title="Connected"></span>
                                             <span class="submenu-label">{{ p.name }}</span>
                                             <span class="submenu-last-seen" id="sidebar-seen-{{ p.id }}" style="display: none;"></span>
                                         </a>
                                     {% else %}
-                                        <a href="{{ url_for('client.peer_details', peer_id=p.id) }}" id="sidebar-peer-{{ p.id }}" data-sidebar-online="false" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} ({{ p.status_title }})">
+                                        <a href="{{ target_url }}" {{ click_handler|safe }} id="sidebar-peer-{{ p.id }}" data-sidebar-online="false" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} ({{ p.status_title }})">
                                             <span class="peer-status-dot offline" id="sidebar-dot-{{ p.id }}" title="{{ p.status_title }}"></span>
                                             <span class="submenu-label">{{ p.name }}</span>
                                             <span class="submenu-last-seen" id="sidebar-seen-{{ p.id }}">{% if p.last_seen_human %}{{ p.last_seen_human }}{% endif %}</span>

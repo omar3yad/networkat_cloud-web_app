@@ -195,15 +195,31 @@ class CustomerService:
             # 3. أتمتة NetBird عبر الـ API (إنشاء الـ Group)
             group_payload = {"name": f"{username}"}
             group_res = requests.post(f"{FASTAPI_BASE_URL}/groups", json=group_payload, headers=headers)
+            group_id = None
             
-            if group_res.status_code not in [200, 201]:
-                raise Exception(f"Failed to create NetBird group: {group_res.text}")
-            
-            group_data = group_res.json()
-            group_id = group_data.get("id")
+            if group_res.status_code in [200, 201]:
+                group_data = group_res.json()
+                group_id = group_data.get("id")
+            else:
+                print(f"[CustomerService] NetBird group creation failed: {group_res.text}")
+                # إذا كانت المجموعة موجودة مسبقاً، استرجاع الـ ID الخاص بها وتفريغها
+                if group_res.status_code == 409 or "already exists" in group_res.text.lower():
+                    try:
+                        print(f"[CustomerService] Group '{username}' already exists, attempting to recover ID...")
+                        groups_res = requests.get(f"{FASTAPI_BASE_URL}/groups", headers=headers, timeout=10)
+                        if groups_res.status_code == 200:
+                            for g in groups_res.json():
+                                if g.get("name") == username:
+                                    group_id = g.get("id")
+                                    # تفريغ أي أعضاء قدامى
+                                    requests.put(f"{FASTAPI_BASE_URL}/groups/{group_id}", json={"name": username, "peers": []}, headers=headers, timeout=10)
+                                    print(f"[CustomerService] Successfully recovered and cleaned existing group {group_id}")
+                                    break
+                    except Exception as ge:
+                        print(f"[CustomerService] Error recovering existing group: {ge}")
 
             if not group_id:
-                raise Exception("NetBird group creation returned no id")
+                raise Exception("Failed to provision network resources. Please try again or contact support.")
 
             client.netbird_group_id = group_id
             created_group_id = group_id
@@ -223,7 +239,8 @@ class CustomerService:
 
             sk_res = requests.post(f"{FASTAPI_BASE_URL}/setup-keys", json=setup_key_payload, headers=headers)
             if sk_res.status_code not in [200, 201]:
-                raise Exception(f"Failed to create NetBird setup-key: {sk_res.text}")
+                print(f"[CustomerService] NetBird setup-key creation failed: {sk_res.text}")
+                raise Exception("Failed to provision network access key. Please try again or contact support.")
             
             setup_key_data = sk_res.json()
             netbird_plain_key = setup_key_data.get("key")
@@ -277,7 +294,8 @@ class CustomerService:
                 policy_res = requests.post(f"{FASTAPI_BASE_URL}/policies", json=policy_payload, headers=headers)
 
                 if policy_res.status_code not in [200, 201]:
-                    raise Exception(f"Failed to create NetBird policy {pname}: {policy_res.text}")
+                    print(f"[CustomerService] NetBird policy creation failed for {pname}: {policy_res.text}")
+                    raise Exception("Failed to provision network access policies. Please try again or contact support.")
 
                 pid = policy_res.json().get("id")
                 if pid:
@@ -322,16 +340,6 @@ class CustomerService:
             return True, token_value
         except Exception as e:
             self.client_repo.rollback()
-            return False, str(e)
-
-    def delete_customer(self, customer_id):
-        client = self.client_repo.get_by_id(customer_id)
-        if not client:
-            return False, "Customer not found"
-        try:
-            self.client_repo.delete(client)
-            return True, "Customer deleted"
-        except Exception as e:
             return False, str(e)
 
     def toggle_token(self, customer_id, token_value):
@@ -392,11 +400,16 @@ class CustomerService:
 
     def delete_customer(self, customer_id):
         """
-        حذف العميل من قاعدة البيانات ومن NetBird (Policy, Setup Key, Group)
+        حذف العميل من قاعدة البيانات ومن NetBird (Peers, Policy, Setup Key, Group)
+        الترتيب الإلزامي: 
+        1. مسح Peers التابعة للمجموعة
+        2. مسح Policies المرتبطة بالعميل أو بالمجموعة
+        3. مسح Setup Keys المرتبطة بالمجموعة (عبر auto_groups) أو باسم العميل
+        4. مسح الـ Group (مع إعادة المحاولة وحل أي ارتباط متبقٍ تلقائياً)
+        5. مسح العميل من قاعدة البيانات المحلية
         """
         FASTAPI_BASE_URL = "https://api.networkat.cloud/api/v2/netbird"
         
-        # 1. إضافة Bearer Token لجميع الطلبات
         token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
         headers = {
             "accept": "application/json",
@@ -412,44 +425,131 @@ class CustomerService:
         group_id = getattr(client, 'netbird_group_id', None)
 
         try:
-            # 1. مسح Policies المتعلقة بالعميل
-            try:
-                policies_res = requests.get(f"{FASTAPI_BASE_URL}/policies", headers=headers, timeout=5)
-                if policies_res.status_code == 200:
-                    for policy in policies_res.json():
-                        pname = policy.get("name", "")
-                        if pname == username or pname.startswith(f"{username}-"):
-                            requests.delete(f"{FASTAPI_BASE_URL}/policies/{policy.get('id')}", headers=headers, timeout=5)
-            except Exception as e:
-                print(f"Warning: Failed to delete NetBird policy for {username}: {str(e)}")
-
-            # 2. مسح Setup Keys المتعلقة بالعميل
-            try:
-                keys_res = requests.get(f"{FASTAPI_BASE_URL}/setup-keys", headers=headers, timeout=5)
-                if keys_res.status_code == 200:
-                    for key in keys_res.json():
-                        if key.get("name") == username:
-                            requests.delete(f"{FASTAPI_BASE_URL}/setup-keys/{key.get('id')}", headers=headers, timeout=5)
-            except Exception as e:
-                print(f"Warning: Failed to delete NetBird setup key for {username}: {str(e)}")
-
-            # 3. مسح Group الخاص بالعميل
-            if group_id:
+            # ── Step 0: جلب الـ Group ID إذا لم يكن مسجلاً في قاعدة البيانات ──
+            if not group_id:
                 try:
-                    requests.delete(f"{FASTAPI_BASE_URL}/groups/{group_id}", headers=headers, timeout=5)
-                except Exception as e:
-                    print(f"Warning: Failed to delete NetBird group {group_id}: {str(e)}")
-            else:
-                try:
-                    groups_res = requests.get(f"{FASTAPI_BASE_URL}/groups", headers=headers, timeout=5)
+                    groups_res = requests.get(f"{FASTAPI_BASE_URL}/groups", headers=headers, timeout=10)
                     if groups_res.status_code == 200:
                         for g in groups_res.json():
                             if g.get("name") == username:
-                                requests.delete(f"{FASTAPI_BASE_URL}/groups/{g.get('id')}", headers=headers, timeout=5)
+                                group_id = g.get("id")
+                                break
                 except Exception as e:
-                    print(f"Warning: Failed to delete NetBird group for {username}: {str(e)}")
+                    print(f"[CustomerService] Warning: Failed to lookup group for {username}: {e}")
 
-            # 4. مسح العميل من قاعدة البيانات المحلية
+            # ── Step 1: حذف جميع الأجهزة (Peers) التابعة للعميل من NetBird ──
+            if group_id:
+                try:
+                    grp_res = requests.get(f"{FASTAPI_BASE_URL}/groups/{group_id}", headers=headers, timeout=10)
+                    if grp_res.status_code == 200:
+                        grp_data = grp_res.json()
+                        peers = grp_data.get("peers") or []
+                        for peer in peers:
+                            pid = peer.get("id") if isinstance(peer, dict) else peer
+                            if pid:
+                                try:
+                                    del_res = requests.delete(f"{FASTAPI_BASE_URL}/peers/{pid}", headers=headers, timeout=10)
+                                    print(f"[CustomerService] Deleted peer {pid}: HTTP {del_res.status_code}")
+                                except Exception as pe:
+                                    print(f"[CustomerService] Warning: Failed to delete peer {pid}: {pe}")
+                except Exception as e:
+                    print(f"[CustomerService] Warning: Failed to fetch/delete group peers for {username}: {e}")
+
+            # ── Step 2: مسح Policies المتعلقة بالعميل أو بالمجموعة ──
+            try:
+                policies_res = requests.get(f"{FASTAPI_BASE_URL}/policies", headers=headers, timeout=10)
+                if policies_res.status_code == 200:
+                    for policy in policies_res.json():
+                        pname = policy.get("name", "")
+                        is_linked_by_name = (
+                            pname == username or
+                            pname.startswith(f"{username}-") or
+                            pname.startswith(username)
+                        )
+                        is_linked_by_group = False
+                        if group_id:
+                            for rule in (policy.get("rules") or []):
+                                for s in (rule.get("sources") or []):
+                                    sid = s.get("id") if isinstance(s, dict) else s
+                                    if sid == group_id:
+                                        is_linked_by_group = True
+                                        break
+                                for d in (rule.get("destinations") or []):
+                                    did = d.get("id") if isinstance(d, dict) else d
+                                    if did == group_id:
+                                        is_linked_by_group = True
+                                        break
+                                if is_linked_by_group:
+                                    break
+
+                        if is_linked_by_name or is_linked_by_group:
+                            try:
+                                requests.delete(f"{FASTAPI_BASE_URL}/policies/{policy.get('id')}", headers=headers, timeout=10)
+                                print(f"[CustomerService] Deleted policy '{pname}' ({policy.get('id')})")
+                            except Exception as pe:
+                                print(f"[CustomerService] Warning: Failed to delete policy '{pname}': {pe}")
+            except Exception as e:
+                print(f"[CustomerService] Warning: Failed to list/delete policies for {username}: {e}")
+
+            # ── Step 3: مسح Setup Keys المرتبطة بالمجموعة (auto_groups) أو باسم العميل ──
+            try:
+                keys_res = requests.get(f"{FASTAPI_BASE_URL}/setup-keys", headers=headers, timeout=10)
+                if keys_res.status_code == 200:
+                    for key in keys_res.json():
+                        kname = key.get("name", "")
+                        auto_groups = key.get("auto_groups") or []
+                        is_linked_by_group = bool(group_id and group_id in auto_groups)
+                        is_linked_by_name = (
+                            kname == username or
+                            kname.startswith(f"{username}-") or
+                            kname.startswith(f"install-{username}") or
+                            kname.startswith(username)
+                        )
+                        if is_linked_by_group or is_linked_by_name:
+                            try:
+                                requests.delete(f"{FASTAPI_BASE_URL}/setup-keys/{key.get('id')}", headers=headers, timeout=10)
+                                print(f"[CustomerService] Deleted setup-key '{kname}' ({key.get('id')})")
+                            except Exception as ke:
+                                print(f"[CustomerService] Warning: Failed to delete setup-key '{kname}': {ke}")
+            except Exception as e:
+                print(f"[CustomerService] Warning: Failed to list/delete setup-keys for {username}: {e}")
+
+            # ── Step 4: مسح Group الخاص بالعميل من NetBird ──
+            if group_id:
+                try:
+                    # تفريغ المجموعة أولاً
+                    try:
+                        requests.put(f"{FASTAPI_BASE_URL}/groups/{group_id}", json={"name": username, "peers": []}, headers=headers, timeout=10)
+                    except Exception:
+                        pass
+
+                    del_res = requests.delete(f"{FASTAPI_BASE_URL}/groups/{group_id}", headers=headers, timeout=10)
+                    if del_res.status_code in (200, 204):
+                        print(f"[CustomerService] Deleted group {group_id} for {username}")
+                    else:
+                        print(f"[CustomerService] Group delete returned HTTP {del_res.status_code}: {del_res.text}")
+                        # إذا كان هناك ارتباط بمفتاح setup key متبقٍ لم يحذف
+                        if "linked to setup key" in del_res.text.lower():
+                            try:
+                                keys_res = requests.get(f"{FASTAPI_BASE_URL}/setup-keys", headers=headers, timeout=10)
+                                if keys_res.status_code == 200:
+                                    for k in keys_res.json():
+                                        if group_id in (k.get("auto_groups") or []):
+                                            requests.delete(f"{FASTAPI_BASE_URL}/setup-keys/{k.get('id')}", headers=headers, timeout=10)
+                                            print(f"[CustomerService] Deleted conflicting setup-key {k.get('id')} ({k.get('name')})")
+                            except Exception as ke:
+                                print(f"[CustomerService] Warning: Error cleaning conflicting setup-keys: {ke}")
+
+                        # إعادة المحاولة لحذف المجموعة
+                        del_retry = requests.delete(f"{FASTAPI_BASE_URL}/groups/{group_id}", headers=headers, timeout=10)
+                        if del_retry.status_code in (200, 204):
+                            print(f"[CustomerService] Deleted group {group_id} on retry for {username}")
+                        else:
+                            print(f"[CustomerService] WARNING: Could not delete group {group_id}: HTTP {del_retry.status_code} - {del_retry.text}")
+                except Exception as e:
+                    print(f"[CustomerService] Warning: Failed to delete group {group_id}: {e}")
+
+            # ── Step 5: مسح العميل من قاعدة البيانات المحلية ──
             self.client_repo.delete(client)
             self.client_repo.commit()
 
@@ -457,4 +557,5 @@ class CustomerService:
 
         except Exception as e:
             self.client_repo.rollback()
-            return False, str(e)
+            print(f"[CustomerService] Error deleting customer {username}: {e}")
+            return False, "Failed to delete customer. Please try again or contact support."
