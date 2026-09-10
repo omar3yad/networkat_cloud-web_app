@@ -135,6 +135,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                     c.subscription_status,
                     c.plan_id,
                     p.name AS plan_name,
+                    p.display_name AS plan_display_name,
                     p.allowed_peers_count AS plan_peer_limit
                 FROM clients c
                 LEFT JOIN subscription_plans p ON (c.plan_id = p.id OR (c.plan_id IS NULL AND LOWER(p.name) = LOWER(c.subscription)))
@@ -159,7 +160,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
             client_name, client_company_name, client_email,
             client_country, subscription, created_at,
             netbird_group_id, subscription_status, plan_id,
-            plan_name, plan_peer_limit
+            plan_name, plan_display_name, plan_peer_limit
         ) = row
 
         if not active:
@@ -171,6 +172,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
             return JSONResponse(status_code=401, content=_INVALID)
 
         plan_name = plan_name or subscription or "starter"
+        plan_display = plan_display_name or plan_name.title()
         allowed_peers_count = plan_peer_limit or (15 if plan_name == "pro" else (50 if plan_name == "enterprise" else 5))
         subscription_status = subscription_status or "active"
 
@@ -184,7 +186,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                 company_name = client_company_name,
                 country      = client_country,
                 subscription = SubscriptionMeta(
-                    plan                  = plan_name,
+                    plan                  = plan_display,
                     allowed_peers_count   = allowed_peers_count,
                     remaining_peers_count = max(0, allowed_peers_count - installed),
                     installed_peers_count = installed,
@@ -278,7 +280,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                 status_code=403,
                 content={
                     "error": "Forbidden",
-                    "message": f"Cannot add more peers\nlimit exceeded ({current_peers}/{allowed_peers_count}). Upgrade plan to connect more.",
+                    "message": f"Cannot add more peers, limit exceeded ({current_peers}/{allowed_peers_count}).\nUpgrade plan to connect more.",
                     "account": _account_meta(current_peers),
                 }
             )
@@ -344,7 +346,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                 company_name = client_company_name,
                 country      = client_country,
                 subscription = SubscriptionMeta(
-                    plan                  = plan_name,
+                    plan                  = plan_display,
                     allowed_peers_count   = allowed,
                     remaining_peers_count = remaining,
                     installed_peers_count = installed,

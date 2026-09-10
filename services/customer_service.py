@@ -259,16 +259,19 @@ class CustomerService:
                     "suffix": "allow_mesh",
                     "description": "Allow peers to reach each other",
                     "destinations": [group_id],
+                    "bidirectional": True,
                 },
                 {
                     "suffix": "allow_controllers",
                     "description": "Allow peers to reach the controllers",
                     "destinations": [CONTROLLERS_GROUP_ID],
+                    "bidirectional": False,
                 },
                 {
                     "suffix": "allow_pkgs_servers",
                     "description": "Allow peers to fetch updates from package servers",
                     "destinations": [PKGS_SERVERS_GROUP_ID],
+                    "bidirectional": False,
                 },
             ]
 
@@ -284,7 +287,7 @@ class CustomerService:
                             "description": pdef["description"],
                             "action": "accept",
                             "enabled": True,
-                            "bidirectional": True,
+                            "bidirectional": pdef["bidirectional"],
                             "protocol": "all",
                             "sources": [group_id],
                             "destinations": pdef["destinations"],

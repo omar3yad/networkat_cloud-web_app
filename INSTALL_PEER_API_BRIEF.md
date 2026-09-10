@@ -78,12 +78,12 @@
 |---|---|---|
 | بيانات اعتماد خاطئة / حساب معطّل | 401 | `{"error":"Unauthorized","message":"Invalid credentials or account is not active."}` |
 | اشتراك مقيّد (`limit_control`/`inactive`) | 403 | `{"error":"Forbidden","message":"Subscription is currently restricted. Renew your plan to enroll new peers.","account":{…}}` |
-| تجاوز حصة الأجهزة | 403 | `{"error":"Forbidden","message":"Cannot add more peers\nlimit exceeded (N/M). Upgrade plan to connect more.","account":{…}}` |
+| تجاوز حصة الأجهزة | 403 | `{"error":"Forbidden","message":"Cannot add more peers, limit exceeded (N/M).\nUpgrade plan to connect more.","account":{…}}` |
 | تجاوز معدّل الطلبات (5 / 60 ث لكل IP) | 429 | `{"error":"Too Many Requests","message":"Too many attempts. Please try again in a minute."}` |
 | خطأ داخلي / فشل NetBird | 500 | `{"error":"Internal Server Error","message":"..."}` |
 
 - **`404` لم يعد يحدث** لهذا المسار (كان يُرجَع سابقًا عند "لا مفتاح نشط"). أي فرع يتعامل مع `404` كـ "لا مفتاح" يجب حذفه؛ الآن `404` = المسار القديم فقط.
-- أجسام أخطاء `403` (تجاوز الحصة + الاشتراك المقيّد) تحمل الآن كتلة `account` بنفس شكل رد الـ 200 (بدون `setup_key`/`install_token`) — بقية الأخطاء `{error, message}` فقط. رسالة تجاوز الحصة تحوي `\n` (سطران): "Cannot add more peers" ثم "limit exceeded (N/M). Upgrade plan to connect more.".
+- أجسام أخطاء `403` (تجاوز الحصة + الاشتراك المقيّد) تحمل الآن كتلة `account` بنفس شكل رد الـ 200 (بدون `setup_key`/`install_token`) — بقية الأخطاء `{error, message}` فقط. رسالة تجاوز الحصة تحوي `\n` (سطران): "Cannot add more peers, limit exceeded (N/M)." ثم "Upgrade plan to connect more.". الإنستولر يعرض `⚠` واحدة على السطر الأول فقط.
 
 ---
 
