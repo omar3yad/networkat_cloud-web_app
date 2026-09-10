@@ -36,8 +36,10 @@ def dashboard():
         flash("Customer not found", "error")
         return redirect(url_for('client.login'))
     
-    # Get total edges count from database directly (extremely fast, no API calls)
-    total_edges = edge_service.edge_repo.count_by_customer(customer_id)
+    # Get customer peer count from cache
+    customer = Client.query.get(customer_id)
+    allowed_peer_ids = get_cached_customer_peer_ids(customer) if customer else set()
+    total_edges = len(allowed_peer_ids)
     
     return render_template(
         'dashboard.html',
@@ -285,7 +287,8 @@ def profile():
 
         return redirect(url_for('client.profile'))
 
-    total_edges = edge_service.edge_repo.count_by_customer(customer_id)
+    allowed_peer_ids = get_cached_customer_peer_ids(client_record) if client_record else set()
+    total_edges = len(allowed_peer_ids)
 
     return render_template(
         'profile.html',

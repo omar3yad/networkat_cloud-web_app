@@ -6,7 +6,6 @@ import logging
 from utils.cache_manager import firewall_cache_lock, firewall_rules_cache, firewall_revalidating
 from utils.network_validators import validate_address_spec, validate_port_spec
 from extensions import db
-from models import FirewallRule
 
 logger = logging.getLogger(__name__)
 

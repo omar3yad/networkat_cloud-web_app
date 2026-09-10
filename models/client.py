@@ -125,30 +125,6 @@ class Client(BaseModel):
         cascade="all, delete-orphan"
     )
 
-    edges = db.relationship(
-        "Edge",
-        back_populates="client",
-        cascade="all, delete-orphan"
-    )
-
-    firewall_rules = db.relationship(
-        "FirewallRule",
-        back_populates="client",
-        cascade="all, delete-orphan"
-    )
-
-    dns_rules = db.relationship(
-        "DNSRule",
-        back_populates="client",
-        cascade="all, delete-orphan"
-    )
-
-    policies = db.relationship(
-        "Policy",
-        back_populates="client",
-        cascade="all, delete-orphan"
-    )
-
     # --- Subscription Helper Properties ---
     @property
     def is_subscription_active(self):

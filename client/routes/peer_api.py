@@ -8,8 +8,7 @@ from sqlalchemy import or_
 
 from client.blueprint import client_bp
 from client.decorators import login_required, no_cache_json, verify_peer_access, subscription_write_required
-from config.database import db
-from models import Client, Edge, FirewallRule, DNSRule
+from models import Client
 from services.netbird_service import (
     get_cached_customer_peer_ids,
     get_cached_all_netbird_peers,
@@ -363,27 +362,7 @@ def delete_peer(peer_id):
             'error': f"Failed to delete peer from NetBird: {peer_del_res.text}"
         }), peer_del_res.status_code
 
-    # 4. Cleanup local database (Edge, FirewallRule, DNSRule)
-    try:
-        edge_filters = []
-        if peer_ip:
-            edge_filters.append(Edge.assigned_ip == peer_ip)
-        if peer_name:
-            edge_filters.append(Edge.edge_name == peer_name)
-
-        if edge_filters:
-            edges_to_delete = Edge.query.filter_by(client_id=customer_id).filter(or_(*edge_filters)).all()
-            for ed in edges_to_delete:
-                FirewallRule.query.filter_by(edge_id=ed.id).delete()
-                DNSRule.query.filter_by(edge_id=ed.id).delete()
-                db.session.delete(ed)
-
-        db.session.commit()
-    except Exception as db_err:
-        logger.error(f"Error cleaning up database for peer {peer_id}: {db_err}")
-        db.session.rollback()
-
-    # 5. Clear caches and overrides
+    # 4. Clear caches and overrides
     for path in [
         f"/tmp/peer_name_{peer_id}.json",
         f"/tmp/peer_route_{peer_id}.json",
