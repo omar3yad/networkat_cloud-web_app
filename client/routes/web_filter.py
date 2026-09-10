@@ -221,7 +221,7 @@ def get_peer_web_filter_rules(peer_id):
     if should_revalidate:
         agent_url = f"http://{peer_ip}:8765/web-filter/rules"
         try:
-            resp = requests.get(agent_url, timeout=10)
+            resp = requests.get(agent_url, timeout=(1, 10))
             if resp.ok:
                 data = resp.json()
                 cached_rules = data.get("rules", [])
@@ -285,7 +285,7 @@ def add_peer_web_filter_rule(peer_id):
     payload = _sanitize_web_filter_payload(request.get_json() or {})
     
     try:
-        resp = requests.post(agent_url, json=payload, timeout=15)
+        resp = requests.post(agent_url, json=payload, timeout=(1, 15))
         if resp.ok:
             _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
@@ -312,7 +312,7 @@ def update_peer_web_filter_rule(peer_id, rule_id):
     payload = _sanitize_web_filter_payload(request.get_json() or {})
     
     try:
-        resp = requests.put(agent_url, json=payload, timeout=15)
+        resp = requests.put(agent_url, json=payload, timeout=(1, 15))
         if resp.ok:
             _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
@@ -338,7 +338,7 @@ def delete_peer_web_filter_rule(peer_id, rule_id):
     agent_url = f"http://{peer_ip}:8765/web-filter/rules/remove"
     
     try:
-        resp = requests.post(agent_url, json={"ids": [rule_id]}, timeout=15)
+        resp = requests.post(agent_url, json={"ids": [rule_id]}, timeout=(1, 15))
         if resp.ok:
             _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
@@ -365,7 +365,7 @@ def bulk_remove_peer_web_filter_rules(peer_id):
     payload = request.get_json() or {}
     
     try:
-        resp = requests.post(agent_url, json=payload, timeout=15)
+        resp = requests.post(agent_url, json=payload, timeout=(1, 15))
         if resp.ok:
             _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
@@ -392,7 +392,7 @@ def enable_peer_web_filter_rules(peer_id):
     payload = request.get_json() or {}
     
     try:
-        resp = requests.post(agent_url, json=payload, timeout=15)
+        resp = requests.post(agent_url, json=payload, timeout=(1, 15))
         if resp.ok:
             _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
@@ -419,7 +419,7 @@ def disable_peer_web_filter_rules(peer_id):
     payload = request.get_json() or {}
     
     try:
-        resp = requests.post(agent_url, json=payload, timeout=15)
+        resp = requests.post(agent_url, json=payload, timeout=(1, 15))
         if resp.ok:
             _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
@@ -446,7 +446,7 @@ def reorder_peer_web_filter_rules(peer_id):
     payload = request.get_json() or {}
     
     try:
-        resp = requests.post(agent_url, json=payload, timeout=15)
+        resp = requests.post(agent_url, json=payload, timeout=(1, 15))
         if resp.ok:
             _invalidate_web_filter_cache(peer_id)
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})

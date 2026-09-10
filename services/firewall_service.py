@@ -30,7 +30,7 @@ class FirewallService:
         if should_revalidate:
             try:
                 url = f"http://{peer_ip}:8765/firewall/rules"
-                resp = requests.get(url, timeout=5)
+                resp = requests.get(url, timeout=(1, 5))
                 if resp.ok:
                     agent_online = True
                     cached_live_rules = resp.json().get("rules", [])
@@ -130,7 +130,7 @@ class FirewallService:
 
         # Get live rules to generate random default name
         try:
-            live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=10)
+            live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
             live_rules = live_resp.json().get("rules", []) if live_resp.ok else []
         except Exception:
             live_rules = []
@@ -196,7 +196,7 @@ class FirewallService:
             agent_payload["order"] = order
 
         try:
-            resp = requests.post(agent_url, json=agent_payload, timeout=15)
+            resp = requests.post(agent_url, json=agent_payload, timeout=(1, 15))
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
 

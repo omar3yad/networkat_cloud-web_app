@@ -185,6 +185,9 @@
     <script src="{{ url_for('static', filename='js/network_math.js') }}"></script>
     <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
     <script>
+        window.IS_READONLY_SUBSCRIPTION = ("{{ 'true' if is_readonly_subscription else 'false' }}" === "true");
+        window.SUBSCRIPTION_STATUS = "{{ subscription_info.status if subscription_info and subscription_info.status else '' }}";
+
         let sidebarFilterOnline = false;
         let sidebarFilterOffline = false;
 
@@ -200,9 +203,19 @@
             }
 
             if (status === 'online') {
-                sidebarFilterOnline = !sidebarFilterOnline;
+                if (sidebarFilterOnline) {
+                    sidebarFilterOnline = false;
+                } else {
+                    sidebarFilterOnline = true;
+                    sidebarFilterOffline = false;
+                }
             } else if (status === 'offline') {
-                sidebarFilterOffline = !sidebarFilterOffline;
+                if (sidebarFilterOffline) {
+                    sidebarFilterOffline = false;
+                } else {
+                    sidebarFilterOffline = true;
+                    sidebarFilterOnline = false;
+                }
             }
             applySidebarSubmenuFilter();
         }
@@ -221,12 +234,11 @@
                 const isOnline = item.getAttribute('data-sidebar-online') === 'true';
                 let show = true;
 
-                if (sidebarFilterOnline && !sidebarFilterOffline) {
+                if (sidebarFilterOnline) {
                     show = isOnline;
-                } else if (!sidebarFilterOnline && sidebarFilterOffline) {
+                } else if (sidebarFilterOffline) {
                     show = !isOnline;
                 } else {
-                    // Both active or neither active -> show all
                     show = true;
                 }
 
@@ -248,7 +260,7 @@
                     emptyEl.className = 'submenu-empty';
                     submenu.appendChild(emptyEl);
                 }
-                const label = (sidebarFilterOnline && !sidebarFilterOffline) ? 'online' : 'offline';
+                const label = sidebarFilterOnline ? 'online' : 'offline';
                 emptyEl.textContent = `No ${label} peers`;
                 emptyEl.style.display = 'block';
             } else if (emptyEl) {

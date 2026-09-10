@@ -64,6 +64,8 @@ def inject_client_sidebar():
         return dict(sidebar_peers=[], sidebar_online_count=0, sidebar_offline_count=0)
 
     try:
+        is_inactive = (customer.subscription_status == 'inactive')
+
         # 1. Use the status cache from peer_api if available (contains true is_online handshake check)
         cached_status, _ = read_file_cache(f"customer_status_{customer_id}")
         if cached_status and cached_status.get("peers"):
@@ -74,7 +76,7 @@ def inject_client_sidebar():
                 is_online = p.get("is_online")
                 if is_online is None:
                     is_online = p.get("connected", False)
-                is_connected = bool(is_online)
+                is_connected = bool(is_online) and not is_inactive
                 offline_dur = _format_offline_duration(p.get("last_seen")) if not is_connected else ""
                 offline_ge_7d = _is_offline_ge_7d(p.get("last_seen"), is_connected)
                 sidebar_peers.append({
@@ -89,7 +91,7 @@ def inject_client_sidebar():
                     "status_title": f"Offline for {offline_dur}" if offline_dur else ("Connected" if is_connected else "Offline")
                 })
             sidebar_peers.sort(key=lambda p: (p.get("name") or "").lower())
-            sidebar_online_count = sum(1 for p in sidebar_peers if p.get("connected"))
+            sidebar_online_count = 0 if is_inactive else sum(1 for p in sidebar_peers if p.get("connected"))
             sidebar_offline_count = len(sidebar_peers) - sidebar_online_count
             return dict(
                 sidebar_peers=sidebar_peers,
@@ -108,7 +110,7 @@ def inject_client_sidebar():
         for p in customer_peers:
             peer_id = p.get("id")
             pname = get_name_override(peer_id) or p.get("name") or "Edge Device"
-            is_connected = bool(p.get("connected", False))
+            is_connected = bool(p.get("connected", False)) and not is_inactive
             offline_dur = _format_offline_duration(p.get("last_seen")) if not is_connected else ""
             offline_ge_7d = _is_offline_ge_7d(p.get("last_seen"), is_connected)
             sidebar_peers.append({
@@ -124,7 +126,7 @@ def inject_client_sidebar():
             })
 
         sidebar_peers.sort(key=lambda p: (p.get("name") or "").lower())
-        sidebar_online_count = sum(1 for p in sidebar_peers if p.get("connected"))
+        sidebar_online_count = 0 if is_inactive else sum(1 for p in sidebar_peers if p.get("connected"))
         sidebar_offline_count = len(sidebar_peers) - sidebar_online_count
         return dict(
             sidebar_peers=sidebar_peers,
@@ -181,8 +183,8 @@ def inject_subscription_context():
             banner = {
                 "type": "danger",
                 "icon": "fas fa-lock",
-                "title": "Read-Only Mode:",
-                "message": "Subscription expired. Network modifications are locked until renewal.",
+                "title": "Read Only Mode:",
+                "message": "Subscription expired: Management locked | Mesh connected.",
                 "status": "limit_control"
             }
         elif status == 'inactive':
@@ -190,7 +192,7 @@ def inject_subscription_context():
                 "type": "critical",
                 "icon": "fas fa-ban",
                 "title": "Subscription Inactive:",
-                "message": "Service suspended. Renew your subscription to restore connectivity.",
+                "message": "Renew your subscription.",
                 "status": "inactive"
             }
 

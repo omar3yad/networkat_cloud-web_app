@@ -66,34 +66,18 @@
     </div>
 
     <!-- Quick Installation Card -->
-    <div class="card install-card {% if is_readonly_subscription or (subscription_info and subscription_info.remaining_peers_count == 0) %}install-locked{% endif %}">
+    <div class="card install-card">
         <div class="card-header">
             <h3><i class="fas fa-terminal"></i> Quick Installation</h3>
-            {% if is_readonly_subscription %}
-            <span class="badge-status-pill status-limit_control"><i class="fas fa-lock"></i> Locked</span>
-            {% elif subscription_info and subscription_info.remaining_peers_count == 0 %}
-            <span class="badge-status-pill status-warning"><i class="fas fa-ban"></i> Quota Full</span>
-            {% endif %}
         </div>
         <div class="install-card-body">
-            {% if is_readonly_subscription %}
-            <div class="install-restriction-banner">
-                <i class="fas fa-lock"></i>
-                <span>Account is in <strong>Read-Only</strong> mode. Installing new peers is prohibited until your subscription is renewed.</span>
-            </div>
-            {% elif subscription_info and subscription_info.remaining_peers_count == 0 %}
-            <div class="install-restriction-banner banner-warning">
-                <i class="fas fa-exclamation-circle"></i>
-                <span>Peer limit reached (<strong>{{ subscription_info.installed_peers_count }}/{{ subscription_info.allowed_peers_count }}</strong>). Upgrade plan to add more.</span>
-            </div>
-            {% endif %}
             <p class="install-desc">Peer install command</p>
-            <div class="command-box {% if is_readonly_subscription or (subscription_info and subscription_info.remaining_peers_count == 0) %}box-disabled{% endif %}">
+            <div class="command-box">
                 <div class="command-text-wrap">
                     <span class="command-prompt">$</span>
                     <span class="command-text" id="install-cmd-text">curl -fsSL https://pkgs.networkat.cloud/install.sh | sudo bash</span>
                 </div>
-                <button class="btn-copy-cmd" onclick="copyInstallCommand(this)" title="Copy command" {% if is_readonly_subscription or (subscription_info and subscription_info.remaining_peers_count == 0) %}disabled{% endif %}>
+                <button class="btn-copy-cmd" onclick="copyInstallCommand(this)" title="Copy command">
                     <i class="far fa-copy"></i>
                     <span></span>
                 </button>

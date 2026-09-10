@@ -129,6 +129,9 @@ def peer_details(peer_id):
     except Exception as e:
         current_app.logger.error(f"Error checking peer status in peer details page: {e}")
 
+    if customer and customer.subscription_status == 'inactive':
+        is_online = False
+
     return render_template(
         'peer_details.html',
         peer_id=peer_id,

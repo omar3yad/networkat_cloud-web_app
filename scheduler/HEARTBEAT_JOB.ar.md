@@ -144,7 +144,7 @@ stderr_logfile_maxbytes=0
 نبضة الحياة. لا body، لا auth.
 
 ```bash
-curl -s -XPOST http://100.123.117.214:8765/heartbeat
+curl -s --connect-timeout 1 -XPOST http://100.123.117.214:8765/heartbeat
 ```
 
 **رد 200:**
@@ -162,7 +162,7 @@ curl -s -XPOST http://100.123.117.214:8765/heartbeat
 ### 4.2 `GET /failsafe` — حالة الـ failsafe
 
 ```bash
-curl -s http://100.123.117.214:8765/failsafe | jq
+curl -s --connect-timeout 1 http://100.123.117.214:8765/failsafe | jq
 ```
 ```json
 {
@@ -196,11 +196,11 @@ body: `{"action": "enable"}` أو `{"action": "disable"}`.
 
 ```bash
 # تهبيط صريح فوري
-curl -s -XPOST http://100.123.117.214:8765/failsafe \
+curl -s --connect-timeout 1 -XPOST http://100.123.117.214:8765/failsafe \
   -H 'content-type: application/json' -d '{"action":"enable"}' | jq
 
 # إلغاء (لازم صريح — enable لا يُسترجع تلقائيًا)
-curl -s -XPOST http://100.123.117.214:8765/failsafe \
+curl -s --connect-timeout 1 -XPOST http://100.123.117.214:8765/failsafe \
   -H 'content-type: application/json' -d '{"action":"disable"}' | jq
 ```
 الرد بنفس شكل `GET /failsafe` مع `action: "enable"` / `"disable"` و
@@ -211,7 +211,7 @@ curl -s -XPOST http://100.123.117.214:8765/failsafe \
 body: `{"timeout_seconds": <int>}` — بين `60` و `1209600`.
 
 ```bash
-curl -s -XPUT http://100.123.117.214:8765/failsafe/config \
+curl -s --connect-timeout 1 -XPUT http://100.123.117.214:8765/failsafe/config \
   -H 'content-type: application/json' -d '{"timeout_seconds": 604800}' | jq
 ```
 > الافتراضي الحالي في المُنصِّب (`failsafe_engine.py: DEFAULT_TIMEOUT_SECONDS`) =

@@ -23,7 +23,9 @@ from fastapi_app.schemas.controller.commands import CommandType
 from fastapi_app.services.netbird.peers import NetBirdPeerService
 
 AGENT_PORT = 8765
+AGENT_CONNECT_TIMEOUT = 1
 AGENT_TIMEOUT_SECONDS = 30  # spec Open Decision #3 default
+AGENT_TIMEOUT = (AGENT_CONNECT_TIMEOUT, AGENT_TIMEOUT_SECONDS)
 
 
 class CommandError(Exception):
@@ -108,30 +110,30 @@ def _call_agent_sync(peer_ip: str, request_id: uuid.UUID, command_type: str, par
     if command_type == "vpn_only":
         operation = parameters.get("operation") or parameters.get("action")
         if operation in ("on", "off"):
-            response = requests.post(f"{url_base}/vpn-only", json={"operation": operation}, timeout=AGENT_TIMEOUT_SECONDS)
+            response = requests.post(f"{url_base}/vpn-only", json={"operation": operation}, timeout=AGENT_TIMEOUT)
         elif operation == "status":
-            response = requests.get(f"{url_base}/vpn-only", timeout=AGENT_TIMEOUT_SECONDS)
+            response = requests.get(f"{url_base}/vpn-only", timeout=AGENT_TIMEOUT)
         else:
-            response = requests.get(f"{url_base}/vpn-only", timeout=AGENT_TIMEOUT_SECONDS)
+            response = requests.get(f"{url_base}/vpn-only", timeout=AGENT_TIMEOUT)
             
     elif command_type == "system_info":
-        response = requests.get(f"{url_base}/status", timeout=AGENT_TIMEOUT_SECONDS)
+        response = requests.get(f"{url_base}/status", timeout=AGENT_TIMEOUT)
         
     elif command_type == "wan_links":
-        response = requests.get(f"{url_base}/wan-links/status", timeout=5)
+        response = requests.get(f"{url_base}/wan-links/status", timeout=(AGENT_CONNECT_TIMEOUT, 5))
         
     elif command_type == "firewall_rules":
         action = parameters.get("action", "list")
         if action == "add":
             rule_data = parameters.get("rule", {})
-            response = requests.post(f"{url_base}/firewall/rules", json=rule_data, timeout=AGENT_TIMEOUT_SECONDS)
+            response = requests.post(f"{url_base}/firewall/rules", json=rule_data, timeout=AGENT_TIMEOUT)
         elif action == "remove":
             rule_id = parameters.get("rule_id")
             if not rule_id:
                 raise ValueError("rule_id is required to remove a firewall rule")
-            response = requests.delete(f"{url_base}/firewall/rules/{rule_id}", timeout=AGENT_TIMEOUT_SECONDS)
+            response = requests.delete(f"{url_base}/firewall/rules/{rule_id}", timeout=AGENT_TIMEOUT)
         else:
-            response = requests.get(f"{url_base}/firewall/rules", timeout=AGENT_TIMEOUT_SECONDS)
+            response = requests.get(f"{url_base}/firewall/rules", timeout=AGENT_TIMEOUT)
             
     else:
         raise ValueError(f"Command type '{command_type}' is not supported by the new agent.")
@@ -142,7 +144,7 @@ def _call_agent_sync(peer_ip: str, request_id: uuid.UUID, command_type: str, par
 
 def _get_agent_health_sync(peer_ip: str) -> Optional[dict]:
     try:
-        response = requests.get(f"http://{peer_ip}:{AGENT_PORT}/health", timeout=5)
+        response = requests.get(f"http://{peer_ip}:{AGENT_PORT}/health", timeout=(AGENT_CONNECT_TIMEOUT, 5))
         response.raise_for_status()
         return response.json()
     except requests.RequestException:

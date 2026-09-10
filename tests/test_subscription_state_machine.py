@@ -66,15 +66,16 @@ class TestSubscriptionStateMachine(unittest.TestCase):
         client.subscription_status = "limit_control"
 
         def find_policy_side_effect(name):
-            if name == "testuser":
-                return {"id": "mesh-pol-1", "name": "testuser"}
-            if name == "testuser-pkgs":
-                return {"id": "pkgs-pol-2", "name": "testuser-pkgs"}
+            if name in ("testuser", "testuser-allow_mesh"):
+                return {"id": "mesh-pol-1", "name": name}
+            if name in ("testuser-pkgs", "testuser-allow_pkgs_servers"):
+                return {"id": "pkgs-pol-2", "name": name}
+            if name in ("testuser-controllers", "testuser-allow_controllers"):
+                return {"id": "ctrl-pol-3", "name": name}
             return None
 
         mock_find_policy.side_effect = find_policy_side_effect
         mock_set_policy.return_value = True
-        mock_remove_peers.return_value = True
 
         success = self.service.transition_to_inactive(client)
         self.assertTrue(success)
@@ -84,8 +85,11 @@ class TestSubscriptionStateMachine(unittest.TestCase):
         mock_set_policy.assert_any_call("mesh-pol-1", False)
         # Packages policy disabled
         mock_set_policy.assert_any_call("pkgs-pol-2", False)
-        # Peers removed from all-peers (cuts controller mesh)
-        mock_remove_peers.assert_called_once_with(client)
+        # Controllers policy NOT disabled (left intact)
+        for call_item in mock_set_policy.call_args_list:
+            self.assertNotEqual(call_item[0][0], "ctrl-pol-3")
+        # Peers NOT removed from all-peers so controllers communication remains active
+        mock_remove_peers.assert_not_called()
         mock_commit.assert_called_once()
 
     @patch('config.database.db.session.commit')

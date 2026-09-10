@@ -257,6 +257,67 @@ class SubscriptionService:
 
         return list(peer_ids)
 
+    def _find_client_policies(self, username: str, category_filter: str | None = None) -> dict[str, list[dict]]:
+        """
+        جلب وتصنيف كافة سياسات NetBird الخاصة بعميل معين:
+        - mesh: السياسات المسؤولة عن تواصل الأجهزة بينياً ({username}-allow_mesh أو {username})
+        - pkgs: السياسات المسؤولة عن خوادم الحزم ({username}-allow_pkgs_servers أو {username}-pkgs)
+        - controllers: السياسات المسؤولة عن الاتصال بالـ Controllers ({username}-controllers أو {username}-allow_controllers)
+        - all: كافة سياسات العميل
+        """
+        result = {
+            "mesh": [],
+            "pkgs": [],
+            "controllers": [],
+            "all": []
+        }
+        seen_ids = set()
+
+        def _add_pol(p, category):
+            if p and p.get("id") and p["id"] not in seen_ids:
+                seen_ids.add(p["id"])
+                result["all"].append(p)
+                result[category].append(p)
+
+        # 1. فحص أسماء السياسات القياسية والمستخدمة في NetBird
+        if category_filter in (None, "mesh"):
+            _add_pol(self._find_policy_by_name(f"{username}-allow_mesh"), "mesh")
+            _add_pol(self._find_policy_by_name(username), "mesh")
+
+        if category_filter in (None, "controllers"):
+            _add_pol(self._find_policy_by_name(f"{username}-allow_controllers"), "controllers")
+            _add_pol(self._find_policy_by_name(f"{username}-controllers"), "controllers")
+
+        if category_filter in (None, "pkgs"):
+            _add_pol(self._find_policy_by_name(f"{username}-allow_pkgs_servers"), "pkgs")
+            _add_pol(self._find_policy_by_name(f"{username}-pkgs"), "pkgs")
+
+        # 2. فحص شامل لأي سياسات إضافية تبدأ باسم العميل
+        url = f"{self.base_url}/policies"
+        try:
+            resp = requests.get(url, headers=self._get_headers(), timeout=10)
+            if resp.status_code == 200:
+                for p in resp.json():
+                    name = p.get("name", "").strip()
+                    if name == username or name.startswith(f"{username}-"):
+                        lower_name = name.lower()
+                        if "mesh" in lower_name or name == username:
+                            if category_filter in (None, "mesh"):
+                                _add_pol(p, "mesh")
+                        elif "pkg" in lower_name:
+                            if category_filter in (None, "pkgs"):
+                                _add_pol(p, "pkgs")
+                        elif "controller" in lower_name:
+                            if category_filter in (None, "controllers"):
+                                _add_pol(p, "controllers")
+                        else:
+                            if category_filter in (None, "mesh"):
+                                _add_pol(p, "mesh")
+        except Exception as e:
+            current_app.logger.error(f"[SubscriptionService] Error searching policies for '{username}': {e}")
+
+        return result
+
     def _find_policy_by_name(self, name: str) -> dict | None:
         """
         البحث في سياسات NetBird عن سياسة معينة بالاسم.
@@ -274,7 +335,7 @@ class SubscriptionService:
 
     def _set_policy_enabled(self, policy_id: str, enabled: bool) -> bool:
         """
-        تفعيل أو تعطيل سياسة في NetBird عبر PUT /policies/{id}.
+        تفعيل أو تعطيل سياسة وقواعدها في NetBird عبر PUT /policies/{id}.
         """
         url = f"{self.base_url}/policies/{policy_id}"
         try:
@@ -290,7 +351,7 @@ class SubscriptionService:
                     "id": r.get("id"),
                     "name": r.get("name"),
                     "description": r.get("description"),
-                    "enabled": r.get("enabled", True),
+                    "enabled": enabled,
                     "action": r.get("action", "accept"),
                     "bidirectional": r.get("bidirectional", True),
                     "protocol": r.get("protocol", "all"),
@@ -434,10 +495,10 @@ class SubscriptionService:
         client.subscription_status = "limit_control"
         db.session.commit()
 
-        # تعطيل سياسة packages إذا كانت موجودة
-        pkgs_policy = self._find_policy_by_name(f"{client.username}-pkgs")
-        if pkgs_policy:
-            self._set_policy_enabled(pkgs_policy["id"], False)
+        # تعطيل سياسات packages التابعة للعميل في NetBird
+        client_policies = self._find_client_policies(client.username, category_filter="pkgs")
+        for p in client_policies.get("pkgs", []):
+            self._set_policy_enabled(p["id"], False)
 
         current_app.logger.info(
             f"[SubscriptionService] Client '{client.username}' transitioned to 'limit_control' (read-only mode)."
@@ -446,11 +507,11 @@ class SubscriptionService:
 
     def transition_to_inactive(self, client) -> bool:
         """
-        الانتقال إلى غير مفعّل (inactive) — عزل تام:
+        الانتقال إلى غير مفعّل (inactive):
         - الحالة: 'inactive'
-        - تعطيل سياسة الـ Mesh ({username}) لمنع تواصل الأجهزة فيما بينها
-        - تعطيل سياسة {username}-pkgs
-        - إزالة أجهزة العميل من مجموعة all-peers لقطع الاتصال بالـ Controllers
+        - تعطيل سياسة الـ Mesh ({username}-allow_mesh) وسياسة حزم التحديثات ({username}-allow_pkgs_servers)
+        - إبقاء سياسة الـ Controllers ({username}-controllers) مفعلة كما هي للتواصل مع السيرفر
+        - إبقاء عضوية all-peers لاستمرار الاتصال بالـ Controllers
         """
         if not client:
             return False
@@ -458,21 +519,14 @@ class SubscriptionService:
         client.subscription_status = "inactive"
         db.session.commit()
 
-        # 1. تعطيل سياسة الـ Mesh الخاصة بالعميل
-        mesh_policy = self._find_policy_by_name(client.username)
-        if mesh_policy:
-            self._set_policy_enabled(mesh_policy["id"], False)
-
-        # 2. تعطيل سياسة packages
-        pkgs_policy = self._find_policy_by_name(f"{client.username}-pkgs")
-        if pkgs_policy:
-            self._set_policy_enabled(pkgs_policy["id"], False)
-
-        # 3. إزالة الأجهزة من all-peers لقطع الاتصال بالـ Controllers
-        self._remove_peers_from_all_peers_group(client)
+        # تعطيل سياسات mesh و pkgs فقط (إبقاء controllers تعمل بدون تغيير)
+        client_policies = self._find_client_policies(client.username)
+        target_policies = client_policies.get("mesh", []) + client_policies.get("pkgs", [])
+        for p in target_policies:
+            self._set_policy_enabled(p["id"], False)
 
         current_app.logger.info(
-            f"[SubscriptionService] Client '{client.username}' transitioned to 'inactive' (fully isolated)."
+            f"[SubscriptionService] Client '{client.username}' transitioned to 'inactive' ({len(target_policies)} policies disabled: mesh & pkgs; controllers kept intact)."
         )
         return True
 
@@ -486,8 +540,7 @@ class SubscriptionService:
         """
         استعادة التفعيل الكامل (active):
         - الحالة: 'active'
-        - إعادة تفعيل سياسة الـ Mesh ({username})
-        - إعادة تفعيل سياسة {username}-pkgs
+        - إعادة تفعيل كافة سياسات العميل في NetBird (mesh, controllers, pkgs)
         - إعادة أجهزة العميل إلى مجموعة all-peers
         - تصفير فترة السماح وتحديث تاريخ التجديد والخطة إن طُلِب
         """
@@ -509,21 +562,16 @@ class SubscriptionService:
 
         db.session.commit()
 
-        # 1. إعادة تفعيل سياسة الـ Mesh
-        mesh_policy = self._find_policy_by_name(client.username)
-        if mesh_policy:
-            self._set_policy_enabled(mesh_policy["id"], True)
+        # 1. إعادة تفعيل كافة سياسات العميل في NetBird (mesh, controllers, pkgs)
+        client_policies = self._find_client_policies(client.username)
+        for p in client_policies.get("all", []):
+            self._set_policy_enabled(p["id"], True)
 
-        # 2. إعادة تفعيل سياسة packages
-        pkgs_policy = self._find_policy_by_name(f"{client.username}-pkgs")
-        if pkgs_policy:
-            self._set_policy_enabled(pkgs_policy["id"], True)
-
-        # 3. إعادة الأجهزة إلى all-peers
+        # 2. إعادة الأجهزة إلى all-peers
         self._add_peers_to_all_peers_group(client)
 
         current_app.logger.info(
-            f"[SubscriptionService] Client '{client.username}' restored to 'active' state."
+            f"[SubscriptionService] Client '{client.username}' restored to 'active' state ({len(client_policies.get('all', []))} policies enabled)."
         )
         return True
 

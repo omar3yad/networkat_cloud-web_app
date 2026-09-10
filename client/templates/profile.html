@@ -16,7 +16,7 @@
     <div class="header-section">
         <div class="title-area">
             <h1>Account Profile</h1>
-            <p>Manage your client details, organization settings, and credentials</p>
+            <!-- <p>Manage your client details, organization settings, and credentials</p> -->
         </div>
         <div>
             {% if client and client.active %}
@@ -145,7 +145,7 @@
                     <div class="form-control-wrap">
                         <i class="fas fa-phone field-icon"></i>
                         <input type="text" class="form-input" id="client_phone_number" name="client_phone_number"
-                            value="+{{ client.client_phone_number if (client and client.client_phone_number) else '' }}"
+                            value="{{ client.client_phone_number if (client and client.client_phone_number) else '' }}"
                             placeholder="e.g. +20 100 000 0000" maxlength="20">
                     </div>
                 </div>
@@ -246,7 +246,7 @@
                     </div>
 
                     <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.82rem; color: var(--nk-text-muted);">
-                        <span>Usage: <strong>{{ pct }}%</strong></span>
+                        <!-- <span>Usage: <strong>{{ pct }}%</strong></span> -->
                         <span><strong>{{ subscription_info.remaining_peers_count if subscription_info else 0 }}</strong> slots available</span>
                     </div>
                 </div>

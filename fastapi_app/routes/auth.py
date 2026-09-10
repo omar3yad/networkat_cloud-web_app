@@ -201,29 +201,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                 ),
             ).model_dump()
 
-        # ── 4. Enforce subscription status ─────────────────────────────────
-        if subscription_status in ("grace_period", "limit_control", "inactive"):
-            logger.warning(f"[install-peer-api] Account in non-active status='{subscription_status}' user='{username}'")
-            edge_cnt = db.execute(
-                text("SELECT COUNT(*) FROM edges WHERE client_id = :uid"),
-                {"uid": str(user_id)}
-            ).scalar()
-
-            if subscription_status == "grace_period":
-                msg = "Adding new peers is not allowed during the grace period. Please renew your subscription."
-            else:
-                msg = "Subscription is currently restricted. Renew your plan to enroll new peers."
-
-            return JSONResponse(
-                status_code=403,
-                content={
-                    "error": "Forbidden",
-                    "message": msg,
-                    "account": _account_meta(edge_cnt or 0),
-                }
-            )
-
-        # ── 5. NetBird group & peer quota check ────────────────────────────
+        # ── 4. NetBird group & live peer count ─────────────────────────────
         NETBIRD_BASE_URL = os.getenv("NETBIRD_API_URL", "http://netbird-server/api").rstrip("/")
         NETBIRD_TOKEN = os.getenv("NETBIRD_TOKEN")
         ALL_PEERS_GROUP_ID = os.getenv("NETBIRD_ALL_PEERS_GROUP_ID")
@@ -262,7 +240,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
             except Exception as ge:
                 logger.warning(f"[install-peer-api] Error looking up group for {username}: {ge}")
 
-        # Fetch current peer count
+        # Fetch current peer count from NetBird group
         current_peers = 0
         if netbird_group_id:
             try:
@@ -275,27 +253,42 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                         current_peers = len(gdata.get("peers") or [])
             except Exception as exc:
                 logger.warning(f"[install-peer-api] Error querying NetBird group {netbird_group_id}: {exc}")
-                edge_cnt = db.execute(
-                    text("SELECT COUNT(*) FROM edges WHERE client_id = :uid"),
-                    {"uid": str(user_id)}
-                ).scalar()
-                current_peers = edge_cnt or 0
-        else:
-            edge_cnt = db.execute(
-                text("SELECT COUNT(*) FROM edges WHERE client_id = :uid"),
-                {"uid": str(user_id)}
-            ).scalar()
-            current_peers = edge_cnt or 0
+                current_peers = 0
 
-        # Quota check
+        # ── 5. Enforce subscription status ─────────────────────────────────
+        if subscription_status != "active":
+            logger.warning(f"[install-peer-api] Non-active subscription='{subscription_status}' user='{username}'")
+            if subscription_status == "inactive":
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "error": "Forbidden",
+                        "message": "Subscription inactive. Please renew.",
+                        "account": _account_meta(current_peers),
+                        "username": username,
+                    }
+                )
+            else:
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "error": "Forbidden",
+                        "message": "Subscription restricted. Renew plan to enroll peers.",
+                        "account": _account_meta(current_peers),
+                        "username": username,
+                    }
+                )
+
+        # ── 6. Quota check ────────────────────────────────────────────────
         if current_peers >= allowed_peers_count:
             logger.warning(f"[install-peer-api] Peer limit reached for user='{username}' ({current_peers}/{allowed_peers_count})")
             return JSONResponse(
                 status_code=403,
                 content={
                     "error": "Forbidden",
-                    "message": f"Cannot add more peers, limit exceeded ({current_peers}/{allowed_peers_count}).\nUpgrade plan to connect more.",
+                    "message": f"Peer limit reached ({current_peers}/{allowed_peers_count}).\nUpgrade plan to add more.",
                     "account": _account_meta(current_peers),
+                    "username": username,
                 }
             )
 

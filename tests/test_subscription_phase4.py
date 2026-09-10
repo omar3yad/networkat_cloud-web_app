@@ -110,5 +110,69 @@ class TestSubscriptionMiddlewarePhase4(unittest.TestCase):
         self.assertNotEqual(data.get("error"), "Subscription Restricted")
 
 
+    @patch('models.client.Client.query')
+    @patch('client.routes.peer_api.read_file_cache')
+    @patch('client.routes.peer_api.get_cached_customer_peer_ids')
+    def test_peers_status_offline_when_inactive(self, mock_peer_ids, mock_cache, mock_query):
+        """When subscription is inactive, /api/peers/status must report all peers as offline and online count as 0."""
+        mock_client = MagicMock()
+        mock_client.subscription_status = 'inactive'
+        mock_query.get.return_value = mock_client
+        mock_peer_ids.return_value = {'peer-1', 'peer-2'}
+
+        cached_payload = {
+            "peers": [
+                {"id": "peer-1", "name": "Device 1", "is_online": True, "connected": True},
+                {"id": "peer-2", "name": "Device 2", "is_online": True, "connected": True}
+            ],
+            "summary": {"total": 2, "online": 2, "offline": 0}
+        }
+        mock_cache.return_value = (cached_payload, 9999999999)
+
+        with self.client.session_transaction() as sess:
+            sess['client_logged_in'] = True
+            sess['client_customer_id'] = 'test-uuid'
+
+        res = self.client.get('/api/peers/status')
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data["summary"]["online"], 0)
+        self.assertEqual(data["summary"]["offline"], 2)
+        for p in data["peers"]:
+            self.assertFalse(p["is_online"])
+            self.assertFalse(p["connected"])
+
+    @patch('models.client.Client.query')
+    @patch('client.context_processors.read_file_cache')
+    def test_sidebar_offline_when_inactive(self, mock_cache, mock_query):
+        """When subscription is inactive, inject_client_sidebar must set all peers as disconnected and online count as 0."""
+        from client.context_processors import inject_client_sidebar
+
+        mock_client = MagicMock()
+        mock_client.subscription_status = 'inactive'
+        mock_query.get.return_value = mock_client
+
+        cached_payload = {
+            "peers": [
+                {"id": "peer-1", "name": "Device 1", "is_online": True, "connected": True},
+                {"id": "peer-2", "name": "Device 2", "is_online": True, "connected": True}
+            ]
+        }
+        mock_cache.return_value = (cached_payload, 9999999999)
+
+        with self.client.session_transaction() as sess:
+            sess['client_customer_id'] = 'test-uuid'
+
+        with self.app.test_request_context():
+            from flask import session
+            session['client_customer_id'] = 'test-uuid'
+            ctx = inject_client_sidebar()
+            self.assertEqual(ctx["sidebar_online_count"], 0)
+            self.assertEqual(ctx["sidebar_offline_count"], 2)
+            for p in ctx["sidebar_peers"]:
+                self.assertFalse(p["connected"])
+
+
 if __name__ == '__main__':
     unittest.main()
+

@@ -130,7 +130,7 @@ def _ping_one(peer: dict) -> bool:
     ip = peer.get("ip")
     try:
         resp = requests.post(
-            f"http://{ip}:{AGENT_PORT}/heartbeat", timeout=HEARTBEAT_TIMEOUT
+            f"http://{ip}:{AGENT_PORT}/heartbeat", timeout=(1, HEARTBEAT_TIMEOUT)
         )
         if resp.ok:
             return True

@@ -218,7 +218,7 @@
 .stat-box .stat-label {
     font-size: 0.75rem;
     font-weight: 600;
-    text-transform: uppercase;
+    /* text-transform: uppercase; */
     letter-spacing: 0.05em;
     color: var(--nk-text-muted);
     margin-top: 0.25rem;

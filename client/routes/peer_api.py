@@ -330,7 +330,7 @@ def delete_peer(peer_id):
     if peer_ip:
         agent_url = f"http://{peer_ip}:8765/uninstall-peer"
         try:
-            agent_resp = requests.post(agent_url, json={"peer_id": peer_id}, timeout=3)
+            agent_resp = requests.post(agent_url, json={"peer_id": peer_id}, timeout=(1, 3))
             logger.info(f"Agent uninstall-peer call to {agent_url} returned {agent_resp.status_code}")
         except Exception as agent_err:
             logger.info(f"Agent uninstall-peer call skipped/failed for {peer_ip}: {agent_err}")
@@ -387,6 +387,18 @@ def delete_peer(peer_id):
     }), 200
 
 
+def _apply_subscription_status_overrides(payload, customer):
+    if customer and customer.subscription_status == 'inactive':
+        for p in payload.get("peers", []):
+            p["is_online"] = False
+            p["connected"] = False
+        if "summary" in payload:
+            total = payload["summary"].get("total", len(payload.get("peers", [])))
+            payload["summary"]["online"] = 0
+            payload["summary"]["offline"] = total
+    return payload
+
+
 def _revalidate_customer_peers_status(customer_id, customer, base_url, headers, allowed_peer_ids):
     """Background helper to refresh customer status cache."""
     try:
@@ -414,6 +426,12 @@ def _revalidate_customer_peers_status(customer_id, customer, base_url, headers, 
                     logger.error(f"Peer check error in background revalidation: {err}")
 
         processed_peers.sort(key=lambda p: (p.get("name") or "").lower())
+
+        if customer and customer.subscription_status == 'inactive':
+            for p in processed_peers:
+                p["is_online"] = False
+                p["connected"] = False
+            online_count = 0
 
         payload = {
             "peers": processed_peers,
@@ -454,7 +472,7 @@ def get_peers_status_api():
 
     # 1. Fresh cache (< 10s) when not forcing refresh
     if not force_refresh and cached_payload and (now - cached_time < 10):
-        return no_cache_json(cached_payload)
+        return no_cache_json(_apply_subscription_status_overrides(cached_payload, customer))
 
     # 2. Stale cache: return immediately, revalidate in background (only when not forcing refresh)
     if not force_refresh and cached_payload:
@@ -464,7 +482,7 @@ def get_peers_status_api():
                 _revalidate_customer_peers_status,
                 customer_id, customer, base_url, headers, allowed_peer_ids
             )
-        return no_cache_json(cached_payload)
+        return no_cache_json(_apply_subscription_status_overrides(cached_payload, customer))
 
     # 3. Synchronous fresh load
     try:
@@ -492,6 +510,12 @@ def get_peers_status_api():
                     logger.error(f"Peer check error: {err}")
 
         processed_peers.sort(key=lambda p: (p.get("name") or "").lower())
+
+        if customer and customer.subscription_status == 'inactive':
+            for p in processed_peers:
+                p["is_online"] = False
+                p["connected"] = False
+            online_count = 0
 
         payload = {
             "peers": processed_peers,
@@ -530,9 +554,9 @@ def peer_vpn_only_proxy(peer_id):
             data = request.get_json() or {}
             if "action" in data and "operation" not in data:
                 data["operation"] = data.pop("action")
-            resp = requests.post(agent_url, json=data, timeout=10)
+            resp = requests.post(agent_url, json=data, timeout=(1, 10))
         else:
-            resp = requests.get(agent_url, timeout=10)
+            resp = requests.get(agent_url, timeout=(1, 10))
 
         if resp.ok:
             try:

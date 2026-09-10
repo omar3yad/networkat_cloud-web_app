@@ -681,6 +681,27 @@ input:disabled+.slider {
     border-color: var(--nk-blue-primary);
 }
 
+.action-btn.btn-locked {
+    background-color: #eab308 !important;
+    border-color: #ca8a04 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    box-shadow: 0 1px 2px rgba(234, 179, 8, 0.2);
+}
+
+.action-btn.btn-locked:hover {
+    background-color: #ca8a04 !important;
+    border-color: #a16207 !important;
+    color: #ffffff !important;
+}
+
+.action-btn.btn-locked i {
+    font-size: 0.8rem;
+}
+
 .legend-footer {
     text-align: center;
     color: var(--nk-text-muted);

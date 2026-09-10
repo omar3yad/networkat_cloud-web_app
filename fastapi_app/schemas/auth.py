@@ -77,9 +77,10 @@ class InstallPeerResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Standard error response."""
-    error:   str = Field(..., description="Short error identifier.")
-    message: str = Field(..., description="Human-readable error description.")
-    account: Optional[AccountMeta] = Field(
+    error:    str = Field(..., description="Short error identifier.")
+    message:  str = Field(..., description="Human-readable error description.")
+    username: Optional[str] = Field(None, description="The authenticated username if valid.")
+    account:  Optional[AccountMeta] = Field(
         None,
         description="Account snapshot — set on quota / subscription 403s so the "
                     "installer can show the customer their plan alongside the notice.",

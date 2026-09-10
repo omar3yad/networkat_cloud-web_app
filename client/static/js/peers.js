@@ -97,8 +97,9 @@
         let offline = 0;
 
         if (Array.isArray(peersOrCount)) {
+            const isInactive = (window.SUBSCRIPTION_STATUS === 'inactive');
             total = peersOrCount.length;
-            online = peersOrCount.filter(p => !!p.is_online).length;
+            online = isInactive ? 0 : peersOrCount.filter(p => !!p.is_online).length;
             offline = total - online;
         } else if (typeof peersOrCount === 'number') {
             total = peersOrCount;
@@ -131,9 +132,28 @@
 
     function updatePeerStatuses(data) {
         if (!data || !data.peers) return;
+
+        const isInactive = (window.SUBSCRIPTION_STATUS === 'inactive');
+        if (isInactive) {
+            data.peers.forEach(p => {
+                p.is_online = false;
+                p.connected = false;
+            });
+        }
+
         updatePeerCountDisplay(data.peers);
 
+        const isLocked = !!(window.IS_READONLY_SUBSCRIPTION || window.SUBSCRIPTION_STATUS === 'limit_control' || window.SUBSCRIPTION_STATUS === 'inactive');
+
         data.peers.forEach(peer => {
+            const fwLink = document.getElementById(`firewall-link-${peer.id}`);
+            if (fwLink && isLocked) {
+                fwLink.className = 'action-btn btn-locked';
+                fwLink.removeAttribute('style');
+                fwLink.title = 'Account is locked (Read-Only)';
+                fwLink.innerHTML = '<i class="fas fa-lock"></i> Lock';
+            }
+
             const statusTitle = getPeerStatusTitle(peer);
             const statusBadge = document.getElementById(`status-badge-${peer.id}`);
             if (statusBadge) {
@@ -713,6 +733,13 @@
         const tbody = document.getElementById('peers-table-body');
         if (!tbody) return;
 
+        if (window.SUBSCRIPTION_STATUS === 'inactive' && peers) {
+            peers.forEach(p => {
+                p.is_online = false;
+                p.connected = false;
+            });
+        }
+
         updatePeerCountDisplay(peers || []);
 
         if (!peers || peers.length === 0) {
@@ -755,6 +782,21 @@
             const tr = document.createElement('tr');
             tr.setAttribute('data-peer-id', peerId);
             tr.setAttribute('data-peer-online', peer.is_online ? 'true' : 'false');
+
+            const isLocked = !!(window.IS_READONLY_SUBSCRIPTION || window.SUBSCRIPTION_STATUS === 'limit_control' || window.SUBSCRIPTION_STATUS === 'inactive');
+            const actionBtnHtml = isLocked ? `
+                <a href="${firewallHref}"
+                    id="firewall-link-${peerId}" class="action-btn btn-locked"
+                    title="Account is locked (Read-Only)">
+                    <i class="fas fa-lock"></i> Lock
+                </a>
+            ` : `
+                <a href="${firewallHref}"
+                    id="firewall-link-${peerId}" class="action-btn"
+                    style="background-color: var(--nk-blue-primary); border-color: var(--nk-blue-primary); color: white;">
+                    Open
+                </a>
+            `;
 
             tr.innerHTML = `
                 <td>
@@ -826,11 +868,7 @@
                 </td>
                 <td>
                     <div class="actions-cell">
-                        <a href="${firewallHref}"
-                            id="firewall-link-${peerId}" class="action-btn"
-                            style="background-color: var(--nk-blue-primary); border-color: var(--nk-blue-primary); color: white;">
-                            Open
-                        </a>
+                        ${actionBtnHtml}
                     </div>
                 </td>
             `;
@@ -937,9 +975,19 @@
 
     function togglePeerStatusFilter(status) {
         if (status === 'online') {
-            filterOnline = !filterOnline;
+            if (filterOnline) {
+                filterOnline = false;
+            } else {
+                filterOnline = true;
+                filterOffline = false;
+            }
         } else if (status === 'offline') {
-            filterOffline = !filterOffline;
+            if (filterOffline) {
+                filterOffline = false;
+            } else {
+                filterOffline = true;
+                filterOnline = false;
+            }
         }
         applyPeerStatusFilter();
     }
@@ -958,12 +1006,11 @@
             const isOnline = tr.getAttribute('data-peer-online') === 'true';
             let show = true;
 
-            if (filterOnline && !filterOffline) {
+            if (filterOnline) {
                 show = isOnline;
-            } else if (!filterOnline && filterOffline) {
+            } else if (filterOffline) {
                 show = !isOnline;
             } else {
-                // Both active or neither active -> show all
                 show = true;
             }
 
@@ -980,7 +1027,7 @@
                 emptyRow.id = 'peers-filter-empty-row';
                 tbody.appendChild(emptyRow);
             }
-            const label = (filterOnline && !filterOffline) ? 'online' : 'offline';
+            const label = filterOnline ? 'online' : 'offline';
             emptyRow.innerHTML = `
                 <td colspan="4" style="text-align: center; padding: 3.5rem; color: var(--nk-text-muted);">
                     <i class="fas fa-filter" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.4;"></i>
@@ -999,8 +1046,10 @@
         const filterParam = urlParams.get('filter');
         if (filterParam === 'online') {
             filterOnline = true;
+            filterOffline = false;
         } else if (filterParam === 'offline') {
             filterOffline = true;
+            filterOnline = false;
         }
         applyPeerStatusFilter();
 

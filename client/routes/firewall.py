@@ -104,7 +104,7 @@ def get_peer_firewall_rules(peer_id):
     if should_revalidate:
         try:
             url = f"http://{peer_ip}:8765/firewall/rules"
-            resp = requests.get(url, timeout=5)
+            resp = requests.get(url, timeout=(1, 5))
             if resp.ok:
                 agent_online = True
                 cached_live_rules = resp.json().get("rules", [])
@@ -221,7 +221,7 @@ def add_peer_firewall_rule(peer_id):
     peer_ip = peer.get("ip")
 
     try:
-        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=10)
+        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
         live_rules = live_resp.json().get("rules", []) if live_resp.ok else []
     except Exception:
         live_rules = []
@@ -287,7 +287,7 @@ def add_peer_firewall_rule(peer_id):
         agent_payload["order"] = order
 
     try:
-        resp = requests.post(agent_url, json=agent_payload, timeout=20)
+        resp = requests.post(agent_url, json=agent_payload, timeout=(1, 15))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -320,7 +320,7 @@ def toggle_peer_firewall_rule(peer_id, rule_id):
     peer_ip = peer.get("ip")
 
     try:
-        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=10)
+        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
         if not live_resp.ok:
             raise Exception("Failed to fetch live rules")
         live_rules = live_resp.json().get("rules", [])
@@ -341,7 +341,7 @@ def toggle_peer_firewall_rule(peer_id, rule_id):
             url = f"http://{peer_ip}:8765/firewall/rules/disable"
             
         payload = {"ids": [rule_slug]}
-        resp = requests.post(url, json=payload, timeout=10)
+        resp = requests.post(url, json=payload, timeout=(1, 10))
         if resp.ok and resp.json().get("ok"):
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -397,7 +397,7 @@ def edit_peer_firewall_rule(peer_id, rule_id):
     peer_ip = peer.get("ip")
 
     try:
-        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=10)
+        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
         if not live_resp.ok:
             raise Exception("Failed to fetch live rules")
         live_rules = live_resp.json().get("rules", [])
@@ -472,7 +472,7 @@ def edit_peer_firewall_rule(peer_id, rule_id):
         agent_payload["order"] = rule_order
 
     try:
-        resp = requests.put(agent_url, json=agent_payload, timeout=20)
+        resp = requests.put(agent_url, json=agent_payload, timeout=(1, 15))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -505,7 +505,7 @@ def delete_peer_firewall_rule(peer_id, rule_id):
     peer_ip = peer.get("ip")
 
     try:
-        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=10)
+        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
         if not live_resp.ok:
             raise Exception("Failed to fetch live rules")
         live_rules = live_resp.json().get("rules", [])
@@ -520,7 +520,7 @@ def delete_peer_firewall_rule(peer_id, rule_id):
 
     try:
         url = f"http://{peer_ip}:8765/firewall/rules/remove"
-        resp = requests.post(url, json={"ids": [slug]}, timeout=15)
+        resp = requests.post(url, json={"ids": [slug]}, timeout=(1, 10))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -554,7 +554,7 @@ def bulk_peer_firewall_rules(peer_id):
     peer_ip = peer.get("ip")
 
     try:
-        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=10)
+        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
         if not live_resp.ok:
             raise Exception("Failed to fetch live rules")
         live_rules = live_resp.json().get("rules", [])
@@ -586,7 +586,7 @@ def bulk_peer_firewall_rules(peer_id):
         else:
             return jsonify({"error": "Unsupported action"}), 400
 
-        resp = requests.post(url, json={"ids": slugs_to_act}, timeout=20)
+        resp = requests.post(url, json={"ids": slugs_to_act}, timeout=(1, 15))
         if resp.ok:
             path = f"/tmp/nbcache_firewall_rules_{peer_id}.json"
             try:
@@ -626,7 +626,7 @@ def reorder_peer_firewall_rules(peer_id):
     peer_ip = peer.get("ip")
 
     try:
-        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=10)
+        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
         if not live_resp.ok:
             raise Exception("Failed to fetch live rules")
         live_rules = live_resp.json().get("rules", [])
@@ -650,7 +650,7 @@ def reorder_peer_firewall_rules(peer_id):
 
     agent_url = f"http://{peer_ip}:8765/firewall/rules/reorder"
     try:
-        resp = requests.post(agent_url, json={"items": agent_items}, timeout=15)
+        resp = requests.post(agent_url, json={"items": agent_items}, timeout=(1, 10))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -678,7 +678,7 @@ def sync_peer_firewall_rules(peer_id):
     agent_url = f"http://{peer_ip}:8765/firewall/rules/sync"
 
     try:
-        resp = requests.post(agent_url, timeout=20)
+        resp = requests.post(agent_url, timeout=(1, 15))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -705,7 +705,7 @@ def reset_peer_firewall_rule_counter(peer_id, rule_id):
     peer_ip = peer.get("ip")
 
     try:
-        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=10)
+        live_resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
         if not live_resp.ok:
             raise Exception("Failed to fetch live rules")
         live_rules = live_resp.json().get("rules", [])
@@ -721,7 +721,7 @@ def reset_peer_firewall_rule_counter(peer_id, rule_id):
     agent_url = f"http://{peer_ip}:8765/firewall/rules/reset-counter"
 
     try:
-        resp = requests.post(agent_url, json=payload, timeout=15)
+        resp = requests.post(agent_url, json=payload, timeout=(1, 10))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)

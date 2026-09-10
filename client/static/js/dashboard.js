@@ -101,6 +101,19 @@
             const response = await fetch('/api/peers/status');
             if (response.ok) {
                 const data = await response.json();
+                if (window.SUBSCRIPTION_STATUS === 'inactive') {
+                    if (data.peers) {
+                        data.peers.forEach(p => {
+                            p.is_online = false;
+                            p.connected = false;
+                        });
+                    }
+                    if (data.summary) {
+                        data.summary.online = 0;
+                        data.summary.offline = data.summary.total;
+                    }
+                }
+
                 if (data.summary) {
                     const totalEl = document.getElementById('total-edges-val');
                     const onlineEl = document.getElementById('online-edges-val');

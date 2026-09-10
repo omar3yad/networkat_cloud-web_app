@@ -554,7 +554,7 @@
         color: var(--nk-text-muted);
         font-size: 0.78rem;
         font-weight: 700;
-        text-transform: uppercase;
+        /* text-transform: uppercase; */
         letter-spacing: 0.5px;
         white-space: nowrap;
     }
