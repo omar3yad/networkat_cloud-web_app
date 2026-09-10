@@ -1,12 +1,15 @@
+import os
 import time
 import requests
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import request, session, jsonify, current_app
+from sqlalchemy import or_
 
 from client.blueprint import client_bp
 from client.decorators import login_required, no_cache_json, verify_peer_access, subscription_write_required
-from models import Client
+from config.database import db
+from models import Client, Edge, FirewallRule, DNSRule
 from services.netbird_service import (
     get_cached_customer_peer_ids,
     get_cached_all_netbird_peers,
@@ -18,6 +21,8 @@ from services.netbird_service import (
 )
 from utils.cache_manager import (
     cache_lock,
+    customer_groups_cache,
+    firewall_rules_cache,
     vpn_only_cache,
     read_file_cache,
     write_file_cache,
@@ -287,6 +292,120 @@ def proxy_delete_route(route_id):
         return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@client_bp.route('/api/peers/<peer_id>/delete', methods=['DELETE', 'POST'])
+@client_bp.route('/api/peers/<peer_id>', methods=['DELETE'])
+@login_required
+@subscription_write_required
+def delete_peer(peer_id):
+    customer_id = session.get('client_customer_id')
+    customer = Client.query.get(customer_id) if customer_id else None
+    if not customer or not verify_peer_access(customer, peer_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    base_url = get_api_base_url()
+    headers = get_api_headers()
+
+    # Retrieve peer details to obtain IP and Name
+    peer_ip = None
+    peer_name = None
+    try:
+        peer_resp = requests.get(f"{base_url}/api/v2/netbird/peers/{peer_id}", headers=headers, timeout=5)
+        if peer_resp.ok:
+            p_data = peer_resp.json()
+            peer_ip = p_data.get("ip")
+            peer_name = p_data.get("name")
+    except Exception as e:
+        logger.warning(f"Could not fetch peer details from NetBird for {peer_id}: {e}")
+
+    if not peer_ip or not peer_name:
+        peers_data = get_cached_all_netbird_peers(base_url, headers)
+        for p in peers_data:
+            if p.get("id") == peer_id:
+                peer_ip = peer_ip or p.get("ip")
+                peer_name = peer_name or p.get("name")
+                break
+
+    # 1. Send uninstall command to peer agent (optional/graceful, ignore failure)
+    if peer_ip:
+        agent_url = f"http://{peer_ip}:8765/uninstall-peer"
+        try:
+            agent_resp = requests.post(agent_url, json={"peer_id": peer_id}, timeout=3)
+            logger.info(f"Agent uninstall-peer call to {agent_url} returned {agent_resp.status_code}")
+        except Exception as agent_err:
+            logger.info(f"Agent uninstall-peer call skipped/failed for {peer_ip}: {agent_err}")
+
+    # 2. Delete all NetBird routes associated with this peer
+    try:
+        routes_url = f"{base_url}/api/v2/netbird/routes"
+        routes_res = requests.get(routes_url, headers=headers, timeout=5)
+        if routes_res.ok:
+            routes = routes_res.json()
+            for route in routes:
+                r_peer_id = route.get('peer_id') or route.get('peer')
+                if r_peer_id == peer_id:
+                    route_id = route.get('id')
+                    if route_id:
+                        del_route_url = f"{base_url}/api/v2/netbird/routes/{route_id}"
+                        requests.delete(del_route_url, headers=headers, timeout=5)
+                        logger.info(f"Deleted associated route {route_id} for peer {peer_id}")
+    except Exception as r_err:
+        logger.warning(f"Error deleting associated routes for peer {peer_id}: {r_err}")
+
+    # 3. Delete peer from NetBird
+    del_peer_url = f"{base_url}/api/v2/netbird/peers/{peer_id}"
+    peer_del_res = requests.delete(del_peer_url, headers=headers, timeout=10)
+
+    if not (peer_del_res.ok or peer_del_res.status_code in [204, 404]):
+        return jsonify({
+            'success': False,
+            'error': f"Failed to delete peer from NetBird: {peer_del_res.text}"
+        }), peer_del_res.status_code
+
+    # 4. Cleanup local database (Edge, FirewallRule, DNSRule)
+    try:
+        edge_filters = []
+        if peer_ip:
+            edge_filters.append(Edge.assigned_ip == peer_ip)
+        if peer_name:
+            edge_filters.append(Edge.edge_name == peer_name)
+
+        if edge_filters:
+            edges_to_delete = Edge.query.filter_by(client_id=customer_id).filter(or_(*edge_filters)).all()
+            for ed in edges_to_delete:
+                FirewallRule.query.filter_by(edge_id=ed.id).delete()
+                DNSRule.query.filter_by(edge_id=ed.id).delete()
+                db.session.delete(ed)
+
+        db.session.commit()
+    except Exception as db_err:
+        logger.error(f"Error cleaning up database for peer {peer_id}: {db_err}")
+        db.session.rollback()
+
+    # 5. Clear caches and overrides
+    for path in [
+        f"/tmp/peer_name_{peer_id}.json",
+        f"/tmp/peer_route_{peer_id}.json",
+        f"/tmp/peer_vpn_only_{peer_id}.json"
+    ]:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
+
+    with cache_lock:
+        vpn_only_cache.pop(peer_id, None)
+        firewall_rules_cache.pop(peer_id, None)
+        customer_groups_cache.pop(customer_id, None)
+
+    clear_all_netbird_caches(customer_id=str(customer_id))
+
+    return jsonify({
+        "success": True,
+        "message": f"Peer '{peer_name or peer_id}' and all associated configurations were deleted successfully"
+    }), 200
 
 
 def _revalidate_customer_peers_status(customer_id, customer, base_url, headers, allowed_peer_ids):

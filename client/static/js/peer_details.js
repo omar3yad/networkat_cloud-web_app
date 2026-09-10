@@ -317,8 +317,129 @@
         }
     }
 
+    function openDeletePeerModal() {
+        const modal = document.getElementById('deletePeerModal');
+        const input = document.getElementById('delete-confirm-input');
+        const confirmBtn = document.getElementById('btn-confirm-delete-peer');
+        if (input) {
+            input.value = '';
+            input.classList.remove('is-invalid');
+        }
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Peer';
+        }
+        if (modal) {
+            modal.classList.add('active');
+            setTimeout(() => {
+                if (input) input.focus();
+            }, 50);
+        }
+    }
+
+    function closeDeletePeerModal() {
+        const modal = document.getElementById('deletePeerModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    function handleDeleteModalOverlayClick(event) {
+        if (event.target && event.target.id === 'deletePeerModal') {
+            closeDeletePeerModal();
+        }
+    }
+
+    function onDeleteConfirmInput(event) {
+        const value = (event.target.value || '').trim();
+        const confirmBtn = document.getElementById('btn-confirm-delete-peer');
+        if (confirmBtn) {
+            confirmBtn.disabled = (value !== 'delete');
+        }
+    }
+
+    function onDeleteConfirmKeydown(event) {
+        if (event.key === 'Enter') {
+            const value = (event.target.value || '').trim();
+            if (value === 'delete') {
+                event.preventDefault();
+                confirmDeletePeer();
+            }
+        } else if (event.key === 'Escape') {
+            closeDeletePeerModal();
+        }
+    }
+
+    async function confirmDeletePeer() {
+        const input = document.getElementById('delete-confirm-input');
+        const confirmBtn = document.getElementById('btn-confirm-delete-peer');
+
+        if (!input || input.value.trim() !== 'delete') {
+            return;
+        }
+
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+        }
+
+        try {
+            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/delete`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await resp.json().catch(() => ({}));
+
+            if (!resp.ok) {
+                const errorMsg = data.message || data.error || data.detail || 'Failed to delete peer';
+                throw new Error(errorMsg);
+            }
+
+            closeDeletePeerModal();
+
+            if (window.showSuccess) {
+                window.showSuccess(data.message || 'Peer deleted successfully');
+            }
+
+            // Redirect back to peers list page after short delay
+            setTimeout(() => {
+                window.location.href = '/peers';
+            }, 800);
+
+        } catch (err) {
+            if (window.showError) {
+                window.showError(err.message || 'Failed to delete peer');
+            } else {
+                alert(err.message || 'Failed to delete peer');
+            }
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Peer';
+            }
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('deletePeerModal');
+            if (modal && modal.classList.contains('active')) {
+                closeDeletePeerModal();
+            }
+        }
+    });
+
     // Expose for HTML event handlers
     window.toggleEditField = toggleEditField;
     window.savePeerField = savePeerField;
     window.initPeerDetails = initPage;
+    window.openDeletePeerModal = openDeletePeerModal;
+    window.closeDeletePeerModal = closeDeletePeerModal;
+    window.handleDeleteModalOverlayClick = handleDeleteModalOverlayClick;
+    window.onDeleteConfirmInput = onDeleteConfirmInput;
+    window.onDeleteConfirmKeydown = onDeleteConfirmKeydown;
+    window.confirmDeletePeer = confirmDeletePeer;
 })();
