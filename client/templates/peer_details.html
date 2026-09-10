@@ -7,13 +7,9 @@
 {% endblock %}
 
 {% block content %}
-<div class="details-container"
-    id="peer-details-container"
-    data-peer-name="{{ peer_name }}"
-    data-peer-network="{{ peer_network or '' }}"
-    data-route-id="{{ peer_route_id or '' }}"
-    data-route-network-id="{{ peer_route_network_id or '' }}"
-    data-peer-id="{{ peer_id }}">
+<div class="details-container" id="peer-details-container" data-peer-name="{{ peer_name }}"
+    data-peer-network="{{ peer_network or '' }}" data-route-id="{{ peer_route_id or '' }}"
+    data-route-network-id="{{ peer_route_network_id or '' }}" data-peer-id="{{ peer_id }}">
     <a href="{{ url_for('client.peers_page') }}" class="back-link">
         <i class="fas fa-arrow-left"></i> Back to Peers List
     </a>
@@ -139,6 +135,7 @@
                     <i class="fas fa-list" style="color: var(--nk-text-muted);"></i>
                     <span style="color: var(--nk-text-muted);">Aliases</span>
                 </a>
+                {% endif %}
             </div>
 
             <div class="danger-zone-section">
@@ -146,9 +143,7 @@
                     <i class="fas fa-exclamation-triangle"></i>
                     <span>Danger Zone</span>
                 </div>
-                <p class="danger-zone-desc">
-                    Permanently delete this peer device, unregister it from the network, and wipe all associated configurations.
-                </p>
+                <p class="danger-zone-desc">Permanently unregister and wipe this peer device.</p>
                 <button type="button" class="btn-danger-delete" onclick="openDeletePeerModal()">
                     <i class="fas fa-trash-alt"></i>
                     <span>Delete Peer</span>
@@ -196,56 +191,60 @@
                 <i class="fas fa-file-alt fa-2x" style="opacity: 0.3;"></i>
                 <span style="font-size: 0.85rem;">No recent log events reported from agent.</span>
             </div>
-    </div>
+        </div>
 
-    <!-- Delete Peer Confirmation Modal -->
-    <div class="modal-overlay" id="deletePeerModal" onclick="handleDeleteModalOverlayClick(event)">
-        <div class="modal-card delete-modal-card">
-            <div class="modal-header delete-modal-header">
-                <h2><i class="fas fa-exclamation-triangle"></i> Delete Peer</h2>
-                <button type="button" class="modal-close" onclick="closeDeletePeerModal()">&times;</button>
-            </div>
-            <div class="modal-body delete-modal-body">
-                <div class="delete-warning-banner">
-                    <i class="fas fa-exclamation-circle delete-warning-icon"></i>
-                    <div class="delete-warning-text">
-                        <p class="delete-warning-title">This action cannot be undone!</p>
-                        <p class="delete-warning-desc">This will permanently delete peer <strong>{{ peer_name }}</strong>, remove its WireGuard configuration, and wipe all associated routes, firewall rules, and web filters.</p>
+        <!-- Delete Peer Confirmation Modal -->
+        <div class="modal-overlay" id="deletePeerModal" onclick="handleDeleteModalOverlayClick(event)">
+            <div class="modal-card delete-modal-card">
+                <div class="modal-header delete-modal-header">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Delete Peer</h2>
+                    <button type="button" class="modal-close" onclick="closeDeletePeerModal()">&times;</button>
+                </div>
+                <div class="modal-body delete-modal-body">
+                    <div class="delete-warning-banner">
+                        <i class="fas fa-exclamation-circle delete-warning-icon"></i>
+                        <div class="delete-warning-text">
+                            <p class="delete-warning-title">This action cannot be undone.</p>
+                            <p class="delete-warning-desc">Permanently deletes <strong>{{ peer_name }}</strong> and
+                                wipes its configurations, routes, and rules.</p>
+                        </div>
+                    </div>
+
+                    <div class="delete-prompt-group">
+                        <label for="delete-confirm-input" class="delete-prompt-label">
+                            Please type <code>delete</code> to confirm:
+                        </label>
+                        <input type="text" id="delete-confirm-input" class="delete-confirm-input" placeholder="delete"
+                            autocomplete="off" oninput="onDeleteConfirmInput(event)"
+                            onkeydown="onDeleteConfirmKeydown(event)">
                     </div>
                 </div>
-
-                <div class="delete-prompt-group">
-                    <label for="delete-confirm-input" class="delete-prompt-label">
-                        Please type <code>delete</code> to confirm:
-                    </label>
-                    <input type="text" id="delete-confirm-input" class="delete-confirm-input" placeholder="delete" autocomplete="off" oninput="onDeleteConfirmInput(event)" onkeydown="onDeleteConfirmKeydown(event)">
+                <div class="modal-footer delete-modal-footer">
+                    <button type="button" class="btn-action btn-cancel" onclick="closeDeletePeerModal()">Cancel</button>
+                    <button type="button" class="btn-action btn-danger" id="btn-confirm-delete-peer" disabled
+                        onclick="confirmDeletePeer()">
+                        <i class="fas fa-trash-alt"></i> Delete Peer
+                    </button>
                 </div>
-            </div>
-            <div class="modal-footer delete-modal-footer">
-                <button type="button" class="btn-action btn-cancel" onclick="closeDeletePeerModal()">Cancel</button>
-                <button type="button" class="btn-action btn-danger" id="btn-confirm-delete-peer" disabled onclick="confirmDeletePeer()">
-                    <i class="fas fa-trash-alt"></i> Delete Peer
-                </button>
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
+    {% endblock %}
 
-{% block extra_scripts %}
-<script src="{{ url_for('static', filename='js/peer_details.js') }}"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const el = document.getElementById("peer-details-container");
-        if (el && window.initPeerDetails) {
-            window.initPeerDetails({
-                peerName: el.getAttribute("data-peer-name") || "",
-                peerNetwork: el.getAttribute("data-peer-network") || "",
-                routeId: el.getAttribute("data-route-id") || "",
-                routeNetworkId: el.getAttribute("data-route-network-id") || "",
-                peerId: el.getAttribute("data-peer-id") || ""
-            });
-        }
-    });
-</script>
-{% endblock %}
+    {% block extra_scripts %}
+    <script src="{{ url_for('static', filename='js/peer_details.js') }}"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const el = document.getElementById("peer-details-container");
+            if (el && window.initPeerDetails) {
+                window.initPeerDetails({
+                    peerName: el.getAttribute("data-peer-name") || "",
+                    peerNetwork: el.getAttribute("data-peer-network") || "",
+                    routeId: el.getAttribute("data-route-id") || "",
+                    routeNetworkId: el.getAttribute("data-route-network-id") || "",
+                    peerId: el.getAttribute("data-peer-id") || ""
+                });
+            }
+        });
+    </script>
+    {% endblock %}

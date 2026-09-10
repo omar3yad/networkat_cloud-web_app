@@ -836,12 +836,12 @@ body {
 .subscription-alert-banner {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
-    padding: 0.95rem 1.6rem;
-    margin: 1.25rem 2.5rem 0.5rem;
-    border-radius: var(--nk-radius-md);
-    box-shadow: var(--nk-shadow-sm);
-    font-size: 0.92rem;
+    gap: 0.65rem;
+    padding: 0.45rem 1.15rem;
+    margin: 0.6rem 2rem 0;
+    border-radius: var(--nk-radius-sm, 8px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    font-size: 0.82rem;
     position: relative;
     z-index: 10;
     animation: fadeInSlideDown 0.3s ease-out;
@@ -850,7 +850,7 @@ body {
 @keyframes fadeInSlideDown {
     from {
         opacity: 0;
-        transform: translateY(-8px);
+        transform: translateY(-6px);
     }
     to {
         opacity: 1;
@@ -859,7 +859,7 @@ body {
 }
 
 .subscription-alert-banner .banner-icon-wrap {
-    font-size: 1.4rem;
+    font-size: 0.95rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -868,19 +868,23 @@ body {
 
 .subscription-alert-banner .banner-text-wrap {
     display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
 }
 
 .subscription-alert-banner .banner-title {
     font-weight: 700;
-    letter-spacing: -0.2px;
+    font-size: 0.82rem;
+    letter-spacing: -0.1px;
 }
 
 .subscription-alert-banner .banner-message {
     font-weight: 500;
+    font-size: 0.82rem;
     opacity: 0.95;
-    line-height: 1.4;
+    line-height: 1.3;
 }
 
 /* Grace Period: Warning */

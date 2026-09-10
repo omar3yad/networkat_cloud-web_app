@@ -627,7 +627,7 @@
                         </div>
                         <div class="meta-item">
                             <i class="fas fa-layer-group"></i>
-                            <span>Plan: <strong>{{ subscription_info.plan_display if (subscription_info and subscription_info.plan_display) else (customer.subscription or 'Starter') }}</strong></span>
+                            <span id="customer-header-plan-meta">Plan: <strong>{{ subscription_info.plan_display if (subscription_info and subscription_info.plan_display) else (customer.subscription or 'Starter') }}</strong> ({{ subscription_info.allowed_peers_count if subscription_info else (customer.allowed_peers_count or 5) }} Peers)</span>
                         </div>
                         <div class="meta-item">
                             <span class="badge-status-pill status-{{ subscription_info.status if (subscription_info and subscription_info.status) else (customer.subscription_status or 'active') }}">
@@ -855,7 +855,7 @@
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
                             <span style="font-size: 1.8rem; font-weight: 800; color: var(--gray-800);" id="sub-card-peers-val">
-                                {{ subscription_info.installed_peers_count if subscription_info else 0 }} <span style="font-size: 1rem; font-weight: 500; color: var(--gray-600);">/ {{ subscription_info.allowed_peers_count if subscription_info else 5 }}</span>
+                                {{ subscription_info.installed_peers_count if subscription_info else 0 }} <span style="font-size: 1rem; font-weight: 500; color: var(--gray-600);" id="sub-card-peers-limit-label">/ {{ subscription_info.allowed_peers_count if subscription_info else 5 }}</span>
                             </span>
                             {% set cur = subscription_info.installed_peers_count if subscription_info else 0 %}
                             {% set lim = [subscription_info.allowed_peers_count if subscription_info else 5, 1]|max %}
@@ -907,9 +907,9 @@
                                 <!-- Plan Selection -->
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label style="display: block; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem;">Assigned Plan</label>
-                                    <select id="sub-select-plan" style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;">
+                                    <select id="sub-select-plan" onchange="onPlanSelectChange(this)" style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;">
                                         {% for plan in plans %}
-                                        <option value="{{ plan.id }}" {% if (subscription_info and subscription_info.plan_id == plan.id) or (customer.plan_id == plan.id) %}selected{% endif %}>
+                                        <option value="{{ plan.id }}" data-peers="{{ plan.allowed_peers_count }}" {% if (subscription_info and subscription_info.plan_id == plan.id) or (customer.plan_id == plan.id) %}selected{% endif %}>
                                             {{ plan.display_name }} ({{ plan.allowed_peers_count }} Peers - ${{ plan.price_monthly }}/mo)
                                         </option>
                                         {% endfor %}
@@ -941,6 +941,13 @@
                                         <option value="limit_control" {% if (subscription_info and subscription_info.status == 'limit_control') or (customer.subscription_status == 'limit_control') %}selected{% endif %}>Limit Control (Read-Only Mode)</option>
                                         <option value="inactive" {% if (subscription_info and subscription_info.status == 'inactive') or (customer.subscription_status == 'inactive') %}selected{% endif %}>Inactive (Mesh Disconnected + Controllers Blocked)</option>
                                     </select>
+                                </div>
+
+                                <!-- Allowed Peers Limit (Custom Override) -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="display: block; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem;">Allowed Peers Limit</label>
+                                    <input type="number" id="sub-input-allowed-peers" min="1" max="1000" oninput="onPeersLimitInput(this)" style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;"
+                                        value="{{ subscription_info.allowed_peers_count if subscription_info else (customer.allowed_peers_count or 5) }}">
                                 </div>
                             </div>
 
@@ -1382,12 +1389,62 @@
         // Subscription Management Actions
         // ======================================================================
         const CUSTOMER_ID = "{{ customer.user_id if customer.user_id else customer.id }}";
+        
+        function onPlanSelectChange(selectEl) {
+            const selectedOpt = selectEl.options[selectEl.selectedIndex];
+            if (selectedOpt && selectedOpt.dataset.peers) {
+                const newLimit = parseInt(selectedOpt.dataset.peers);
+                const peersInput = document.getElementById('sub-input-allowed-peers');
+                if (peersInput) {
+                    peersInput.value = newLimit;
+                    // Visual indicator feedback
+                    peersInput.style.transition = 'all 0.3s ease';
+                    peersInput.style.borderColor = '#10b981';
+                    peersInput.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.2)';
+                    setTimeout(() => {
+                        peersInput.style.borderColor = '';
+                        peersInput.style.boxShadow = '';
+                    }, 1200);
+                }
+
+                // Update quota label in card
+                const limitLabel = document.getElementById('sub-card-peers-limit-label');
+                if (limitLabel) limitLabel.textContent = `/ ${newLimit}`;
+
+                // Update plan display in card and header
+                const cleanName = selectedOpt.textContent.split('(')[0].trim();
+                const planDisplay = document.getElementById('sub-card-plan-display');
+                if (planDisplay) planDisplay.textContent = cleanName;
+
+                const headerPlanMeta = document.getElementById('customer-header-plan-meta');
+                if (headerPlanMeta) {
+                    headerPlanMeta.innerHTML = `Plan: <strong>${cleanName}</strong> (${newLimit} Peers)`;
+                }
+            }
+        }
+
+        function onPeersLimitInput(inputEl) {
+            const val = parseInt(inputEl.value);
+            if (!isNaN(val) && val > 0) {
+                const limitLabel = document.getElementById('sub-card-peers-limit-label');
+                if (limitLabel) limitLabel.textContent = `/ ${val}`;
+
+                const headerPlanMeta = document.getElementById('customer-header-plan-meta');
+                if (headerPlanMeta) {
+                    const planSelect = document.getElementById('sub-select-plan');
+                    const cleanName = planSelect ? planSelect.options[planSelect.selectedIndex].textContent.split('(')[0].trim() : 'Plan';
+                    headerPlanMeta.innerHTML = `Plan: <strong>${cleanName}</strong> (${val} Peers)`;
+                }
+            }
+        }
 
         async function updateSubscription() {
             const planId = document.getElementById('sub-select-plan').value;
             const billingCycle = document.getElementById('sub-select-cycle').value;
             const renewalDate = document.getElementById('sub-input-renewal').value;
             const status = document.getElementById('sub-select-status').value;
+            const allowedPeersInput = document.getElementById('sub-input-allowed-peers');
+            const allowedPeers = allowedPeersInput ? allowedPeersInput.value : null;
             const saveBtn = document.getElementById('btn-save-sub');
 
             const origText = saveBtn.innerHTML;
@@ -1402,7 +1459,8 @@
                         plan_id: planId,
                         billing_cycle: billingCycle,
                         renewal_date: renewalDate,
-                        status: status
+                        status: status,
+                        allowed_peers_count: allowedPeers ? parseInt(allowedPeers) : null
                     })
                 });
                 const data = await res.json();

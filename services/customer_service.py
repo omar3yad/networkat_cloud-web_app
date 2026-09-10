@@ -190,6 +190,18 @@ class CustomerService:
             client.renewal_date = renewal_date
             client.subscription_status = 'active'
 
+            # Initialize allowed_peers_count from custom override or plan default
+            custom_peers = data.get('allowed_peers_count')
+            if custom_peers is not None:
+                try:
+                    client.allowed_peers_count = int(custom_peers)
+                except (ValueError, TypeError):
+                    client.allowed_peers_count = plan_rec.allowed_peers_count if plan_rec else 5
+            elif plan_rec and plan_rec.allowed_peers_count is not None:
+                client.allowed_peers_count = plan_rec.allowed_peers_count
+            else:
+                client.allowed_peers_count = 5
+
             self.client_repo.flush()
             
             # 3. أتمتة NetBird عبر الـ API (إنشاء الـ Group)

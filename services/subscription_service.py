@@ -71,16 +71,24 @@ class SubscriptionService:
         """
         حساب عدد الأجهزة المتبقية المسموح للعميل بإضافتها:
         remaining = allowed_peers_count - installed_peers_count
+        لا يُسمح بإضافة أجهزة إلا إذا كانت حالة الاشتراك نشطة (active) فقط.
         """
-        if not client:
+        if not client or getattr(client, "subscription_status", None) != "active":
             return 0
 
-        allowed_peers_count = client.allowed_peers_count
-        if allowed_peers_count is None:
-            starter = self.plan_repo.get_by_name("starter")
-            allowed_peers_count = starter.allowed_peers_count if starter else 5
+        allowed_peers_count = getattr(client, "allowed_peers_count", None)
+        if not isinstance(allowed_peers_count, int):
+            plan = getattr(client, "plan", None)
+            if plan and isinstance(getattr(plan, "allowed_peers_count", None), int):
+                allowed_peers_count = plan.allowed_peers_count
+            else:
+                starter = self.plan_repo.get_by_name("starter") if hasattr(self, 'plan_repo') and self.plan_repo else None
+                allowed_peers_count = starter.allowed_peers_count if starter else 5
 
         current_count = self.get_client_peer_count(client)
+        if not isinstance(current_count, int):
+            current_count = 0
+
         return max(0, allowed_peers_count - current_count)
 
     def can_install_peer(self, client) -> tuple[bool, str, dict]:
@@ -88,7 +96,7 @@ class SubscriptionService:
         فحص شامل: هل يُسمح للعميل بتنصيب جهاز جديد؟
         الشروط:
         1. الحساب مفعّل (active=True)
-        2. حالة الاشتراك تسمح بالتحكم الكامل ('active' أو 'grace_period')
+        2. حالة الاشتراك نشطة ('active') فقط (لا يُسمح بإضافة أجهزة في فترة السماح grace_period أو limit_control أو inactive)
         3. عدد الأجهزة الحالية أقل من الحد الأقصى للخطة (current_peers < peer_limit)
         """
         if not client:
@@ -99,9 +107,10 @@ class SubscriptionService:
                 "subscription_status": client.subscription_status
             }
 
-        # التحقق من حالة الاشتراك
-        if not client.is_subscription_active:
+        # التحقق من حالة الاشتراك: لا يُسمح بإضافة peer في فترة السماح أو وضع القراءة فقط أو غير النشط
+        if client.subscription_status != "active":
             status_desc = {
+                "grace_period": "Adding new peers is not allowed during the grace period. Please renew your subscription.",
                 "limit_control": "Subscription is currently restricted. Renew your plan to enroll new peers.",
                 "inactive": "Subscription inactive. Renew your plan."
             }.get(client.subscription_status, f"Subscription status '{client.subscription_status}' does not allow adding new peers.")
@@ -123,7 +132,11 @@ class SubscriptionService:
                 db.session.commit()
                 plan = starter
 
-        allowed_peers_count = plan.allowed_peers_count if plan else 5
+        # تحديد حد الأجهزة: المرجع هو client.allowed_peers_count
+        allowed_peers_count = getattr(client, 'allowed_peers_count', None)
+        if not isinstance(allowed_peers_count, int):
+            allowed_peers_count = plan.allowed_peers_count if plan else 5
+
         installed_peers_count = self.get_client_peer_count(client)
 
         if installed_peers_count >= allowed_peers_count:
@@ -488,6 +501,9 @@ class SubscriptionService:
             client.renewal_date = new_renewal_date
         if plan_id:
             client.plan_id = plan_id
+            plan = self.plan_repo.get_by_id(plan_id)
+            if plan and plan.allowed_peers_count is not None:
+                client.allowed_peers_count = plan.allowed_peers_count
         if billing_cycle:
             client.billing_cycle = billing_cycle
 
@@ -523,9 +539,13 @@ class SubscriptionService:
             return {}
 
         plan = client.plan
-        allowed_peers_count = plan.allowed_peers_count if plan else 5
+        # Source of truth: client.allowed_peers_count (with plan fallback)
+        allowed_peers_count = getattr(client, 'allowed_peers_count', None)
+        if not isinstance(allowed_peers_count, int):
+            allowed_peers_count = plan.allowed_peers_count if plan else 5
+
         installed_peers_count = self.get_client_peer_count(client)
-        remaining_peers_count = max(0, allowed_peers_count - installed_peers_count)
+        remaining_peers_count = self.get_remaining_peers(client)
 
         return {
             "username": client.username,
@@ -533,8 +553,10 @@ class SubscriptionService:
             "is_active": client.is_subscription_active,
             "is_readonly": client.is_subscription_readonly,
             "is_inactive": client.is_subscription_inactive,
+            "can_add_peers": (client.subscription_status == "active" and remaining_peers_count > 0),
             "plan_name": plan.name if plan else "starter",
             "plan_display": plan.display_name if plan else "Starter",
+            "plan_id": plan.id if plan else None,
             "allowed_peers_count": allowed_peers_count,
             "installed_peers_count": installed_peers_count,
             "remaining_peers_count": remaining_peers_count,

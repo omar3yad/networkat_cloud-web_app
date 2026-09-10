@@ -164,33 +164,33 @@ def inject_subscription_context():
         # Create alert banner for non-active states
         banner = None
         if status == 'grace_period':
-            days_msg = "A grace period is active."
+            days_rem = ""
             if customer.grace_expires_at:
                 now_utc = datetime.datetime.utcnow()
                 exp = customer.grace_expires_at.replace(tzinfo=None) if customer.grace_expires_at.tzinfo else customer.grace_expires_at
-                days_rem = max(0, (exp - now_utc).days)
-                days_msg = f"{days_rem} day(s) remaining in grace period."
+                days_val = max(0, (exp - now_utc).days)
+                days_rem = f" ({days_val}d left)"
             banner = {
                 "type": "warning",
                 "icon": "fas fa-exclamation-triangle",
-                "title": "Subscription Expired — Grace Period Active",
-                "message": f"Your plan has expired. {days_msg} Full control is temporarily maintained. Please renew soon.",
+                "title": f"Grace Period Active{days_rem}:",
+                "message": "Plan expired. Please renew soon to avoid service restriction.",
                 "status": "grace_period"
             }
         elif status == 'limit_control':
             banner = {
                 "type": "danger",
                 "icon": "fas fa-lock",
-                "title": "Account Restricted — Read-Only Mode",
-                "message": "Your subscription is expired and grace period ended. Modifying rules, routes, and adding peers are locked.",
+                "title": "Read-Only Mode:",
+                "message": "Subscription expired. Network modifications are locked until renewal.",
                 "status": "limit_control"
             }
         elif status == 'inactive':
             banner = {
                 "type": "critical",
                 "icon": "fas fa-ban",
-                "title": "Subscription Inactive — Mesh Disconnected",
-                "message": "Your subscription is inactive. Peer mesh connectivity and controller access are disabled.",
+                "title": "Subscription Inactive:",
+                "message": "Service suspended. Renew your subscription to restore connectivity.",
                 "status": "inactive"
             }
 

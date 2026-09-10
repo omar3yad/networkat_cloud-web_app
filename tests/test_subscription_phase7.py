@@ -189,6 +189,35 @@ class TestSubscriptionAdminPhase7(unittest.TestCase):
         self.assertIn('Renewal reminder sent', data['message'])
         mock_send_email.assert_called_once()
 
+    @patch('extensions.db.session.commit')
+    @patch('models.subscription_plan.SubscriptionPlan.query')
+    @patch('services.subscription_service.SubscriptionService.get_subscription_info')
+    @patch('models.client.Client.query')
+    def test_update_customer_subscription_custom_allowed_peers(self, mock_client_query, mock_get_info, mock_plan_query, mock_commit):
+        """Admin can override allowed_peers_count as an exception without changing plan."""
+        cust_id = uuid.uuid4()
+        mock_customer = MagicMock()
+        mock_customer.user_id = cust_id
+        mock_customer.plan_id = 1
+        mock_customer.subscription_status = 'active'
+        mock_client_query.get.return_value = mock_customer
+
+        mock_get_info.return_value = {
+            'allowed_peers_count': 12,
+            'status': 'active'
+        }
+
+        with self.client.session_transaction() as sess:
+            sess['admin_logged_in'] = True
+
+        resp = self.client.post(
+            f'/api/customers/{cust_id}/subscription/update',
+            json={'allowed_peers_count': 12}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(mock_customer.allowed_peers_count, 12)
+        mock_commit.assert_called()
+
 
 if __name__ == '__main__':
     unittest.main()

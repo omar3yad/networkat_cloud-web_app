@@ -63,7 +63,7 @@
             const icon = buttonElement.querySelector('i');
             const span = buttonElement.querySelector('span');
             if (icon) icon.className = 'fas fa-check';
-            if (span) span.textContent = 'Copied!';
+            if (span) span.textContent = '';
             buttonElement.classList.add('copied');
             setTimeout(() => {
                 if (icon) icon.className = 'far fa-copy';

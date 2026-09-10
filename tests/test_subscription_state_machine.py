@@ -159,6 +159,55 @@ class TestSubscriptionStateMachine(unittest.TestCase):
         self.assertEqual(info["billing_cycle"], "monthly")
         self.assertEqual(info["renewal_date"], "2026-10-01T00:00:00")
         self.assertIsNone(info["grace_expires_at"])
+        self.assertTrue(info["can_add_peers"])
+
+    @patch.object(SubscriptionService, 'get_client_peer_count')
+    def test_cannot_install_peer_during_grace_period(self, mock_peer_count):
+        mock_peer_count.return_value = 2
+        client = MagicMock()
+        client.username = "grace_user"
+        client.active = True
+        client.subscription_status = "grace_period"
+        plan = MagicMock()
+        plan.allowed_peers_count = 5
+        client.plan = plan
+
+        allowed, msg, quota = self.service.can_install_peer(client)
+        self.assertFalse(allowed)
+        self.assertIn("grace period", msg)
+        self.assertEqual(quota["remaining_peers_count"], 0)
+
+        remaining = self.service.get_remaining_peers(client)
+        self.assertEqual(remaining, 0)
+
+        info = self.service.get_subscription_info(client)
+        self.assertFalse(info["can_add_peers"])
+        self.assertEqual(info["remaining_peers_count"], 0)
+
+    @patch.object(SubscriptionService, 'get_client_peer_count')
+    def test_can_install_peer_when_active(self, mock_peer_count):
+        mock_peer_count.return_value = 2
+        client = MagicMock()
+        client.username = "active_user"
+        client.active = True
+        client.subscription_status = "active"
+        plan = MagicMock()
+        plan.name = "starter"
+        plan.display_name = "Starter"
+        plan.allowed_peers_count = 5
+        client.plan = plan
+        client.allowed_peers_count = 5
+
+        allowed, msg, quota = self.service.can_install_peer(client)
+        self.assertTrue(allowed)
+        self.assertEqual(quota["remaining_peers_count"], 3)
+
+        remaining = self.service.get_remaining_peers(client)
+        self.assertEqual(remaining, 3)
+
+        info = self.service.get_subscription_info(client)
+        self.assertTrue(info["can_add_peers"])
+        self.assertEqual(info["remaining_peers_count"], 3)
 
 
 if __name__ == '__main__':

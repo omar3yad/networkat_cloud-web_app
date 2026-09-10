@@ -798,7 +798,6 @@
     }
 
     .cell-action {
-        grid-area: action;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1348,13 +1347,13 @@
 
     #rules-table tr {
         display: grid;
-        grid-template-columns: 40px 30px 60px 90px 1.2fr 80px 1.2fr 80px 1.2fr 100px 150px 100px 120px;
+        grid-template-columns: 40px 30px 55px 95px minmax(90px, 1.2fr) 80px minmax(90px, 1.2fr) 80px 85px 80px 100px 75px 80px;
         align-items: center;
     }
 
     #rules-table th,
     #rules-table td {
-        padding: 0.75rem 1rem;
+        padding: 0.65rem 0.6rem;
         border-bottom: none;
     }
 
@@ -1383,9 +1382,20 @@
     #rules-table tbody tr {
         border-bottom: 1px solid var(--nk-border);
         padding: 0.5rem 0;
+        transition: background-color 0.15s ease;
         grid-template-areas:
             "comment comment comment comment comment comment comment comment comment comment comment comment comment"
             "check drag order interface sources src-port destinations dst-port services action counters enabled actions";
+    }
+
+    #rules-table tbody tr.no-comment {
+        grid-template-areas:
+            "check drag order interface sources src-port destinations dst-port services action counters enabled actions";
+        padding: 0.5rem 0;
+    }
+
+    #rules-table tbody tr:hover {
+        background-color: #f8fafc;
     }
 
     #rules-table tbody tr:last-child {
@@ -1405,8 +1415,12 @@
         font-size: 0.88rem;
         color: #64748b;
         font-weight: 700;
-        padding: 0.25rem 0.75rem 0 0.75rem !important;
+        padding: 0.25rem 0.75rem 0.15rem 0.75rem !important;
         text-align: left;
+    }
+
+    .rule-comment-cell:empty {
+        display: none;
     }
 
     .cell-check {
@@ -1419,6 +1433,49 @@
 
     .cell-order {
         grid-area: order;
+    }
+
+    .cell-interface {
+        grid-area: interface;
+    }
+
+    .cell-sources {
+        grid-area: sources;
+    }
+
+    .cell-src-port {
+        grid-area: src-port;
+    }
+
+    .cell-destinations {
+        grid-area: destinations;
+    }
+
+    .cell-dst-port {
+        grid-area: dst-port;
+    }
+
+    .cell-services {
+        grid-area: services;
+    }
+
+    .cell-action {
+        grid-area: action;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cell-counters {
+        grid-area: counters;
+    }
+
+    .cell-enabled {
+        grid-area: enabled;
+    }
+
+    .cell-actions {
+        grid-area: actions;
     }
 
     /* Lists Table CSS Grid Styling */
@@ -1500,42 +1557,6 @@
 
     .cell-updated {
         grid-area: updated;
-    }
-
-    .cell-actions {
-        grid-area: actions;
-    }
-
-    .cell-sources {
-        grid-area: sources;
-    }
-
-    .cell-destinations {
-        grid-area: destinations;
-    }
-
-    .cell-dst-port {
-        grid-area: dst-port;
-    }
-
-    .cell-src-port {
-        grid-area: src-port;
-    }
-
-    .cell-services {
-        grid-area: services;
-    }
-
-    .cell-interface {
-        grid-area: interface;
-    }
-
-    .cell-counters {
-        grid-area: counters;
-    }
-
-    .cell-enabled {
-        grid-area: enabled;
     }
 
     .cell-actions {

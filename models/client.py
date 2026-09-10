@@ -3,6 +3,7 @@ from config.database import db
 from models.base import BaseModel
 import uuid
 from sqlalchemy.dialects.postgresql import UUID 
+from sqlalchemy.ext.hybrid import hybrid_property
 class Client(BaseModel):
     __tablename__ = "clients"
 
@@ -142,8 +143,30 @@ class Client(BaseModel):
         return self.subscription_status == "inactive"
 
     @property
+    def can_add_peers(self):
+        """Returns True only if subscription is strictly active (not in grace_period, limit_control, or inactive)."""
+        return bool(self.active and self.subscription_status == "active")
+
+    # --- Subscription Limit Column & Source of Truth ---
+    _allowed_peers_count = db.Column(
+        'allowed_peers_count',
+        db.Integer,
+        nullable=True,
+        default=5
+    )
+
+    @hybrid_property
     def allowed_peers_count(self):
-        """Returns allowed peer count from associated plan, defaulting to Starter (5) if no plan."""
-        if self.plan:
+        """Returns allowed peer count from client table (source of truth), defaulting to plan value if None."""
+        if self._allowed_peers_count is not None:
+            return self._allowed_peers_count
+        if self.plan and self.plan.allowed_peers_count is not None:
             return self.plan.allowed_peers_count
         return 5
+
+    @allowed_peers_count.setter
+    def allowed_peers_count(self, value):
+        try:
+            self._allowed_peers_count = int(value) if value is not None else None
+        except (ValueError, TypeError):
+            self._allowed_peers_count = value

@@ -292,6 +292,19 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         const tr = document.createElement('tr');
         tr.setAttribute('data-rule-id', rule.id);
 
+        // 0. Rule comment (above the row)
+        const tdComment = document.createElement('td');
+        tdComment.className = 'rule-comment-cell';
+        const commentVal = (rule.rule_name || '').trim();
+        if (commentVal) {
+            tdComment.innerHTML = `<span style="opacity: 0.9;">${commentVal}</span>`;
+        } else {
+            tdComment.innerHTML = '';
+            tdComment.style.display = 'none';
+            tr.classList.add('no-comment');
+        }
+        tr.appendChild(tdComment);
+
         // checkbox column
         const tdCheck = document.createElement('td');
         tdCheck.className = 'cell-check';
@@ -332,12 +345,6 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
             tdOrder.textContent = rule.order && rule.order !== 9999 ? rule.order : '-';
         }
         tr.appendChild(tdOrder);
-
-        // rule comment
-        const tdComment = document.createElement('td');
-        tdComment.className = 'rule-comment-cell';
-        tdComment.innerHTML = `<span style="opacity: 0.9;">${rule.rule_name}</span>`;
-        tr.appendChild(tdComment);
 
         // In Interface (LAN / VPN)
         const tdInterface = document.createElement('td');
@@ -1528,19 +1535,20 @@ function formatBytes(bytes) {
 
 // Client-side rule filtering
 function filterRulesTable() {
-    const searchVal = document.getElementById('search-input').value.toLowerCase();
+    const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
     const rows = document.querySelectorAll('#rules-tbody tr');
 
     rows.forEach(row => {
         // If it is a full width loading/error column
-        if (row.cells.length === 1) return;
+        if (row.cells.length <= 1) return;
 
-        const name = row.cells[3].textContent.toLowerCase();
-        const src = row.cells[5].textContent.toLowerCase();
-        const dst = row.cells[6].textContent.toLowerCase();
-        const svc = row.cells[7].textContent.toLowerCase();
+        if (!searchVal) {
+            row.style.display = '';
+            return;
+        }
 
-        if (name.includes(searchVal) || src.includes(searchVal) || dst.includes(searchVal) || svc.includes(searchVal)) {
+        const rowText = row.textContent.toLowerCase();
+        if (rowText.includes(searchVal)) {
             row.style.display = '';
         } else {
             row.style.display = 'none';

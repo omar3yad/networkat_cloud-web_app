@@ -324,6 +324,8 @@ def update_customer_subscription(customer_id):
     new_status = data.get('status')
 
     # Update plan
+    old_plan_id = customer.plan_id
+    plan = None
     if plan_id is not None:
         try:
             plan_id = int(plan_id)
@@ -333,6 +335,19 @@ def update_customer_subscription(customer_id):
                 customer.subscription = plan.name
         except (ValueError, TypeError):
             pass
+
+    # Update allowed_peers_count (custom exception or plan default)
+    custom_peers = data.get('allowed_peers_count')
+    if custom_peers is not None and str(custom_peers).strip() != "":
+        try:
+            val = int(custom_peers)
+            if val > 0:
+                customer.allowed_peers_count = val
+        except (ValueError, TypeError):
+            pass
+    elif plan and plan.id != old_plan_id:
+        # If plan changed and no custom override provided, adopt new plan's limit
+        customer.allowed_peers_count = plan.allowed_peers_count
 
     # Update billing cycle
     if billing_cycle in ('monthly', 'yearly'):
@@ -348,6 +363,9 @@ def update_customer_subscription(customer_id):
         except Exception as e:
             current_app.logger.warning(f"Error parsing renewal date: {e}")
 
+    # Commit updated attributes (allowed_peers_count, plan_id, billing_cycle, renewal_date)
+    db.session.commit()
+
     # Handle status transition if changed
     old_status = customer.subscription_status
     if new_status and new_status != old_status:
@@ -359,9 +377,11 @@ def update_customer_subscription(customer_id):
             subscription_service.transition_to_limit_control(customer)
         elif new_status == 'inactive':
             subscription_service.transition_to_inactive(customer)
-    else:
-        db.session.commit()
 
+    try:
+        db.session.refresh(customer)
+    except Exception:
+        pass
     sub_info = subscription_service.get_subscription_info(customer)
     return jsonify({
         'success': True,

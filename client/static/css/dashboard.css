@@ -312,12 +312,6 @@ tr:hover td {
     color: #ffffff;
 }
 
-.btn-copy-cmd.copied {
-    background: #10b981 !important;
-    border-color: #10b981 !important;
-    color: #ffffff !important;
-}
-
 /* Install Card Restrictions & Lock State */
 .install-card.install-locked {
     border-color: #fed7aa;

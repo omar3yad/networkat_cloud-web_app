@@ -134,6 +134,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                     c.netbird_group_id,
                     c.subscription_status,
                     c.plan_id,
+                    c.allowed_peers_count AS client_peer_limit,
                     p.name AS plan_name,
                     p.display_name AS plan_display_name,
                     p.allowed_peers_count AS plan_peer_limit
@@ -160,6 +161,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
             client_name, client_company_name, client_email,
             client_country, subscription, created_at,
             netbird_group_id, subscription_status, plan_id,
+            client_peer_limit,
             plan_name, plan_display_name, plan_peer_limit
         ) = row
 
@@ -173,7 +175,13 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
 
         plan_name = plan_name or subscription or "starter"
         plan_display = plan_display_name or plan_name.title()
-        allowed_peers_count = plan_peer_limit or (15 if plan_name == "pro" else (50 if plan_name == "enterprise" else 5))
+        # Source of truth: c.allowed_peers_count, fallback to plan_peer_limit, fallback to default (5)
+        if client_peer_limit is not None:
+            allowed_peers_count = int(client_peer_limit)
+        elif plan_peer_limit is not None:
+            allowed_peers_count = int(plan_peer_limit)
+        else:
+            allowed_peers_count = 15 if plan_name == "pro" else (50 if plan_name == "enterprise" else 5)
         subscription_status = subscription_status or "active"
 
         # Account snapshot returned alongside the setup key on 200, and alongside
@@ -194,17 +202,23 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
             ).model_dump()
 
         # ── 4. Enforce subscription status ─────────────────────────────────
-        if subscription_status in ("limit_control", "inactive"):
-            logger.warning(f"[install-peer-api] Account in read-only status='{subscription_status}' user='{username}'")
+        if subscription_status in ("grace_period", "limit_control", "inactive"):
+            logger.warning(f"[install-peer-api] Account in non-active status='{subscription_status}' user='{username}'")
             edge_cnt = db.execute(
                 text("SELECT COUNT(*) FROM edges WHERE client_id = :uid"),
                 {"uid": str(user_id)}
             ).scalar()
+
+            if subscription_status == "grace_period":
+                msg = "Adding new peers is not allowed during the grace period. Please renew your subscription."
+            else:
+                msg = "Subscription is currently restricted. Renew your plan to enroll new peers."
+
             return JSONResponse(
                 status_code=403,
                 content={
                     "error": "Forbidden",
-                    "message": "Subscription is currently restricted. Renew your plan to enroll new peers.",
+                    "message": msg,
                     "account": _account_meta(edge_cnt or 0),
                 }
             )

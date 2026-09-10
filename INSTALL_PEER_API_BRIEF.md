@@ -77,7 +77,7 @@
 | الحالة | HTTP | الجسم |
 |---|---|---|
 | بيانات اعتماد خاطئة / حساب معطّل | 401 | `{"error":"Unauthorized","message":"Invalid credentials or account is not active."}` |
-| اشتراك مقيّد (`limit_control`/`inactive`) | 403 | `{"error":"Forbidden","message":"Subscription is currently restricted. Renew your plan to enroll new peers.","account":{…}}` |
+| اشتراك غير نشط أو في فترة السماح (`grace_period`/`limit_control`/`inactive`) | 403 | `{"error":"Forbidden","message":"Adding new peers is not allowed during the grace period... / Subscription is currently restricted...","account":{…}}` |
 | تجاوز حصة الأجهزة | 403 | `{"error":"Forbidden","message":"Cannot add more peers, limit exceeded (N/M).\nUpgrade plan to connect more.","account":{…}}` |
 | تجاوز معدّل الطلبات (5 / 60 ث لكل IP) | 429 | `{"error":"Too Many Requests","message":"Too many attempts. Please try again in a minute."}` |
 | خطأ داخلي / فشل NetBird | 500 | `{"error":"Internal Server Error","message":"..."}` |
