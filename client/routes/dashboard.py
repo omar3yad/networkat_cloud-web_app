@@ -99,6 +99,15 @@ def peer_details(peer_id):
             peer_public_ip = checked_peer.get("connection_ip", peer_public_ip) or "Unknown"
             peer_os = checked_peer.get("os", peer_os)
             peer_version = checked_peer.get("version", peer_version)
+            if is_online and peer_ip and peer_ip != "Unknown":
+                try:
+                    h_resp = requests.get(f"http://{peer_ip}:8765/health", timeout=(1, 2))
+                    if h_resp.ok:
+                        h_data = h_resp.json()
+                        if h_data.get("version"):
+                            peer_version = h_data["version"]
+                except Exception as ex:
+                    current_app.logger.warning(f"Could not fetch health version for {peer_ip}: {ex}")
             peer_last_seen = checked_peer.get("last_seen", peer_last_seen)
             if peer_last_seen and peer_last_seen != "Never":
                 try:

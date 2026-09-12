@@ -540,6 +540,24 @@
 
     async function fetchPeerVersionSilent() {
         if (!peerId) return;
+        // 1. Fetch version directly from agent /health
+        try {
+            const hResp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/health`);
+            if (hResp.ok) {
+                const hData = await hResp.json();
+                const healthVersion = hData.version || "";
+                if (healthVersion) {
+                    const versionEl = document.getElementById("peer-version-display");
+                    if (versionEl) versionEl.textContent = healthVersion;
+                    const updatesInstalledVal = document.getElementById("updates-installed-val");
+                    if (updatesInstalledVal) updatesInstalledVal.textContent = healthVersion;
+                }
+            }
+        } catch (e) {
+            // Health check silent fail
+        }
+
+        // 2. Fetch update discovery status
         try {
             const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update`);
             if (!resp.ok) return;
@@ -547,13 +565,11 @@
             const update = data.update || {};
             const installedVersion = update.installed_version || "";
             const availableVersion = update.available_version || "";
-            const versionEl = document.getElementById("peer-version-display");
-            if (versionEl && installedVersion) {
-                versionEl.textContent = installedVersion;
-            }
-            const updatesInstalledVal = document.getElementById("updates-installed-val");
-            if (updatesInstalledVal && installedVersion) {
-                updatesInstalledVal.textContent = installedVersion;
+            if (installedVersion) {
+                const versionEl = document.getElementById("peer-version-display");
+                if (versionEl) versionEl.textContent = installedVersion;
+                const updatesInstalledVal = document.getElementById("updates-installed-val");
+                if (updatesInstalledVal) updatesInstalledVal.textContent = installedVersion;
             }
             if (update.state === "update-available" && availableVersion && availableVersion !== installedVersion) {
                 const badgeEl = document.getElementById("peer-version-badge");

@@ -24,6 +24,38 @@ class TestPeerUpdateApi(unittest.TestCase):
     @patch('client.routes.peer_api.verify_peer_access')
     @patch('client.routes.peer_api.get_cached_all_netbird_peers')
     @patch('client.routes.peer_api.requests.get')
+    def test_get_peer_health(self, mock_requests_get, mock_peers, mock_verify, mock_client_cls):
+        mock_verify.return_value = True
+        mock_customer = MagicMock()
+        mock_customer.is_subscription_active = True
+        mock_customer.subscription_status = 'active'
+        mock_client_cls.query.get.return_value = mock_customer
+
+        mock_peers.return_value = [{"id": "peer-123", "ip": "100.64.0.10"}]
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = '{"status": "ok", "version": "1.6.0-beta.1", "uptime": 57999}'
+        mock_requests_get.return_value = mock_resp
+
+        with self.client.session_transaction() as sess:
+            sess['client_logged_in'] = True
+            sess['client_id'] = 'user-123'
+            sess['client_customer_id'] = 1
+
+        resp = self.client.get('/api/peers/peer-123/health')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data.get("version"), "1.6.0-beta.1")
+        mock_requests_get.assert_called_once_with(
+            "http://100.64.0.10:8765/health",
+            timeout=(1, 2)
+        )
+
+    @patch('client.routes.peer_api.Client')
+    @patch('client.routes.peer_api.verify_peer_access')
+    @patch('client.routes.peer_api.get_cached_all_netbird_peers')
+    @patch('client.routes.peer_api.requests.get')
     def test_get_peer_update_status(self, mock_requests_get, mock_peers, mock_verify, mock_client_cls):
         mock_verify.return_value = True
         mock_customer = MagicMock()

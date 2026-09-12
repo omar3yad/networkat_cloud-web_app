@@ -646,6 +646,29 @@ def peer_services_proxy(peer_id):
         return jsonify({"error": "Unable to update service"}), 502
 
 
+@client_bp.route('/api/peers/<peer_id>/health', methods=['GET'])
+@login_required
+def peer_health_api(peer_id):
+    customer_id = session.get('client_customer_id')
+    customer = Client.query.get(customer_id) if customer_id else None
+    if not customer or not verify_peer_access(customer, peer_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    peers_data = get_cached_all_netbird_peers(get_api_base_url(), get_api_headers())
+    peer = next((p for p in peers_data if p.get("id") == peer_id), None)
+    if not peer or not peer.get("ip"):
+        return jsonify({"error": "Device unreachable"}), 404
+
+    peer_ip = peer.get("ip")
+    agent_url = f"http://{peer_ip}:8765/health"
+
+    try:
+        resp = requests.get(agent_url, timeout=(1, 2))
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except requests.RequestException:
+        return jsonify({"error": "Device unreachable"}), 504
+
+
 @client_bp.route('/api/peers/<peer_id>/update', methods=['GET', 'POST'])
 @login_required
 def peer_update_api(peer_id):
