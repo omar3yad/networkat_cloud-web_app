@@ -1,24 +1,17 @@
-# Project Rule: Concise Messages, Alerts, and Validations
+# Project Rule: UI Typography, Concise Messages, Alerts, and Validations
 
-## Core Directive
-All user-facing messages across the entire codebase (frontend templates, JavaScript handlers, alerts, toasts, modals, form validations, backend routes, flash messages, and API error responses) MUST always be concise, simple, clean, and punchy.
+## 1. Strictly NO UPPERCASE in UI / CSS
+- **Never use `text-transform: uppercase`** anywhere in CSS across the entire project.
+- **Never write UI labels, buttons, headers, tags, badges, or dialog text in ALL CAPS (UPPERCASE)** in HTML, JavaScript, or CSS.
+- **Always use standard Sentence case or Title case** (e.g. `Current version`, `Auto-update`, `Save changes`, `Close`, `Update available`).
 
-## Guidelines & Examples
+## 2. Ultra-Concise Messages & Alerts
+All user-facing messages across the entire codebase (frontend templates, JavaScript handlers, alerts, toasts, modals, form validations, backend routes, flash messages, and API error responses) MUST always be minimal, direct, simple, and punchy. Avoid verbose sentences.
 
-### 1. Success & Action Alerts / Toasts
-- `"Saved successfully"` (never verbose sentences like *"Settings saved and applied successfully!"*).
-- `"Synced successfully"` (never *"Address lists / rules synchronized successfully"*).
-- `"Deleted successfully"` (never *"Item was deleted successfully from the database"*).
-- Confirm dialogs: `"Delete this rule?"`, `"Delete alias \"{name}\"?"` (never long *"Are you sure you want to permanently delete..."*).
+### Examples:
+- Success: `"Saved"`, `"Auto-update saved"`, `"Updated successfully"`, `"Synced successfully"`, `"Deleted successfully"`.
+- Confirmations: `"Delete this rule?"`, `"Delete peer?"`.
+- Form validations: `"Required"`, `"Name required"`, `"Subnet required"`, `"Invalid subnet"`, `"Name already in use"`.
+- Backend error responses: `{"error": "Unauthorized"}`, `{"error": "Name already in use"}`. Avoid exposing internal stack traces or database IDs.
+- Strictly avoid native browser dialogs (`alert()`, `confirm()`, `prompt()`). Always use project toasts or custom modal components.
 
-### 2. Form & Field Validations
-- Required fields: `"Required"` or `"Name required"`, `"Subnet required"`.
-- Character limits: `"Max 200 characters"`, `"Max 64 addresses"`, `"Max 64 ports"`.
-- Subnets / IPs: `"Invalid subnet"`, `"Invalid IP address"`, `"Invalid subnet mask"`, `"Only IPv4 supported"`.
-- Hostnames / Domains: `"Invalid hostname"`, `"Invalid domain"`, `"Enter domain name"`.
-- Duplicates: `"Name already in use"`, `"Subnet already in use"`, `"Duplicate item"`, `"Duplicate address"`, `"Duplicate alias"`.
-- Mixed inputs: `"Cannot mix IPs and @alias"`, `"Only one alias allowed"`, `"Web Domain aliases not supported"`, `"Normal aliases not supported"`.
-
-### 3. Backend Route & API Responses
-- Error keys should carry minimal, clear strings (e.g. `{"error": "Unauthorized"}`, `{"error": "Name already in use"}`, `{"error": "Invalid subnet"}`).
-- Avoid long error sentences or stack trace leaks to the client UI.

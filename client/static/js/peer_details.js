@@ -525,6 +525,8 @@
     // ==========================================================================
 
     let isApplyingUpdate = false;
+    let initialAutoUpdateEnabled = false;
+    let initialIntervalHours = 12;
 
     function escapeHtml(str) {
         if (!str) return '';
