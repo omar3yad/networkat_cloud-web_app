@@ -13,15 +13,22 @@
     let otherPeers = [];
     let otherRoutes = [];
 
+    let isPeerOnline = false;
+
     function initPage(config) {
         currentPeerName = config.peerName || "";
         currentPeerNetwork = config.peerNetwork || "";
         currentRouteId = config.routeId || "";
         currentRouteNetworkId = config.routeNetworkId || "";
         peerId = config.peerId || "";
+        isPeerOnline = !!config.isOnline;
 
         loadFleetContext();
         bindInputListeners();
+
+        if (isPeerOnline) {
+            fetchPeerVersionSilent();
+        }
     }
 
     async function loadFleetContext() {
@@ -433,6 +440,10 @@
             if (servicesModal && servicesModal.classList.contains('active')) {
                 closeServicesModal();
             }
+            const updatesModal = document.getElementById('updatesModal');
+            if (updatesModal && updatesModal.classList.contains('active') && !isApplyingUpdate) {
+                closeUpdatesModal();
+            }
         }
     });
 
@@ -502,10 +513,335 @@
             if (window.showError) {
                 window.showError(err.message || 'Failed to update service');
             } else {
-                alert(err.message || 'Failed to update service');
+                console.error('Failed to update service:', err);
             }
         } finally {
             checkbox.disabled = false;
+        }
+    }
+
+    // ==========================================================================
+    // Software Updates Feature
+    // ==========================================================================
+
+    let isApplyingUpdate = false;
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    async function fetchPeerVersionSilent() {
+        if (!peerId) return;
+        try {
+            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const update = data.update || {};
+            const installedVersion = update.installed_version || "";
+            const versionEl = document.getElementById("peer-version-display");
+            if (versionEl && installedVersion) {
+                versionEl.textContent = installedVersion;
+            }
+            const updatesInstalledVal = document.getElementById("updates-installed-val");
+            if (updatesInstalledVal && installedVersion) {
+                updatesInstalledVal.textContent = installedVersion;
+            }
+            if (update.state === "update-available") {
+                const badgeEl = document.getElementById("peer-version-badge");
+                if (badgeEl) badgeEl.style.display = "inline-flex";
+                const dotEl = document.getElementById("update-badge-dot");
+                if (dotEl) dotEl.style.display = "inline-block";
+            }
+        } catch (e) {
+            // Background check silent fail
+        }
+    }
+
+    function openUpdatesModal() {
+        const modal = document.getElementById("updatesModal");
+        if (modal) modal.classList.add("active");
+        clearUpdatesFeedback();
+        checkPeerUpdate();
+        loadAutoUpdateConfig();
+    }
+
+    function closeUpdatesModal() {
+        if (isApplyingUpdate) return;
+        const modal = document.getElementById("updatesModal");
+        if (modal) modal.classList.remove("active");
+    }
+
+    function handleUpdatesModalOverlayClick(event) {
+        if (isApplyingUpdate) return;
+        if (event.target && event.target.id === "updatesModal") {
+            closeUpdatesModal();
+        }
+    }
+
+    function showUpdatesFeedback(message, type = "info") {
+        const el = document.getElementById("updates-feedback-msg");
+        if (!el) return;
+        el.className = `updates-feedback-msg feedback-${type}`;
+        const icon = type === "success" ? "fa-check-circle" : (type === "error" ? "fa-exclamation-circle" : "fa-info-circle");
+        el.innerHTML = `<i class="fas ${icon}"></i> <span>${escapeHtml(message)}</span>`;
+        el.style.display = "flex";
+    }
+
+    function clearUpdatesFeedback() {
+        const el = document.getElementById("updates-feedback-msg");
+        if (el) {
+            el.textContent = "";
+            el.style.display = "none";
+        }
+    }
+
+    async function checkPeerUpdate() {
+        if (isApplyingUpdate) return;
+        const btnCheck = document.getElementById("btn-check-update");
+        const btnApply = document.getElementById("btn-apply-update");
+        const badgeState = document.getElementById("updates-state-badge");
+        const installedVal = document.getElementById("updates-installed-val");
+        const availableVal = document.getElementById("updates-available-val");
+        const lastCheckedText = document.getElementById("updates-last-checked-text");
+
+        if (btnCheck) {
+            btnCheck.disabled = true;
+            btnCheck.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+        }
+        if (badgeState) {
+            badgeState.className = "badge-update-status state-updating";
+            badgeState.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking for updates...';
+        }
+        clearUpdatesFeedback();
+
+        try {
+            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update`);
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.error || "Failed to check for updates");
+            }
+
+            const update = data.update || {};
+            const state = update.state || "unknown";
+            const installed = update.installed_version || "—";
+            const available = update.available_version || "—";
+
+            if (installedVal) installedVal.textContent = installed;
+            if (availableVal) availableVal.textContent = available;
+
+            const infoVersion = document.getElementById("peer-version-display");
+            if (infoVersion && installed !== "—") infoVersion.textContent = installed;
+
+            if (lastCheckedText) {
+                const now = new Date();
+                lastCheckedText.textContent = `Checked at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            const versionBadge = document.getElementById("peer-version-badge");
+            const dotBadge = document.getElementById("update-badge-dot");
+
+            if (state === "up-to-date") {
+                if (badgeState) {
+                    badgeState.className = "badge-update-status state-up-to-date";
+                    badgeState.innerHTML = '<i class="fas fa-check-circle"></i> Up to date';
+                }
+                if (btnApply) {
+                    btnApply.disabled = true;
+                    btnApply.classList.remove("has-update");
+                }
+                if (versionBadge) versionBadge.style.display = "none";
+                if (dotBadge) dotBadge.style.display = "none";
+            } else if (state === "update-available") {
+                if (badgeState) {
+                    badgeState.className = "badge-update-status state-update-available";
+                    badgeState.innerHTML = '<i class="fas fa-arrow-alt-circle-up"></i> Update available';
+                }
+                if (btnApply) {
+                    btnApply.disabled = false;
+                    btnApply.classList.add("has-update");
+                }
+                if (versionBadge) versionBadge.style.display = "inline-flex";
+                if (dotBadge) dotBadge.style.display = "inline-block";
+            } else {
+                if (badgeState) {
+                    badgeState.className = "badge-update-status state-unknown";
+                    badgeState.innerHTML = '<i class="fas fa-question-circle"></i> Status unknown';
+                }
+                if (btnApply) {
+                    btnApply.disabled = true;
+                    btnApply.classList.remove("has-update");
+                }
+            }
+        } catch (err) {
+            if (badgeState) {
+                badgeState.className = "badge-update-status state-unknown";
+                badgeState.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Check failed';
+            }
+            showUpdatesFeedback(err.message || "Failed to check for updates", "error");
+        } finally {
+            if (btnCheck) {
+                btnCheck.disabled = false;
+                btnCheck.innerHTML = '<i class="fas fa-sync-alt"></i> Check Update';
+            }
+        }
+    }
+
+    async function applyPeerUpdate() {
+        if (isApplyingUpdate) return;
+        isApplyingUpdate = true;
+
+        const btnApply = document.getElementById("btn-apply-update");
+        const btnCheck = document.getElementById("btn-check-update");
+        const btnSave = document.getElementById("btn-save-update-config");
+        const btnCloseModal = document.getElementById("btn-close-updates-modal");
+        const btnCancelModal = document.getElementById("btn-cancel-updates-modal");
+        const badgeState = document.getElementById("updates-state-badge");
+
+        if (btnApply) {
+            btnApply.disabled = true;
+            btnApply.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+        }
+        if (btnCheck) btnCheck.disabled = true;
+        if (btnSave) btnSave.disabled = true;
+        if (btnCloseModal) btnCloseModal.style.visibility = "hidden";
+        if (btnCancelModal) btnCancelModal.disabled = true;
+
+        if (badgeState) {
+            badgeState.className = "badge-update-status state-updating";
+            badgeState.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying software update...';
+        }
+        showUpdatesFeedback("Software update in progress. This may take up to 2 minutes, please do not close the window.", "info");
+
+        try {
+            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await resp.json().catch(() => ({}));
+
+            if (!resp.ok || data.ok === false) {
+                const errorMsg = data.error || data.message || "Failed to apply update";
+                throw new Error(errorMsg);
+            }
+
+            showUpdatesFeedback("Update completed successfully! Peer is running the latest version.", "success");
+            if (window.showSuccess) window.showSuccess("Update completed successfully");
+
+            setTimeout(() => {
+                checkPeerUpdate();
+            }, 3000);
+        } catch (err) {
+            showUpdatesFeedback(err.message || "Failed to apply update", "error");
+            if (window.showError) window.showError(err.message || "Failed to apply update");
+        } finally {
+            isApplyingUpdate = false;
+            if (btnApply) {
+                btnApply.disabled = false;
+                btnApply.innerHTML = '<i class="fas fa-download"></i> Update Now';
+            }
+            if (btnCheck) btnCheck.disabled = false;
+            if (btnSave) btnSave.disabled = false;
+            if (btnCloseModal) btnCloseModal.style.visibility = "visible";
+            if (btnCancelModal) btnCancelModal.disabled = false;
+        }
+    }
+
+    async function loadAutoUpdateConfig() {
+        try {
+            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update/config`);
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) return;
+
+            const toggle = document.getElementById("auto-update-toggle");
+            const intervalInp = document.getElementById("update-interval-hours");
+            const wrapper = document.getElementById("auto-update-interval-wrapper");
+
+            const enabled = !!data.auto_update_enabled;
+            if (toggle) toggle.checked = enabled;
+
+            let hours = 12;
+            if (data.update_check_interval_hours !== undefined) {
+                hours = Math.max(3, Math.round(data.update_check_interval_hours));
+            } else if (data.update_check_interval_seconds !== undefined) {
+                hours = Math.max(3, Math.round(data.update_check_interval_seconds / 3600));
+            }
+            if (intervalInp) {
+                intervalInp.value = hours;
+                intervalInp.disabled = !enabled;
+            }
+            if (wrapper) {
+                if (enabled) wrapper.classList.remove("disabled");
+                else wrapper.classList.add("disabled");
+            }
+        } catch (e) {
+            console.error("Error loading auto update config:", e);
+        }
+    }
+
+    function onAutoUpdateToggleChange(checkbox) {
+        const isChecked = checkbox ? checkbox.checked : false;
+        const intervalInp = document.getElementById("update-interval-hours");
+        const wrapper = document.getElementById("auto-update-interval-wrapper");
+
+        if (intervalInp) intervalInp.disabled = !isChecked;
+        if (wrapper) {
+            if (isChecked) wrapper.classList.remove("disabled");
+            else wrapper.classList.add("disabled");
+        }
+    }
+
+    async function saveAutoUpdateConfig() {
+        if (isApplyingUpdate) return;
+        const btnSave = document.getElementById("btn-save-update-config");
+        const toggle = document.getElementById("auto-update-toggle");
+        const intervalInp = document.getElementById("update-interval-hours");
+
+        const enabled = toggle ? toggle.checked : false;
+        let hours = intervalInp ? parseInt(intervalInp.value, 10) : 12;
+
+        if (enabled && (isNaN(hours) || hours < 3)) {
+            showUpdatesFeedback("Update interval must be at least 3 hours.", "error");
+            if (window.showWarning) window.showWarning("Minimum update interval is 3 hours");
+            return;
+        }
+
+        if (btnSave) {
+            btnSave.disabled = true;
+            btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        }
+
+        try {
+            const intervalSeconds = hours * 3600;
+            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update/config`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    auto_update_enabled: enabled,
+                    update_check_interval_seconds: intervalSeconds
+                })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.error || "Failed to save auto-update configuration");
+            }
+
+            showUpdatesFeedback("Auto-update settings saved successfully.", "success");
+            if (window.showSuccess) window.showSuccess("Settings saved");
+        } catch (err) {
+            showUpdatesFeedback(err.message || "Failed to save settings", "error");
+            if (window.showError) window.showError(err.message || "Failed to save settings");
+        } finally {
+            if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i class="fas fa-save"></i> Save Settings';
+            }
         }
     }
 
@@ -523,4 +859,11 @@
     window.closeServicesModal = closeServicesModal;
     window.handleServicesModalOverlayClick = handleServicesModalOverlayClick;
     window.toggleService = toggleService;
+    window.openUpdatesModal = openUpdatesModal;
+    window.closeUpdatesModal = closeUpdatesModal;
+    window.handleUpdatesModalOverlayClick = handleUpdatesModalOverlayClick;
+    window.checkPeerUpdate = checkPeerUpdate;
+    window.applyPeerUpdate = applyPeerUpdate;
+    window.onAutoUpdateToggleChange = onAutoUpdateToggleChange;
+    window.saveAutoUpdateConfig = saveAutoUpdateConfig;
 })();

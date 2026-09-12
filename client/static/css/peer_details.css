@@ -634,7 +634,6 @@
 .btn-icon-gear:hover {
     color: var(--nk-blue-primary);
     border-color: var(--nk-blue-primary);
-    transform: rotate(30deg);
 }
 
 .modal-body {
@@ -737,4 +736,319 @@
 .service-row input:disabled + .slider {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Software Updates Feature Styling
+   ========================================================================== */
+
+.updates-modal-card {
+    max-width: 540px;
+    width: 92%;
+}
+
+.updates-status-card {
+    background: #f8fafc;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-md);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.updates-version-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.version-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    background: #ffffff;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-md);
+    padding: 0.75rem 1rem;
+    text-align: center;
+}
+
+.version-lbl {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--nk-text-muted);
+    font-weight: 600;
+}
+
+.version-val {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--nk-text-main);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.version-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--nk-text-muted);
+    font-size: 1.1rem;
+}
+
+.updates-state-badge-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(226, 232, 240, 0.8);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.badge-update-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: var(--nk-text-muted);
+}
+
+.badge-update-status.state-up-to-date {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+
+.badge-update-status.state-update-available {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+
+.badge-update-status.state-updating {
+    background: rgba(2, 132, 199, 0.12);
+    color: var(--nk-blue-primary);
+}
+
+.badge-update-status.state-unknown {
+    background: #f1f5f9;
+    color: var(--nk-text-muted);
+}
+
+.updates-last-checked {
+    font-size: 0.75rem;
+    color: var(--nk-text-muted);
+}
+
+.updates-actions-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.btn-check-updates,
+.btn-apply-update {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border-radius: var(--nk-radius-md);
+    cursor: pointer;
+    transition: var(--nk-transition);
+}
+
+.btn-check-updates {
+    background: #ffffff;
+    border: 1px solid var(--nk-border);
+    color: var(--nk-text-main);
+}
+
+.btn-check-updates:hover:not(:disabled) {
+    border-color: var(--nk-blue-primary);
+    color: var(--nk-blue-primary);
+    background: rgba(2, 132, 199, 0.04);
+}
+
+.btn-apply-update {
+    background: var(--nk-blue-primary);
+    border: 1px solid var(--nk-blue-primary);
+    color: #ffffff;
+}
+
+.btn-apply-update:hover:not(:disabled) {
+    background: #0274af;
+    border-color: #0274af;
+}
+
+.btn-apply-update:disabled,
+.btn-check-updates:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-apply-update.has-update {
+    background: #059669;
+    border-color: #059669;
+}
+
+.btn-apply-update.has-update:hover:not(:disabled) {
+    background: #047857;
+    border-color: #047857;
+}
+
+.updates-feedback-msg {
+    margin-bottom: 1rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: var(--nk-radius-md);
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.updates-feedback-msg.feedback-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.updates-feedback-msg.feedback-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.updates-config-section {
+    border-top: 1px solid var(--nk-border);
+    padding-top: 1.15rem;
+    margin-top: 0.5rem;
+}
+
+.updates-section-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--nk-text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+}
+
+.auto-update-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+}
+
+.auto-update-info,
+.interval-label-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.auto-update-interval-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    border-top: 1px dashed var(--nk-border);
+    margin-top: 0.4rem;
+    transition: opacity 0.2s ease;
+}
+
+.auto-update-interval-row.disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.interval-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.interval-input {
+    width: 85px;
+    padding: 0.35rem 0.5rem;
+    text-align: center;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-md);
+    font-weight: 600;
+    font-size: 0.9rem;
+    background: #ffffff;
+}
+
+.interval-unit {
+    font-size: 0.82rem;
+    color: var(--nk-text-muted);
+}
+
+.auto-update-save-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.btn-save-config {
+    background: #ffffff;
+    border: 1px solid var(--nk-border);
+    color: var(--nk-text-main);
+    padding: 0.45rem 1rem;
+    border-radius: var(--nk-radius-md);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: var(--nk-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-save-config:hover:not(:disabled) {
+    background: var(--nk-blue-primary);
+    border-color: var(--nk-blue-primary);
+    color: #ffffff;
+}
+
+/* Badge in Peer Info card */
+.badge-pill-update {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+    margin-left: 0.4rem;
+    cursor: pointer;
+    transition: var(--nk-transition);
+}
+
+.badge-pill-update:hover {
+    background: rgba(245, 158, 11, 0.25);
+}
+
+/* Action Card Update Indicator Dot */
+.update-dot {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #f59e0b;
+    box-shadow: 0 0 0 2px #ffffff;
 }

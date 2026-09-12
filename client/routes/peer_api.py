@@ -644,3 +644,112 @@ def peer_services_proxy(peer_id):
         return jsonify({"error": "Device unreachable"}), 503
     except (ValueError, KeyError):
         return jsonify({"error": "Unable to update service"}), 502
+
+
+@client_bp.route('/api/peers/<peer_id>/update', methods=['GET', 'POST'])
+@login_required
+def peer_update_api(peer_id):
+    customer_id = session.get('client_customer_id')
+    customer = Client.query.get(customer_id) if customer_id else None
+    if not customer or not verify_peer_access(customer, peer_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    if request.method == 'POST':
+        if not customer.is_subscription_active or customer.subscription_status in ('inactive', 'limit_control'):
+            return jsonify({"error": "Updates locked in Read-Only mode"}), 403
+
+    peers_data = get_cached_all_netbird_peers(get_api_base_url(), get_api_headers())
+    peer = next((p for p in peers_data if p.get("id") == peer_id), None)
+    if not peer or not peer.get("ip"):
+        return jsonify({"error": "Device unreachable"}), 404
+
+    peer_ip = peer.get("ip")
+    agent_url = f"http://{peer_ip}:8765/update"
+
+    try:
+        if request.method == 'POST':
+            payload = request.get_json(silent=True) or {}
+            # Software apply can take up to 3 minutes for tarball download and engine apply
+            resp = requests.post(agent_url, json=payload, timeout=(2, 180))
+        else:
+            resp = requests.get(agent_url, timeout=(2, 15))
+
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except requests.Timeout:
+        return jsonify({"error": "Update operation timed out"}), 504
+    except requests.RequestException:
+        return jsonify({"error": "Device unreachable"}), 503
+    except Exception as e:
+        logger.error(f"Error in peer_update_api for peer {peer_id}: {e}")
+        return jsonify({"error": "Unable to process update"}), 500
+
+
+@client_bp.route('/api/peers/<peer_id>/update/config', methods=['GET', 'PUT'])
+@login_required
+def peer_update_config_api(peer_id):
+    customer_id = session.get('client_customer_id')
+    customer = Client.query.get(customer_id) if customer_id else None
+    if not customer or not verify_peer_access(customer, peer_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    peers_data = get_cached_all_netbird_peers(get_api_base_url(), get_api_headers())
+    peer = next((p for p in peers_data if p.get("id") == peer_id), None)
+    if not peer or not peer.get("ip"):
+        return jsonify({"error": "Device unreachable"}), 404
+
+    peer_ip = peer.get("ip")
+    agent_url = f"http://{peer_ip}:8765/update/config"
+
+    try:
+        if request.method == 'PUT':
+            if not customer.is_subscription_active or customer.subscription_status in ('inactive', 'limit_control'):
+                return jsonify({"error": "Modifications locked in Read-Only mode"}), 403
+
+            data = request.get_json() or {}
+            agent_payload = {}
+
+            if "auto_update_enabled" in data:
+                agent_payload["auto_update_enabled"] = bool(data["auto_update_enabled"])
+
+            # Support interval in hours or seconds with minimum 3 hours (10,800 seconds)
+            if "update_check_interval_hours" in data:
+                try:
+                    hours = float(data["update_check_interval_hours"])
+                    if hours < 3:
+                        return jsonify({"error": "Minimum interval is 3 hours"}), 400
+                    agent_payload["update_check_interval_seconds"] = int(hours * 3600)
+                except (ValueError, TypeError):
+                    return jsonify({"error": "Invalid interval value"}), 400
+            elif "update_check_interval_seconds" in data:
+                try:
+                    secs = int(data["update_check_interval_seconds"])
+                    if secs < 10800:
+                        return jsonify({"error": "Minimum interval is 3 hours"}), 400
+                    agent_payload["update_check_interval_seconds"] = secs
+                except (ValueError, TypeError):
+                    return jsonify({"error": "Invalid interval value"}), 400
+
+            if not agent_payload:
+                return jsonify({"error": "No configuration parameters provided"}), 400
+
+            resp = requests.put(agent_url, json=agent_payload, timeout=(2, 10))
+        else:
+            resp = requests.get(agent_url, timeout=(2, 10))
+
+        if resp.ok:
+            try:
+                resp_json = resp.json()
+                secs = resp_json.get("update_check_interval_seconds")
+                if secs is not None:
+                    resp_json["update_check_interval_hours"] = round(secs / 3600.0, 1)
+                return jsonify(resp_json), resp.status_code
+            except Exception:
+                pass
+
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except requests.RequestException:
+        return jsonify({"error": "Device unreachable"}), 503
+    except Exception as e:
+        logger.error(f"Error in peer_update_config_api for peer {peer_id}: {e}")
+        return jsonify({"error": "Unable to process update config"}), 500
+

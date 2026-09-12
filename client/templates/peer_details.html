@@ -9,7 +9,8 @@
 {% block content %}
 <div class="details-container" id="peer-details-container" data-peer-name="{{ peer_name }}"
     data-peer-network="{{ peer_network or '' }}" data-route-id="{{ peer_route_id or '' }}"
-    data-route-network-id="{{ peer_route_network_id or '' }}" data-peer-id="{{ peer_id }}">
+    data-route-network-id="{{ peer_route_network_id or '' }}" data-peer-id="{{ peer_id }}"
+    data-peer-online="{{ 'true' if is_online else 'false' }}">
     <a href="{{ url_for('client.peers_page') }}" class="back-link">
         <i class="fas fa-arrow-left"></i> Back to Peers List
     </a>
@@ -98,9 +99,17 @@
                 </div>
 
                 <div class="info-item">
+                    <span class="info-label">Version</span>
+                    <div class="info-value-wrapper">
+                        <span class="info-value" id="peer-version-display">{{ peer_version or '—' }}</span>
+                        <span class="badge-status-pill badge-pill-update" id="peer-version-badge" style="display: none;"></span>
+                    </div>
+                </div>
+<!-- 
+                <div class="info-item">
                     <span class="info-label">Last Synchronization</span>
                     <span class="info-value">{{ peer_last_seen }}</span>
-                </div>
+                </div> -->
             </div>
 
             <h3 class="card-title" style="margin-top: 2rem; display: flex; align-items: center; justify-content: space-between;">
@@ -125,6 +134,11 @@
                     <i class="fas fa-list"></i>
                     <span>Aliases</span>
                 </a>
+                <a href="javascript:void(0)" class="action-card" id="btn-open-updates" onclick="openUpdatesModal()" title="Manage Software Updates">
+                    <i class="fas fa-arrow-alt-circle-up"></i>
+                    <span>Updates</span>
+                    <span class="update-dot" id="update-badge-dot" style="display: none;"></span>
+                </a>
                 {% else %}
                 <a href="javascript:void(0)" class="action-card disabled"
                     title="This peer is offline. Firewall rules are only accessible when the peer is online.">
@@ -139,6 +153,11 @@
                     title="This peer is offline. Aliases are only accessible when the peer is online.">
                     <i class="fas fa-list" style="color: var(--nk-text-muted);"></i>
                     <span style="color: var(--nk-text-muted);">Aliases</span>
+                </a>
+                <a href="javascript:void(0)" class="action-card disabled"
+                    title="This peer is offline. Updates are only accessible when the peer is online.">
+                    <i class="fas fa-arrow-alt-circle-up" style="color: var(--nk-text-muted);"></i>
+                    <span style="color: var(--nk-text-muted);">Updates</span>
                 </a>
                 {% endif %}
             </div>
@@ -213,8 +232,8 @@
                     <div class="services-list" id="services-list" style="display: none;">
                         <div class="service-row" data-service="dns_filtering">
                             <div class="service-info">
-                                <span class="service-name">DNS Filtering</span>
-                                <span class="service-desc">Content filtering</span>
+                                <span class="service-name">Web Filter</span>
+                                <!-- <span class="service-desc">web domains filtering</span> -->
                             </div>
                             <label class="switch">
                                 <input type="checkbox" class="service-toggle" data-service="dns_filtering" onchange="toggleService(this)">
@@ -224,7 +243,7 @@
                         <div class="service-row" data-service="firewall">
                             <div class="service-info">
                                 <span class="service-name">Firewall</span>
-                                <span class="service-desc">Custom firewall rules</span>
+                                <!-- <span class="service-desc"></span> -->
                             </div>
                             <label class="switch">
                                 <input type="checkbox" class="service-toggle" data-service="firewall" onchange="toggleService(this)">
@@ -234,7 +253,7 @@
                         <div class="service-row" data-service="mesh_network">
                             <div class="service-info">
                                 <span class="service-name">Mesh Network</span>
-                                <span class="service-desc">Connectivity to other devices</span>
+                                <span class="service-desc">Connectivity to other peers (branches)</span>
                             </div>
                             <label class="switch">
                                 <input type="checkbox" class="service-toggle" data-service="mesh_network" onchange="toggleService(this)">
@@ -245,6 +264,91 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-action btn-cancel" onclick="closeServicesModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Software Updates Modal -->
+        <div class="modal-overlay" id="updatesModal" onclick="handleUpdatesModalOverlayClick(event)">
+            <div class="modal-card updates-modal-card">
+                <div class="modal-header">
+                    <h2><i class="fas fa-arrow-alt-circle-up"></i> Software Updates</h2>
+                    <button type="button" class="modal-close" id="btn-close-updates-modal" onclick="closeUpdatesModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Status Banner -->
+                    <div class="updates-status-card">
+                        <div class="updates-version-row">
+                            <div class="version-box">
+                                <span class="version-lbl">Installed Version</span>
+                                <span class="version-val" id="updates-installed-val">{{ peer_version or '—' }}</span>
+                            </div>
+                            <div class="version-arrow">
+                                <i class="fas fa-arrow-right"></i>
+                            </div>
+                            <div class="version-box">
+                                <span class="version-lbl">Available Version</span>
+                                <span class="version-val" id="updates-available-val">—</span>
+                            </div>
+                        </div>
+                        <div class="updates-state-badge-row">
+                            <span class="badge-update-status status-checking" id="updates-state-badge">
+                                <i class="fas fa-info-circle"></i> Ready to check
+                            </span>
+                            <span class="updates-last-checked" id="updates-last-checked-text"></span>
+                        </div>
+                    </div>
+
+                    <!-- Manual Actions -->
+                    <div class="updates-actions-row">
+                        <button type="button" class="btn-action btn-check-updates" id="btn-check-update" onclick="checkPeerUpdate()">
+                            <i class="fas fa-sync-alt"></i> Check Update
+                        </button>
+                        <button type="button" class="btn-action btn-apply-update" id="btn-apply-update" disabled onclick="applyPeerUpdate()">
+                            <i class="fas fa-download"></i> Update Now
+                        </button>
+                    </div>
+
+                    <div class="updates-feedback-msg" id="updates-feedback-msg" style="display: none;"></div>
+
+                    <!-- Auto-Update Configuration Section -->
+                    <div class="updates-config-section">
+                        <h4 class="updates-section-title">
+                            <i class="fas fa-clock"></i> Automatic Updates
+                        </h4>
+
+                        <div class="auto-update-setting-row">
+                            <div class="auto-update-info">
+                                <span class="setting-title">Auto-Update</span>
+                                <span class="setting-desc">Automatically check and apply updates</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="auto-update-toggle" onchange="onAutoUpdateToggleChange(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="auto-update-interval-row" id="auto-update-interval-wrapper">
+                            <div class="interval-label-group">
+                                <label for="update-interval-hours" class="setting-title">Update Interval</label>
+                                <span class="setting-desc">Minimum 3 hours</span>
+                            </div>
+                            <div class="interval-input-group">
+                                <input type="number" id="update-interval-hours" class="table-input interval-input"
+                                    min="3" max="168" step="1" value="12" placeholder="Hours">
+                                <span class="interval-unit">hours</span>
+                            </div>
+                        </div>
+
+                        <div class="auto-update-save-row">
+                            <button type="button" class="btn-action btn-save-config" id="btn-save-update-config" onclick="saveAutoUpdateConfig()">
+                                <i class="fas fa-save"></i> Save Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-action btn-cancel" id="btn-cancel-updates-modal" onclick="closeUpdatesModal()">Close</button>
                 </div>
             </div>
         </div>
@@ -297,7 +401,8 @@
                     peerNetwork: el.getAttribute("data-peer-network") || "",
                     routeId: el.getAttribute("data-route-id") || "",
                     routeNetworkId: el.getAttribute("data-route-network-id") || "",
-                    peerId: el.getAttribute("data-peer-id") || ""
+                    peerId: el.getAttribute("data-peer-id") || "",
+                    isOnline: el.getAttribute("data-peer-online") === "true"
                 });
             }
         });
