@@ -258,26 +258,15 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
         # ── 5. Enforce subscription status ─────────────────────────────────
         if subscription_status != "active":
             logger.warning(f"[install-peer-api] Non-active subscription='{subscription_status}' user='{username}'")
-            if subscription_status == "inactive":
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "error": "Forbidden",
-                        "message": "Subscription is inactive.\nPlease renew it.",
-                        "account": _account_meta(current_peers),
-                        "username": username,
-                    }
-                )
-            else:
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "error": "Forbidden",
-                        "message": "Subscription is inactive.\nPlease renew it.",
-                        "account": _account_meta(current_peers),
-                        "username": username,
-                    }
-                )
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "Forbidden",
+                    "message": "Subscription inactive. Please renew.",
+                    "account": _account_meta(current_peers),
+                    "username": username,
+                }
+            )
 
         # ── 6. Quota check ────────────────────────────────────────────────
         if current_peers >= allowed_peers_count:

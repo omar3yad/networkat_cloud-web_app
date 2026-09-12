@@ -86,7 +86,7 @@ class TestInstallPeerApi(unittest.TestCase):
         import json
         data = json.loads(resp.body.decode())
         self.assertEqual(data["error"], "Forbidden")
-        self.assertIn("Subscription restricted", data["message"])
+        self.assertIn("Subscription inactive", data["message"])
         self.assertIn("account", data)
         self.assertEqual(data["account"]["full_name"], "Mustafa Net")
         self.assertEqual(data["account"]["subscription"]["installed_peers_count"], 2)

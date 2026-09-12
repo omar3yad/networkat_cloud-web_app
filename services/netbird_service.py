@@ -71,7 +71,7 @@ class NetBirdService:
             return set()
 
     @classmethod
-    def get_cached_customer_peer_ids(cls, customer) -> set:
+    def get_cached_customer_peer_ids(cls, customer, force_refresh: bool = False) -> set:
         """Fetch allowed peer IDs for a customer with a 60-second cache."""
         if not customer or not getattr(customer, 'netbird_group_id', None):
             return set()
@@ -80,7 +80,7 @@ class NetBirdService:
         now = time.time()
 
         with cache_lock:
-            if cid in customer_groups_cache:
+            if not force_refresh and cid in customer_groups_cache:
                 peer_ids, cached_time = customer_groups_cache[cid]
                 if now - cached_time < 60:
                     return peer_ids

@@ -374,11 +374,14 @@
         transition: var(--nk-transition);
         border: 1px solid transparent;
         text-decoration: none;
+        background: #0284c7;
+        color: #ffffff;
     }
 
     .btn-primary:hover {
-        background: var(--nk-blue-hover);
+        background: #50a6d2;
         box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+        color: #ffffff;
     }
 
     .btn-action.btn-icon-only {

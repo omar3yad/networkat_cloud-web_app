@@ -456,19 +456,19 @@ def get_peers_status_api():
     if not customer:
         return jsonify({"error": "Unauthorized"}), 401
 
+    force_refresh = request.args.get('refresh') == 'true'
+    now = time.time()
+    cached_payload, cached_time = read_file_cache(f"customer_status_{customer_id}")
+
     base_url = get_api_base_url()
     headers = get_api_headers()
-    allowed_peer_ids = get_cached_customer_peer_ids(customer)
+    allowed_peer_ids = get_cached_customer_peer_ids(customer, force_refresh=force_refresh)
 
     if not allowed_peer_ids:
         return jsonify({
             "peers": [],
             "summary": {"total": 0, "online": 0, "offline": 0}
         })
-
-    force_refresh = request.args.get('refresh') == 'true'
-    now = time.time()
-    cached_payload, cached_time = read_file_cache(f"customer_status_{customer_id}")
 
     # 1. Fresh cache (< 10s) when not forcing refresh
     if not force_refresh and cached_payload and (now - cached_time < 10):

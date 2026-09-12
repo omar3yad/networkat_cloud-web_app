@@ -27,11 +27,16 @@
                 // Update read-only route label
                 const routeLabel = document.getElementById(`peer-route-text-${peerId}`);
                 if (routeLabel) {
-                    routeLabel.textContent = currentRoute || '—';
                     if (!currentRoute) {
-                        routeLabel.classList.add('is-empty');
+                        routeLabel.textContent = 'e.g. 192.168.87.0/24';
+                        routeLabel.className = 'peer-route-placeholder';
+                        routeLabel.title = 'Click to add network route';
+                        routeLabel.onclick = () => enablePeerRouteEditMode(peerId);
                     } else {
-                        routeLabel.classList.remove('is-empty');
+                        routeLabel.textContent = currentRoute;
+                        routeLabel.className = 'peer-route-text';
+                        routeLabel.title = '';
+                        routeLabel.onclick = null;
                     }
                 }
 
@@ -143,6 +148,70 @@
 
         updatePeerCountDisplay(data.peers);
 
+        const tbody = document.getElementById('peers-table-body');
+        const sidebarSubmenu = document.getElementById('peer-submenu');
+
+        // Dynamically sync table rows if peers were added or removed
+        if (tbody) {
+            const currentPeerIds = new Set(data.peers.map(p => p.id));
+            const existingRows = tbody.querySelectorAll('tr[data-peer-id]');
+            existingRows.forEach(r => {
+                const pid = r.getAttribute('data-peer-id');
+                if (!currentPeerIds.has(pid)) {
+                    r.remove();
+                }
+            });
+
+            let addedNewRow = false;
+            data.peers.forEach(peer => {
+                let tr = tbody.querySelector(`tr[data-peer-id="${peer.id}"]`);
+                if (!tr) {
+                    tr = createPeerRow(peer);
+                    tbody.appendChild(tr);
+                    addedNewRow = true;
+                }
+            });
+            if (addedNewRow) {
+                fetchAndPopulateRoutes();
+            }
+        }
+
+        // Dynamically sync sidebar submenu items
+        if (sidebarSubmenu) {
+            const currentPeerIds = new Set(data.peers.map(p => p.id));
+            const existingLinks = sidebarSubmenu.querySelectorAll('a[id^="sidebar-peer-"]');
+            existingLinks.forEach(l => {
+                const pid = l.id.replace('sidebar-peer-', '');
+                if (!currentPeerIds.has(pid)) {
+                    l.remove();
+                }
+            });
+
+            data.peers.forEach(peer => {
+                let sidebarItem = document.getElementById(`sidebar-peer-${peer.id}`);
+                const statusTitle = getPeerStatusTitle(peer);
+                const isOver7d = isOfflineOver7Days(peer.last_seen, peer.is_online);
+                if (!sidebarItem) {
+                    sidebarItem = document.createElement('a');
+                    sidebarItem.href = `/peers/${peer.id}`;
+                    sidebarItem.id = `sidebar-peer-${peer.id}`;
+                    sidebarItem.className = 'submenu-item';
+                    sidebarItem.setAttribute('data-sidebar-online', peer.is_online ? 'true' : 'false');
+                    sidebarItem.setAttribute('data-over-7d', isOver7d ? 'true' : 'false');
+                    if (isOver7d) sidebarItem.style.display = 'none';
+                    sidebarItem.title = `${peer.name || 'Edge Device'} (${statusTitle})`;
+                    sidebarItem.innerHTML = `
+                        <span class="submenu-icon-wrapper">
+                            <span class="peer-status-dot ${peer.is_online ? 'online' : 'offline'}" id="sidebar-dot-${peer.id}" title="${statusTitle}"></span>
+                        </span>
+                        <span class="submenu-peer-name">${escapeHtml(peer.name || 'Edge Device')}</span>
+                        <span class="submenu-seen" id="sidebar-seen-${peer.id}" ${peer.is_online ? 'style="display: none;"' : ''}>${peer.is_online ? '' : (formatOfflineDuration(peer.last_seen) ? formatOfflineDuration(peer.last_seen) + ' ago' : '')}</span>
+                    `;
+                    sidebarSubmenu.appendChild(sidebarItem);
+                }
+            });
+        }
+
         const isLocked = !!(window.IS_READONLY_SUBSCRIPTION || window.SUBSCRIPTION_STATUS === 'limit_control' || window.SUBSCRIPTION_STATUS === 'inactive');
 
         data.peers.forEach(peer => {
@@ -156,9 +225,13 @@
 
             const statusTitle = getPeerStatusTitle(peer);
             const statusBadge = document.getElementById(`status-badge-${peer.id}`);
+            const statusText = document.getElementById(`status-badge-text-${peer.id}`);
             if (statusBadge) {
-                statusBadge.className = `peer-status-bulb ${peer.is_online ? 'online' : 'offline'}`;
+                statusBadge.className = `badge ${peer.is_online ? 'badge-success' : 'badge-inactive'}`;
                 statusBadge.title = statusTitle;
+            }
+            if (statusText) {
+                statusText.textContent = peer.is_online ? 'Connected' : 'Offline';
             }
 
             const sidebarDot = document.getElementById(`sidebar-dot-${peer.id}`);
@@ -200,9 +273,7 @@
                 }
             }
 
-            // VPN-Only applies immediately on click, so always mirror server state
-            // (unless a toggle request is in flight). When the peer is offline the real
-            // value is unknowable, so hide the switch and show "—" instead of ON/OFF.
+            // VPN-Only toggle: When offline, show switch disabled/grey with ON/OFF
             const vpnToggle = document.getElementById(`vpn-only-toggle-${peer.id}`);
             const vpnText = document.getElementById(`vpn-only-text-${peer.id}`);
             const vpnContainer = document.getElementById(`vpn-only-container-${peer.id}`);
@@ -210,10 +281,16 @@
                 vpnToggle.checked = !!peer.vpn_only;
                 vpnToggle.disabled = !peer.is_online;
                 if (vpnContainer) {
-                    vpnContainer.classList.toggle('vpn-only-unknown', !peer.is_online);
+                    vpnContainer.classList.toggle('is-offline', !peer.is_online);
+                    vpnContainer.classList.remove('vpn-only-unknown');
+                    if (!peer.is_online) {
+                        vpnContainer.setAttribute('title', 'Device is offline');
+                    } else {
+                        vpnContainer.removeAttribute('title');
+                    }
                 }
                 if (vpnText) {
-                    vpnText.innerText = peer.is_online ? (peer.vpn_only ? 'ON' : 'OFF') : '—';
+                    vpnText.innerText = peer.vpn_only ? 'ON' : 'OFF';
                 }
                 if (originalPeerState[peer.id]) {
                     originalPeerState[peer.id].vpn_only = !!peer.vpn_only;
@@ -498,6 +575,21 @@
         }
         clearInlineError(`inline-route-${peerId}`);
 
+        const routeLabel = document.getElementById(`peer-route-text-${peerId}`);
+        if (routeLabel && orig) {
+            if (!orig.route) {
+                routeLabel.textContent = 'e.g. 192.168.87.0/24';
+                routeLabel.className = 'peer-route-placeholder';
+                routeLabel.title = 'Click to add network route';
+                routeLabel.onclick = () => enablePeerRouteEditMode(peerId);
+            } else {
+                routeLabel.textContent = orig.route;
+                routeLabel.className = 'peer-route-text';
+                routeLabel.title = '';
+                routeLabel.onclick = null;
+            }
+        }
+
         const routeView = document.getElementById(`peer-route-view-${peerId}`);
         const routeWrapper = document.getElementById(`route-input-wrapper-${peerId}`);
         if (routeView) routeView.style.display = 'flex';
@@ -540,6 +632,21 @@
             if (routeInp) {
                 routeInp.value = orig.route;
                 routeInp.classList.remove('is-modified');
+            }
+
+            const routeLabel = document.getElementById(`peer-route-text-${peerId}`);
+            if (routeLabel) {
+                if (!orig.route) {
+                    routeLabel.textContent = 'e.g. 192.168.87.0/24';
+                    routeLabel.className = 'peer-route-placeholder';
+                    routeLabel.title = 'Click to add network route';
+                    routeLabel.onclick = () => enablePeerRouteEditMode(peerId);
+                } else {
+                    routeLabel.textContent = orig.route;
+                    routeLabel.className = 'peer-route-text';
+                    routeLabel.title = '';
+                    routeLabel.onclick = null;
+                }
             }
 
             clearInlineError(`inline-name-${peerId}`);
@@ -697,9 +804,17 @@
                 if (nameLabel) nameLabel.textContent = item.currentName;
                 const routeLabel = document.getElementById(`peer-route-text-${item.peerId}`);
                 if (routeLabel) {
-                    routeLabel.textContent = item.currentRoute || '—';
-                    if (!item.currentRoute) routeLabel.classList.add('is-empty');
-                    else routeLabel.classList.remove('is-empty');
+                    if (!item.currentRoute) {
+                        routeLabel.textContent = 'e.g. 192.168.87.0/24';
+                        routeLabel.className = 'peer-route-placeholder';
+                        routeLabel.title = 'Click to add network route';
+                        routeLabel.onclick = () => enablePeerRouteEditMode(item.peerId);
+                    } else {
+                        routeLabel.textContent = item.currentRoute;
+                        routeLabel.className = 'peer-route-text';
+                        routeLabel.title = '';
+                        routeLabel.onclick = null;
+                    }
                 }
                 const nameInp = document.getElementById(`inline-name-${item.peerId}`);
                 if (nameInp) nameInp.classList.remove('is-modified');
@@ -729,6 +844,166 @@
         }
     }
 
+    function createPeerRow(peer) {
+        const peerId = peer.id;
+        const name = peer.name || '';
+        const route = peer.route || '';
+        const vpnOnlyChecked = peer.vpn_only ? 'checked' : '';
+        const vpnOnlyText = peer.vpn_only ? 'ON' : 'OFF';
+
+        const isDisabled = !peer.is_online ? 'disabled' : '';
+        const disabledTitle = !peer.is_online ? 'title="Device is offline"' : '';
+        const offlineCls = !peer.is_online ? ' is-offline' : '';
+
+        // Manage is always available, regardless of peer online state
+        const firewallHref = `/peers/${peerId}`;
+
+        // Store initial state
+        originalPeerState[peerId] = {
+            name: name,
+            route: route,
+            vpn_only: !!peer.vpn_only,
+            route_id: null,
+            route_network_id: null
+        };
+
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-peer-id', peerId);
+        tr.setAttribute('data-peer-online', peer.is_online ? 'true' : 'false');
+
+        const isLocked = !!(window.IS_READONLY_SUBSCRIPTION || window.SUBSCRIPTION_STATUS === 'limit_control' || window.SUBSCRIPTION_STATUS === 'inactive');
+        const actionBtnHtml = isLocked ? `
+            <a href="${firewallHref}"
+                id="firewall-link-${peerId}" class="action-btn btn-locked"
+                title="Account is locked (Read-Only)">
+                <i class="fas fa-lock"></i> Lock
+            </a>
+        ` : `
+            <a href="${firewallHref}"
+                id="firewall-link-${peerId}" class="action-btn"
+                style="background-color: var(--nk-blue-primary); border-color: var(--nk-blue-primary); color: white;">
+                Open
+            </a>
+        `;
+
+        tr.innerHTML = `
+            <td>
+                <div class="peer-name-cell">
+                    <!-- Read-only Name View -->
+                    <div class="peer-name-view" id="peer-name-view-${peerId}">
+                        <span class="peer-name-text" id="peer-name-text-${peerId}">${escapeHtml(name)}</span>
+                        <button type="button" class="btn-edit-peer" id="btn-edit-name-${peerId}"
+                            title="Edit device name" onclick="enablePeerNameEditMode('${peerId}')">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                    </div>
+
+                    <!-- Edit Mode Wrapper -->
+                    <div class="peer-name-input-wrapper" id="name-input-wrapper-${peerId}" style="display: none;">
+                        <div class="peer-input-row">
+                            <input style="min-width: 140px;" type="text" class="table-input" id="inline-name-${peerId}"
+                                value="${escapeHtml(name)}" placeholder="Device Name" maxlength="200">
+                            <button type="button" class="btn-cancel-edit" title="Cancel edit"
+                                onclick="cancelPeerNameEditMode('${peerId}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="table-error-msg" id="inline-name-${peerId}-error" style="display: none;"></div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <!-- Read-only Route View -->
+                <div class="peer-route-view" id="peer-route-view-${peerId}">
+                    ${route ? `
+                        <span class="peer-route-text" id="peer-route-text-${peerId}">${escapeHtml(route)}</span>
+                    ` : `
+                        <span class="peer-route-placeholder" id="peer-route-text-${peerId}"
+                            onclick="enablePeerRouteEditMode('${peerId}')"
+                            title="Click to add network route">e.g. 192.168.87.0/24</span>
+                    `}
+                    <button type="button" class="btn-edit-peer" id="btn-edit-route-${peerId}"
+                        title="Edit network route" onclick="enablePeerRouteEditMode('${peerId}')">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                </div>
+
+                <!-- Edit Mode Wrapper -->
+                <div class="peer-route-input-wrapper" id="route-input-wrapper-${peerId}" style="display: none;">
+                    <div class="peer-input-row">
+                        <input style="min-width: 140px;" type="text" class="table-input inline-route-field"
+                            id="inline-route-${peerId}" data-peer-id="${peerId}"
+                            placeholder="e.g. 192.168.87.0/24" value="${escapeHtml(route)}">
+                        <button type="button" class="btn-cancel-edit" title="Cancel edit"
+                            onclick="cancelPeerRouteEditMode('${peerId}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="table-error-msg" id="inline-route-${peerId}-error" style="display: none;"></div>
+                </div>
+            </td>
+            <td>
+                <div class="toggle-container${offlineCls}" id="vpn-only-container-${peerId}" ${disabledTitle}>
+                    <label class="switch">
+                        <input type="checkbox"
+                               id="vpn-only-toggle-${peerId}"
+                               onchange="onVpnOnlyToggleChange('${peerId}', this)"
+                               ${vpnOnlyChecked}
+                               ${isDisabled}>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-status-text" id="vpn-only-text-${peerId}">${vpnOnlyText}</span>
+                </div>
+            </td>
+            <td>
+                <span class="badge ${peer.is_online ? 'badge-success' : 'badge-inactive'}"
+                      id="status-badge-${peerId}"
+                      title="${getPeerStatusTitle(peer)}">
+                    <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                    <span id="status-badge-text-${peerId}">${peer.is_online ? 'Connected' : 'Offline'}</span>
+                </span>
+            </td>
+            <td>
+                <div class="actions-cell">
+                    ${actionBtnHtml}
+                </div>
+            </td>
+        `;
+
+        // Bind live validation & dirty tracking + keyboard shortcuts
+        const nameInput = tr.querySelector(`#inline-name-${peerId}`);
+        if (nameInput) {
+            nameInput.addEventListener('input', () => {
+                checkDirtyPeerChanges();
+            });
+            nameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    cancelPeerNameEditMode(peerId);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    enablePeerRouteEditMode(peerId);
+                }
+            });
+        }
+
+        const routeInput = tr.querySelector(`#inline-route-${peerId}`);
+        if (routeInput) {
+            routeInput.addEventListener('input', () => {
+                checkDirtyPeerChanges();
+            });
+            routeInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    cancelPeerRouteEditMode(peerId);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyAllPeerChanges();
+                }
+            });
+        }
+
+        return tr;
+    }
+
     function renderPeersTable(peers) {
         const tbody = document.getElementById('peers-table-body');
         if (!tbody) return;
@@ -745,7 +1020,7 @@
         if (!peers || peers.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="4" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
+                    <td colspan="5" style="text-align: center; padding: 4rem; color: var(--nk-text-muted);">
                         No Peer devices found in this customer group.
                     </td>
                 </tr>
@@ -757,154 +1032,8 @@
         originalPeerState = {};
 
         peers.forEach(peer => {
-            const peerId = peer.id;
-            const name = peer.name || '';
-            const route = peer.route || '';
-            const vpnOnlyChecked = peer.vpn_only ? 'checked' : '';
-            const vpnOnlyText = peer.is_online ? (peer.vpn_only ? 'ON' : 'OFF') : '—';
-
-            const isDisabled = !peer.is_online ? 'disabled' : '';
-            const disabledTitle = !peer.is_online ? 'title="Device is offline"' : '';
-            const vpnUnknownCls = !peer.is_online ? ' vpn-only-unknown' : '';
-
-            // Manage is always available, regardless of peer online state
-            const firewallHref = `/peers/${peerId}`;
-
-            // Store initial state
-            originalPeerState[peerId] = {
-                name: name,
-                route: route,
-                vpn_only: !!peer.vpn_only,
-                route_id: null,
-                route_network_id: null
-            };
-
-            const tr = document.createElement('tr');
-            tr.setAttribute('data-peer-id', peerId);
-            tr.setAttribute('data-peer-online', peer.is_online ? 'true' : 'false');
-
-            const isLocked = !!(window.IS_READONLY_SUBSCRIPTION || window.SUBSCRIPTION_STATUS === 'limit_control' || window.SUBSCRIPTION_STATUS === 'inactive');
-            const actionBtnHtml = isLocked ? `
-                <a href="${firewallHref}"
-                    id="firewall-link-${peerId}" class="action-btn btn-locked"
-                    title="Account is locked (Read-Only)">
-                    <i class="fas fa-lock"></i> Lock
-                </a>
-            ` : `
-                <a href="${firewallHref}"
-                    id="firewall-link-${peerId}" class="action-btn"
-                    style="background-color: var(--nk-blue-primary); border-color: var(--nk-blue-primary); color: white;">
-                    Open
-                </a>
-            `;
-
-            tr.innerHTML = `
-                <td>
-                    <div class="peer-name-cell">
-                        <span class="peer-status-bulb ${peer.is_online ? 'online' : 'offline'}"
-                            id="status-badge-${peerId}" title="${getPeerStatusTitle(peer)}"></span>
-
-                        <!-- Read-only Name View -->
-                        <div class="peer-name-view" id="peer-name-view-${peerId}">
-                            <span class="peer-name-text" id="peer-name-text-${peerId}">${escapeHtml(name)}</span>
-                            <button type="button" class="btn-edit-peer" id="btn-edit-name-${peerId}"
-                                title="Edit device name" onclick="enablePeerNameEditMode('${peerId}')">
-                                <i class="bi bi-pencil-square"></i>
-                            </button>
-                        </div>
-
-                        <!-- Edit Mode Wrapper -->
-                        <div class="peer-name-input-wrapper" id="name-input-wrapper-${peerId}" style="display: none;">
-                            <div class="peer-input-row">
-                                <input style="min-width: 140px;" type="text" class="table-input" id="inline-name-${peerId}"
-                                    value="${escapeHtml(name)}" placeholder="Device Name" maxlength="200">
-                                <button type="button" class="btn-cancel-edit" title="Cancel edit"
-                                    onclick="cancelPeerNameEditMode('${peerId}')">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                            <div class="table-error-msg" id="inline-name-${peerId}-error" style="display: none;"></div>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <!-- Read-only Route View -->
-                    <div class="peer-route-view" id="peer-route-view-${peerId}">
-                        <span class="peer-route-text ${route ? '' : 'is-empty'}" id="peer-route-text-${peerId}">
-                            ${escapeHtml(route) || '—'}
-                        </span>
-                        <button type="button" class="btn-edit-peer" id="btn-edit-route-${peerId}"
-                            title="Edit network route" onclick="enablePeerRouteEditMode('${peerId}')">
-                            <i class="bi bi-pencil-square"></i>
-                        </button>
-                    </div>
-
-                    <!-- Edit Mode Wrapper -->
-                    <div class="peer-route-input-wrapper" id="route-input-wrapper-${peerId}" style="display: none;">
-                        <div class="peer-input-row">
-                            <input style="min-width: 140px;" type="text" class="table-input inline-route-field"
-                                id="inline-route-${peerId}" data-peer-id="${peerId}"
-                                placeholder="e.g. 192.168.87.0/24" value="${escapeHtml(route)}">
-                            <button type="button" class="btn-cancel-edit" title="Cancel edit"
-                                onclick="cancelPeerRouteEditMode('${peerId}')">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <div class="table-error-msg" id="inline-route-${peerId}-error" style="display: none;"></div>
-                    </div>
-                </td>
-                <td>
-                    <div class="toggle-container${vpnUnknownCls}" id="vpn-only-container-${peerId}" ${disabledTitle}>
-                        <label class="switch">
-                            <input type="checkbox"
-                                   id="vpn-only-toggle-${peerId}"
-                                   onchange="onVpnOnlyToggleChange('${peerId}', this)"
-                                   ${vpnOnlyChecked}
-                                   ${isDisabled}>
-                            <span class="slider"></span>
-                        </label>
-                        <span class="toggle-status-text" id="vpn-only-text-${peerId}">${vpnOnlyText}</span>
-                    </div>
-                </td>
-                <td>
-                    <div class="actions-cell">
-                        ${actionBtnHtml}
-                    </div>
-                </td>
-            `;
-
+            const tr = createPeerRow(peer);
             tbody.appendChild(tr);
-
-            // Bind live validation & dirty tracking + keyboard shortcuts
-            const nameInput = tr.querySelector(`#inline-name-${peerId}`);
-            if (nameInput) {
-                nameInput.addEventListener('input', () => {
-                    checkDirtyPeerChanges();
-                });
-                nameInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        cancelPeerNameEditMode(peerId);
-                    } else if (e.key === 'Enter') {
-                        e.preventDefault();
-                        enablePeerRouteEditMode(peerId);
-                    }
-                });
-            }
-
-            const routeInput = tr.querySelector(`#inline-route-${peerId}`);
-            if (routeInput) {
-                routeInput.addEventListener('input', () => {
-                    checkDirtyPeerChanges();
-                });
-                routeInput.addEventListener('keydown', (e) => {
-                    if (e.key === 'Escape') {
-                        cancelPeerRouteEditMode(peerId);
-                    } else if (e.key === 'Enter') {
-                        e.preventDefault();
-                        applyAllPeerChanges();
-                    }
-                });
-            }
         });
 
         fetchAndPopulateRoutes();
@@ -962,7 +1091,20 @@
             const tbody = document.getElementById('peers-table-body');
             const isLoaded = tbody && tbody.getAttribute('data-loaded') === 'true';
 
-            if (tbody && !isLoaded) {
+            // Check if peer set changed (peer added or deleted)
+            const renderedRowIds = new Set(
+                Array.from(tbody ? tbody.querySelectorAll('tr[data-peer-id]') : []).map(r => r.getAttribute('data-peer-id'))
+            );
+            const currentPeerIds = new Set((data.peers || []).map(p => p.id));
+            const peerSetChanged = (renderedRowIds.size !== currentPeerIds.size) ||
+                [...currentPeerIds].some(id => !renderedRowIds.has(id)) ||
+                [...renderedRowIds].some(id => !currentPeerIds.has(id));
+
+            const applyBar = document.getElementById('peers-apply-bar');
+            const hasUnsavedChanges = (applyBar && applyBar.style.display !== 'none') ||
+                (tbody && tbody.querySelectorAll('tr.row-editing').length > 0);
+
+            if (tbody && (!isLoaded || (peerSetChanged && !hasUnsavedChanges))) {
                 renderPeersTable(data.peers);
                 tbody.setAttribute('data-loaded', 'true');
             } else {
@@ -1029,7 +1171,7 @@
             }
             const label = filterOnline ? 'online' : 'offline';
             emptyRow.innerHTML = `
-                <td colspan="4" style="text-align: center; padding: 3.5rem; color: var(--nk-text-muted);">
+                <td colspan="5" style="text-align: center; padding: 3.5rem; color: var(--nk-text-muted);">
                     <i class="fas fa-filter" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.4;"></i>
                     No ${label} peers found matching filter.
                 </td>

@@ -96,7 +96,7 @@
                                         <a href="{{ target_url }}" {{ click_handler|safe }} id="sidebar-peer-{{ p.id }}" data-sidebar-online="false" class="submenu-item {% if is_current_peer %}active{% endif %}" title="{{ p.name }} ({{ p.status_title }})">
                                             <span class="peer-status-dot offline" id="sidebar-dot-{{ p.id }}" title="{{ p.status_title }}"></span>
                                             <span class="submenu-label">{{ p.name }}</span>
-                                            <span class="submenu-last-seen" id="sidebar-seen-{{ p.id }}">{% if p.last_seen_human %}{{ p.last_seen_human }}{% endif %}</span>
+                                            <!-- <span class="submenu-last-seen" id="sidebar-seen-{{ p.id }}" >{% if p.last_seen_human %}{{ p.last_seen_human }}{% endif %}</span> -->
                                         </a>
                                     {% endif %}
                                 {% endif %}
