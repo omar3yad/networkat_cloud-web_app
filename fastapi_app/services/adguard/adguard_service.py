@@ -1,10 +1,13 @@
 # /opt/networkat_sdwan/core/web_app/fastapi_app/services/adguard/adguard_service.py
+import logging
 import os
 import requests
 from typing import Any, Optional
 from fastapi import HTTPException, status
 from starlette.concurrency import run_in_threadpool
 from fastapi_app.services.netbird.peers import NetBirdPeerService
+
+logger = logging.getLogger("adguard_service")
 
 ADGUARD_USER = os.getenv("ADGUARD_USER", "admin")
 ADGUARD_PASSWORD = os.getenv("ADGUARD_PASSWORD", "adguard-api")
@@ -48,8 +51,8 @@ class AdGuardService:
                 result = session.execute(query, {"peer_id": peer_id}).fetchone()
                 if result and result[0] and result[0] not in ("default_password", ADGUARD_PASSWORD):
                     return result[0]
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("adguard pw db read failed for peer %s: %s", peer_id, exc)
 
         # 2. Try to query the peer's agent API
         try:
@@ -59,23 +62,30 @@ class AdGuardService:
                 try:
                     data = response.json()
                     password = data.get("password") if isinstance(data, dict) else response.text.strip()
-                except Exception:
+                except ValueError:
                     password = response.text.strip()
 
                 if password:
-                    # Save it back to our DB if table exists (UPDATE only to avoid logical replication conflicts)
+                    # Save it back to our DB if table exists (UPDATE only to avoid logical replication
+                    # conflicts). No group_id filter: peer_id repeats once per NetBird group the peer
+                    # belongs to (group_peers PK is (group_id, peer_id)), and this writes every matching
+                    # row so none is left stranded on the default. The default guard stops this from ever
+                    # overwriting a real password.
                     try:
                         with SessionLocal() as session:
                             update_query = text(
-                                "UPDATE group_peers SET adguard_password = :password WHERE peer_id = :peer_id"
+                                "UPDATE group_peers SET adguard_password = :password "
+                                "WHERE peer_id = :peer_id AND adguard_password = :default"
                             )
-                            session.execute(update_query, {"password": password, "peer_id": peer_id})
+                            session.execute(update_query, {
+                                "password": password, "peer_id": peer_id, "default": ADGUARD_PASSWORD,
+                            })
                             session.commit()
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("adguard pw write-back failed for peer %s: %s", peer_id, exc)
                     return password
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("adguard pw agent fetch failed for peer %s: %s", peer_id, exc)
 
         # 3. Fallback to global ADGUARD_PASSWORD from .env
         return ADGUARD_PASSWORD
@@ -120,23 +130,27 @@ class AdGuardService:
                         try:
                             data = agent_resp.json()
                             new_password = data.get("password") if isinstance(data, dict) else agent_resp.text.strip()
-                        except Exception:
+                        except ValueError:
                             new_password = agent_resp.text.strip()
-                            
+
                         if new_password and new_password != adguard_password:
-                            # Save new password to DB
+                            # Save new password to DB (same no-group_id-filter, default-guarded write as
+                            # _get_adguard_password: updates every group_peers row for this peer_id).
                             from fastapi_app.database import SessionLocal
                             from sqlalchemy import text
                             try:
                                 with SessionLocal() as session:
                                     update_query = text(
-                                        "UPDATE group_peers SET adguard_password = :password WHERE peer_id = :peer_id"
+                                        "UPDATE group_peers SET adguard_password = :password "
+                                        "WHERE peer_id = :peer_id AND adguard_password = :default"
                                     )
-                                    session.execute(update_query, {"password": new_password, "peer_id": peer_id})
+                                    session.execute(update_query, {
+                                        "password": new_password, "peer_id": peer_id, "default": ADGUARD_PASSWORD,
+                                    })
                                     session.commit()
-                            except Exception:
-                                pass
-                            
+                            except Exception as exc:
+                                logger.warning("adguard pw retry write-back failed for peer %s: %s", peer_id, exc)
+
                             # Retry the request with the new password
                             return cls._sync_call_adguard_api(
                                 peer_id=peer_id,
@@ -148,8 +162,8 @@ class AdGuardService:
                                 params=params,
                                 is_retry=True,
                             )
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("adguard pw retry fetch failed for peer %s: %s", peer_id, exc)
 
             text_err = exc.response.text if exc.response is not None else "Invalid response"
             raise HTTPException(

@@ -7,6 +7,7 @@ from flask import current_app
 from config.database import db
 from repositories.client_repository import ClientRepository
 from repositories.subscription_plan_repository import SubscriptionPlanRepository
+from services.netbird_service import NetBirdService
 
 
 class SubscriptionService:
@@ -380,6 +381,39 @@ class SubscriptionService:
             current_app.logger.error(f"[SubscriptionService] Exception setting policy {policy_id} enabled={enabled}: {e}")
             return False
 
+    def _set_peers_services(self, client, services: dict[str, str], source: str = "subscription") -> None:
+        """
+        تطبيق حالة الخدمات الثلاث (adguard, client_firewall, mesh_network) على كل
+        أجهزة العميل عبر Edge Agent (PUT /services)، بواسطة FastAPI gateway
+        (POST /api/v1/peers/{peer_id}/commands, command_type=service_control).
+        عدم استجابة جهاز واحد لا يوقف تطبيق البقية.
+        """
+        peer_ids = self._get_client_peer_ids(client)
+        if not peer_ids:
+            return
+
+        url_base = f"{NetBirdService.get_api_base_url()}/api/v1/peers"
+        headers = NetBirdService.get_api_headers()
+
+        for peer_id in peer_ids:
+            try:
+                resp = requests.post(
+                    f"{url_base}/{peer_id}/commands",
+                    json={
+                        "command_type": "service_control",
+                        "parameters": {"services": services, "source": source},
+                        "requested_by": "subscription_checker",
+                    },
+                    headers=headers,
+                    timeout=15,
+                )
+                if resp.status_code >= 400:
+                    current_app.logger.warning(
+                        f"[SubscriptionService] service_control failed for peer {peer_id}: HTTP {resp.status_code}"
+                    )
+            except Exception as e:
+                current_app.logger.error(f"[SubscriptionService] Error setting services for peer {peer_id}: {e}")
+
     def _remove_peers_from_all_peers_group(self, client) -> bool:
         """
         إزالة أجهزة العميل من مجموعة 'all-peers' لقطع الاتصال بالـ Controllers عند الحالة inactive.
@@ -525,6 +559,13 @@ class SubscriptionService:
         for p in target_policies:
             self._set_policy_enabled(p["id"], False)
 
+        # إيقاف كافة الخدمات (adguard, client_firewall, mesh_network) على أجهزة العميل
+        self._set_peers_services(
+            client,
+            {"adguard": "disabled", "client_firewall": "disabled", "mesh_network": "disabled"},
+            source="subscription",
+        )
+
         current_app.logger.info(
             f"[SubscriptionService] Client '{client.username}' transitioned to 'inactive' ({len(target_policies)} policies disabled: mesh & pkgs; controllers kept intact)."
         )
@@ -569,6 +610,13 @@ class SubscriptionService:
 
         # 2. إعادة الأجهزة إلى all-peers
         self._add_peers_to_all_peers_group(client)
+
+        # 3. إعادة تفعيل كافة الخدمات على أجهزة العميل
+        self._set_peers_services(
+            client,
+            {"adguard": "enabled", "client_firewall": "enabled", "mesh_network": "enabled"},
+            source="subscription",
+        )
 
         current_app.logger.info(
             f"[SubscriptionService] Client '{client.username}' restored to 'active' state ({len(client_policies.get('all', []))} policies enabled)."

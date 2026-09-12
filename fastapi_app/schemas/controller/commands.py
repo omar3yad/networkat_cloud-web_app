@@ -18,6 +18,7 @@ class CommandType(str, Enum):
     VPN_ONLY = "vpn_only"
     WAN_LINKS = "wan_links"
     FIREWALL_RULES = "firewall_rules"
+    SERVICE_CONTROL = "service_control"
 
 
 

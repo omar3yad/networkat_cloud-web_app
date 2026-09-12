@@ -263,7 +263,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                     status_code=403,
                     content={
                         "error": "Forbidden",
-                        "message": "Subscription inactive. Please renew.",
+                        "message": "Subscription is inactive.\nPlease renew it.",
                         "account": _account_meta(current_peers),
                         "username": username,
                     }
@@ -273,7 +273,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                     status_code=403,
                     content={
                         "error": "Forbidden",
-                        "message": "Subscription restricted. Renew plan to enroll peers.",
+                        "message": "Subscription is inactive.\nPlease renew it.",
                         "account": _account_meta(current_peers),
                         "username": username,
                     }
@@ -315,7 +315,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                     status_code=500,
                     content={
                         "error": "Internal Server Error",
-                        "message": "Failed to generate installation setup key. Please try again or contact support."
+                        "message": "An error occurred on our end during setup.\nPlease try again later or contact support."
                     }
                 )
             sk_data = sk_res.json()
@@ -326,7 +326,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                     status_code=500,
                     content={
                         "error": "Internal Server Error",
-                        "message": "Failed to generate installation setup key. Please try again or contact support."
+                        "message": "An error occurred on our end during setup.\nPlease try again later or contact support."
                     }
                 )
         except Exception as ske:
@@ -335,7 +335,7 @@ async def install_peer(payload: InstallPeerRequest, request: Request):
                 status_code=500,
                 content={
                     "error": "Internal Server Error",
-                    "message": "Failed to generate installation setup key. Please try again or contact support."
+                    "message": "An error occurred on our end during setup.\nPlease try again later or contact support."
                 }
             )
 

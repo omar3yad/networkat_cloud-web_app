@@ -103,8 +103,13 @@
                 </div>
             </div>
 
-            <h3 class="card-title" style="margin-top: 2rem;">
-                <i class="fas fa-sliders-h"></i> Management
+            <h3 class="card-title" style="margin-top: 2rem; display: flex; align-items: center; justify-content: space-between;">
+                <span><i class="fas fa-sliders-h"></i> Management</span>
+                {% if is_online and can_manage_services %}
+                <button type="button" class="btn-icon-gear" onclick="openServicesModal()" title="Service Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+                {% endif %}
             </h3>
             <div class="actions-grid">
                 {% if is_online %}
@@ -190,6 +195,57 @@
             <div class="graph-placeholder" style="height: 140px; border-style: dotted;">
                 <i class="fas fa-file-alt fa-2x" style="opacity: 0.3;"></i>
                 <span style="font-size: 0.85rem;">No recent log events reported from agent.</span>
+            </div>
+        </div>
+
+        <!-- Service Settings Modal -->
+        <div class="modal-overlay" id="servicesModal" onclick="handleServicesModalOverlayClick(event)">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h2><i class="fas fa-cog"></i> Service Settings</h2>
+                    <button type="button" class="modal-close" onclick="closeServicesModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="services-loading" id="services-loading">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </div>
+                    <div class="services-error" id="services-error" style="display: none;"></div>
+                    <div class="services-list" id="services-list" style="display: none;">
+                        <div class="service-row" data-service="dns_filtering">
+                            <div class="service-info">
+                                <span class="service-name">DNS Filtering</span>
+                                <span class="service-desc">Content filtering</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="service-toggle" data-service="dns_filtering" onchange="toggleService(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="service-row" data-service="firewall">
+                            <div class="service-info">
+                                <span class="service-name">Firewall</span>
+                                <span class="service-desc">Custom firewall rules</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="service-toggle" data-service="firewall" onchange="toggleService(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="service-row" data-service="mesh_network">
+                            <div class="service-info">
+                                <span class="service-name">Mesh Network</span>
+                                <span class="service-desc">Connectivity to other devices</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" class="service-toggle" data-service="mesh_network" onchange="toggleService(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-action btn-cancel" onclick="closeServicesModal()">Close</button>
+                </div>
             </div>
         </div>
 

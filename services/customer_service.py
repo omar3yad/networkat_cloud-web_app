@@ -1,4 +1,5 @@
 # /opt/networkat_sdwan/core/web_app/services/customer_service.py
+import logging
 import secrets
 import requests
 from repositories.edge_repository import EdgeRepository
@@ -6,6 +7,8 @@ from repositories.user_repository import UserRepository
 from repositories.token_repository import TokenRepository
 from repositories.client_repository import ClientRepository
 from werkzeug.security import generate_password_hash, check_password_hash
+
+logger = logging.getLogger("customer_service")
 
 
 class CustomerService:
@@ -77,7 +80,7 @@ class CustomerService:
                     group_data = response.json()
                     netbird_peers = group_data.get("peers") if group_data.get("peers") else []
             except Exception as e:
-                print(f"Error fetching NetBird peers: {str(e)}")
+                logger.warning("netbird peers fetch failed: %s", e)
 
         if netbird_peers:
             peer_ids = [p.get("id") for p in netbird_peers if isinstance(p, dict) and p.get("id")]
@@ -99,15 +102,19 @@ class CustomerService:
                                         fetched_pwd = cred_data.get("password") if isinstance(cred_data, dict) else str(cred_data).strip()
                                         if fetched_pwd:
                                             stored_pwd = fetched_pwd
-                                            target_rec = next((r for r in records if r.peer_id == p_id), None)
-                                            if target_rec:
-                                                target_rec.adguard_password = fetched_pwd
-                                                self.client_repo.flush()
-                                except Exception:
-                                    pass
+                                            # group_peers PK is (group_id, peer_id): the same peer_id
+                                            # repeats once per NetBird group it belongs to (customer
+                                            # group + all-peers, at least). Update every matching row so
+                                            # none is left stranded on the default password.
+                                            for r in records:
+                                                if r.peer_id == p_id and r.adguard_password in (None, "default_password", "adguard-api"):
+                                                    r.adguard_password = fetched_pwd
+                                            self.client_repo.commit()
+                                except Exception as exc:
+                                    logger.warning("adguard pw fetch failed for peer %s: %s", p_id, exc)
                             p["adguard_password"] = stored_pwd or "adguard-api"
                 except Exception as e:
-                    print(f"Error fetching AdGuard passwords: {str(e)}")
+                    logger.warning("adguard pw lookup failed: %s", e)
                     for p in netbird_peers:
                         if isinstance(p, dict) and "adguard_password" not in p:
                             p["adguard_password"] = "adguard-api"

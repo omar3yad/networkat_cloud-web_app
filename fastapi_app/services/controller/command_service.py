@@ -134,7 +134,25 @@ def _call_agent_sync(peer_ip: str, request_id: uuid.UUID, command_type: str, par
             response = requests.delete(f"{url_base}/firewall/rules/{rule_id}", timeout=AGENT_TIMEOUT)
         else:
             response = requests.get(f"{url_base}/firewall/rules", timeout=AGENT_TIMEOUT)
-            
+
+    elif command_type == "service_control":
+        name = parameters.get("name")
+        services = parameters.get("services")
+        source = parameters.get("source", "manual")
+        if services:
+            response = requests.put(
+                f"{url_base}/services", json={"services": services, "source": source}, timeout=AGENT_TIMEOUT
+            )
+        elif name:
+            state = parameters.get("state")
+            if state not in ("enabled", "disabled"):
+                raise ValueError("state must be 'enabled' or 'disabled'")
+            response = requests.put(
+                f"{url_base}/services/{name}", json={"state": state, "source": source}, timeout=AGENT_TIMEOUT
+            )
+        else:
+            response = requests.get(f"{url_base}/services", timeout=AGENT_TIMEOUT)
+
     else:
         raise ValueError(f"Command type '{command_type}' is not supported by the new agent.")
         

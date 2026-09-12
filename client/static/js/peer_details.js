@@ -429,8 +429,85 @@
             if (modal && modal.classList.contains('active')) {
                 closeDeletePeerModal();
             }
+            const servicesModal = document.getElementById('servicesModal');
+            if (servicesModal && servicesModal.classList.contains('active')) {
+                closeServicesModal();
+            }
         }
     });
+
+    async function openServicesModal() {
+        const modal = document.getElementById('servicesModal');
+        const loading = document.getElementById('services-loading');
+        const errorEl = document.getElementById('services-error');
+        const list = document.getElementById('services-list');
+        if (!modal) return;
+
+        modal.classList.add('active');
+        loading.style.display = 'block';
+        errorEl.style.display = 'none';
+        list.style.display = 'none';
+
+        try {
+            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/services`);
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.error || 'Failed to load service settings');
+            }
+
+            const services = data.services || [];
+            services.forEach(svc => {
+                const toggle = document.querySelector(`.service-toggle[data-service="${svc.name}"]`);
+                if (toggle) toggle.checked = svc.state === 'enabled';
+            });
+
+            loading.style.display = 'none';
+            list.style.display = 'flex';
+        } catch (err) {
+            loading.style.display = 'none';
+            errorEl.textContent = err.message || 'Failed to load service settings';
+            errorEl.style.display = 'block';
+        }
+    }
+
+    function closeServicesModal() {
+        const modal = document.getElementById('servicesModal');
+        if (modal) modal.classList.remove('active');
+    }
+
+    function handleServicesModalOverlayClick(event) {
+        if (event.target && event.target.id === 'servicesModal') {
+            closeServicesModal();
+        }
+    }
+
+    async function toggleService(checkbox) {
+        const serviceName = checkbox.getAttribute('data-service');
+        const newState = checkbox.checked ? 'enabled' : 'disabled';
+        checkbox.disabled = true;
+
+        try {
+            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/services`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ services: { [serviceName]: newState } })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.error || 'Failed to update service');
+            }
+            if (window.showSuccess) window.showSuccess('Saved');
+        } catch (err) {
+            checkbox.checked = !checkbox.checked;
+            if (window.showError) {
+                window.showError(err.message || 'Failed to update service');
+            } else {
+                alert(err.message || 'Failed to update service');
+            }
+        } finally {
+            checkbox.disabled = false;
+        }
+    }
 
     // Expose for HTML event handlers
     window.toggleEditField = toggleEditField;
@@ -442,4 +519,8 @@
     window.onDeleteConfirmInput = onDeleteConfirmInput;
     window.onDeleteConfirmKeydown = onDeleteConfirmKeydown;
     window.confirmDeletePeer = confirmDeletePeer;
+    window.openServicesModal = openServicesModal;
+    window.closeServicesModal = closeServicesModal;
+    window.handleServicesModalOverlayClick = handleServicesModalOverlayClick;
+    window.toggleService = toggleService;
 })();

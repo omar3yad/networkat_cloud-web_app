@@ -145,7 +145,8 @@ def peer_details(peer_id):
         peer_last_seen=peer_last_seen,
         peer_network=peer_route_network,
         peer_route_id=peer_route_id,
-        peer_route_network_id=peer_route_network_id
+        peer_route_network_id=peer_route_network_id,
+        can_manage_services=bool(customer and customer.is_subscription_active)
     )
 
 

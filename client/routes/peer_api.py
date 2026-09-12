@@ -578,3 +578,69 @@ def peer_vpn_only_proxy(peer_id):
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"detail": "Device agent is offline or unreachable"}), 503
+
+
+# Public-facing service names — never leak the agent's internal service
+# identifiers (adguard/client_firewall/mesh_network) or its raw JSON/errors.
+_SERVICE_PUBLIC_TO_INTERNAL = {
+    "dns_filtering": "adguard",
+    "firewall": "client_firewall",
+    "mesh_network": "mesh_network",
+}
+_SERVICE_INTERNAL_TO_PUBLIC = {v: k for k, v in _SERVICE_PUBLIC_TO_INTERNAL.items()}
+
+
+@client_bp.route('/api/peers/<peer_id>/services', methods=['GET', 'PUT'])
+@login_required
+@subscription_write_required
+def peer_services_proxy(peer_id):
+    customer_id = session.get('client_customer_id')
+    customer = Client.query.get(customer_id) if customer_id else None
+    if not customer or not verify_peer_access(customer, peer_id):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    peers_data = get_cached_all_netbird_peers(get_api_base_url(), get_api_headers())
+    peer = next((p for p in peers_data if p.get("id") == peer_id), None)
+    if not peer or not peer.get("ip"):
+        return jsonify({"error": "Device unreachable"}), 404
+
+    peer_ip = peer.get("ip")
+    agent_url = f"http://{peer_ip}:8765/services"
+
+    try:
+        if request.method == 'PUT':
+            data = request.get_json() or {}
+            services = data.get("services") or {}
+
+            internal_services = {}
+            for public_name, state in services.items():
+                internal_name = _SERVICE_PUBLIC_TO_INTERNAL.get(public_name)
+                if not internal_name or state not in ("enabled", "disabled"):
+                    return jsonify({"error": "Invalid request"}), 400
+                internal_services[internal_name] = state
+
+            if not internal_services:
+                return jsonify({"error": "Invalid request"}), 400
+
+            resp = requests.put(
+                agent_url,
+                json={"services": internal_services, "source": "customer"},
+                timeout=(1, 10),
+            )
+        else:
+            resp = requests.get(agent_url, timeout=(1, 5))
+
+        if not resp.ok:
+            return jsonify({"error": "Unable to update service"}), 502
+
+        agent_data = resp.json()
+        public_services = [
+            {"name": _SERVICE_INTERNAL_TO_PUBLIC[s["name"]], "state": s["state"]}
+            for s in agent_data.get("services", [])
+            if s.get("name") in _SERVICE_INTERNAL_TO_PUBLIC
+        ]
+        return jsonify({"services": public_services}), 200
+    except requests.RequestException:
+        return jsonify({"error": "Device unreachable"}), 503
+    except (ValueError, KeyError):
+        return jsonify({"error": "Unable to update service"}), 502
