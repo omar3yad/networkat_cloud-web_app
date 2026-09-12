@@ -276,36 +276,36 @@
                     <button type="button" class="modal-close" id="btn-close-updates-modal" onclick="closeUpdatesModal()">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <!-- Status Banner -->
+                    <!-- Current Version & Status Card -->
                     <div class="updates-status-card">
-                        <div class="updates-version-row">
-                            <div class="version-box">
-                                <span class="version-lbl">Installed Version</span>
+                        <div class="current-version-row">
+                            <div class="version-label-group">
+                                <span class="version-label">Current version:</span>
                                 <span class="version-val" id="updates-installed-val">{{ peer_version or '—' }}</span>
                             </div>
-                            <div class="version-arrow">
-                                <i class="fas fa-arrow-right"></i>
-                            </div>
-                            <div class="version-box">
-                                <span class="version-lbl">Available Version</span>
-                                <span class="version-val" id="updates-available-val">—</span>
-                            </div>
+                            <button type="button" class="btn-action btn-check-updates" id="btn-check-update" onclick="checkPeerUpdate()">
+                                <i class="fas fa-sync-alt"></i> Check for updates
+                            </button>
                         </div>
                         <div class="updates-state-badge-row">
-                            <span class="badge-update-status status-checking" id="updates-state-badge">
-                                <i class="fas fa-info-circle"></i> Ready to check
+                            <span class="badge-update-status state-up-to-date" id="updates-state-badge">
+                                <i class="fas fa-check-circle"></i> Up to date
                             </span>
                             <span class="updates-last-checked" id="updates-last-checked-text"></span>
                         </div>
                     </div>
 
-                    <!-- Manual Actions -->
-                    <div class="updates-actions-row">
-                        <button type="button" class="btn-action btn-check-updates" id="btn-check-update" onclick="checkPeerUpdate()">
-                            <i class="fas fa-sync-alt"></i> Check Update
-                        </button>
-                        <button type="button" class="btn-action btn-apply-update" id="btn-apply-update" disabled onclick="applyPeerUpdate()">
-                            <i class="fas fa-download"></i> Update Now
+                    <!-- Available Update Card (shown ONLY when an update is actually available) -->
+                    <div class="updates-available-card" id="updates-available-card" style="display: none;">
+                        <div class="available-info-group">
+                            <i class="fas fa-arrow-alt-circle-up available-icon"></i>
+                            <div class="available-text-group">
+                                <div class="available-title">New version available</div>
+                                <div class="available-version-text">Version <strong id="updates-available-val"></strong> is ready to install.</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-action btn-apply-update" id="btn-apply-update" onclick="applyPeerUpdate()">
+                            <i class="fas fa-download"></i> Update now
                         </button>
                     </div>
 
@@ -314,41 +314,38 @@
                     <!-- Auto-Update Configuration Section -->
                     <div class="updates-config-section">
                         <h4 class="updates-section-title">
-                            <i class="fas fa-clock"></i> Automatic Updates
+                            <i class="fas fa-clock"></i> Automatic updates
                         </h4>
 
                         <div class="auto-update-setting-row">
                             <div class="auto-update-info">
-                                <span class="setting-title">Auto-Update</span>
-                                <span class="setting-desc">Automatically check and apply updates</span>
+                                <span class="setting-title">Auto-update</span>
+                                <span class="setting-desc">Automatically check and install updates</span>
                             </div>
                             <label class="switch">
-                                <input type="checkbox" id="auto-update-toggle" onchange="onAutoUpdateToggleChange(this)">
+                                <input type="checkbox" id="auto-update-toggle" onchange="onAutoUpdateFieldChange()">
                                 <span class="slider"></span>
                             </label>
                         </div>
 
                         <div class="auto-update-interval-row" id="auto-update-interval-wrapper">
                             <div class="interval-label-group">
-                                <label for="update-interval-hours" class="setting-title">Update Interval</label>
+                                <label for="update-interval-hours" class="setting-title">Update interval</label>
                                 <span class="setting-desc">Minimum 3 hours</span>
                             </div>
                             <div class="interval-input-group">
-                                <input type="number" id="update-interval-hours" class="table-input interval-input"
-                                    min="3" max="168" step="1" value="12" placeholder="Hours">
+                                <input type="number" id="update-interval-hours" class="interval-input"
+                                    min="3" max="168" step="1" value="12" placeholder="Hours" oninput="onAutoUpdateFieldChange()">
                                 <span class="interval-unit">hours</span>
                             </div>
-                        </div>
-
-                        <div class="auto-update-save-row">
-                            <button type="button" class="btn-action btn-save-config" id="btn-save-update-config" onclick="saveAutoUpdateConfig()">
-                                <i class="fas fa-save"></i> Save Settings
-                            </button>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn-action btn-cancel" id="btn-cancel-updates-modal" onclick="closeUpdatesModal()">Close</button>
+                    <button type="button" class="btn-action btn-primary" id="btn-save-update-config" onclick="saveAutoUpdateConfig()" disabled>
+                        <i class="fas fa-save"></i> Save changes
+                    </button>
                 </div>
             </div>
         </div>

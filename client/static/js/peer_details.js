@@ -164,7 +164,7 @@
             });
         }
 
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 const activeEl = document.activeElement;
                 if (activeEl && activeEl.id === 'peer-name-input') {
@@ -430,7 +430,7 @@
         }
     }
 
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             const modal = document.getElementById('deletePeerModal');
             if (modal && modal.classList.contains('active')) {
@@ -544,6 +544,7 @@
             const data = await resp.json();
             const update = data.update || {};
             const installedVersion = update.installed_version || "";
+            const availableVersion = update.available_version || "";
             const versionEl = document.getElementById("peer-version-display");
             if (versionEl && installedVersion) {
                 versionEl.textContent = installedVersion;
@@ -552,9 +553,12 @@
             if (updatesInstalledVal && installedVersion) {
                 updatesInstalledVal.textContent = installedVersion;
             }
-            if (update.state === "update-available") {
+            if (update.state === "update-available" && availableVersion && availableVersion !== installedVersion) {
                 const badgeEl = document.getElementById("peer-version-badge");
-                if (badgeEl) badgeEl.style.display = "inline-flex";
+                if (badgeEl) {
+                    badgeEl.textContent = "Update available";
+                    badgeEl.style.display = "inline-flex";
+                }
                 const dotEl = document.getElementById("update-badge-dot");
                 if (dotEl) dotEl.style.display = "inline-block";
             }
@@ -601,12 +605,28 @@
         }
     }
 
+    function updateSaveButtonState() {
+        const btnSave = document.getElementById("btn-save-update-config");
+        if (!btnSave) return;
+        if (isApplyingUpdate) {
+            btnSave.disabled = true;
+            return;
+        }
+        const toggle = document.getElementById("auto-update-toggle");
+        const intervalInp = document.getElementById("update-interval-hours");
+        const curEnabled = toggle ? toggle.checked : false;
+        const curHours = intervalInp ? parseInt(intervalInp.value, 10) : 12;
+
+        const isDirty = (curEnabled !== initialAutoUpdateEnabled) || (curHours !== initialIntervalHours);
+        btnSave.disabled = !isDirty;
+    }
+
     async function checkPeerUpdate() {
         if (isApplyingUpdate) return;
         const btnCheck = document.getElementById("btn-check-update");
-        const btnApply = document.getElementById("btn-apply-update");
         const badgeState = document.getElementById("updates-state-badge");
         const installedVal = document.getElementById("updates-installed-val");
+        const availableCard = document.getElementById("updates-available-card");
         const availableVal = document.getElementById("updates-available-val");
         const lastCheckedText = document.getElementById("updates-last-checked-text");
 
@@ -630,10 +650,9 @@
             const update = data.update || {};
             const state = update.state || "unknown";
             const installed = update.installed_version || "—";
-            const available = update.available_version || "—";
+            const available = update.available_version || "";
 
             if (installedVal) installedVal.textContent = installed;
-            if (availableVal) availableVal.textContent = available;
 
             const infoVersion = document.getElementById("peer-version-display");
             if (infoVersion && installed !== "—") infoVersion.textContent = installed;
@@ -646,37 +665,36 @@
             const versionBadge = document.getElementById("peer-version-badge");
             const dotBadge = document.getElementById("update-badge-dot");
 
-            if (state === "up-to-date") {
-                if (badgeState) {
-                    badgeState.className = "badge-update-status state-up-to-date";
-                    badgeState.innerHTML = '<i class="fas fa-check-circle"></i> Up to date';
-                }
-                if (btnApply) {
-                    btnApply.disabled = true;
-                    btnApply.classList.remove("has-update");
-                }
-                if (versionBadge) versionBadge.style.display = "none";
-                if (dotBadge) dotBadge.style.display = "none";
-            } else if (state === "update-available") {
+            if (state === "update-available" && available && available !== installed) {
                 if (badgeState) {
                     badgeState.className = "badge-update-status state-update-available";
                     badgeState.innerHTML = '<i class="fas fa-arrow-alt-circle-up"></i> Update available';
                 }
-                if (btnApply) {
-                    btnApply.disabled = false;
-                    btnApply.classList.add("has-update");
+                if (availableCard) availableCard.style.display = "flex";
+                if (availableVal) availableVal.textContent = available;
+                if (versionBadge) {
+                    versionBadge.textContent = "Update available";
+                    versionBadge.style.display = "inline-flex";
                 }
-                if (versionBadge) versionBadge.style.display = "inline-flex";
                 if (dotBadge) dotBadge.style.display = "inline-block";
+            } else if (state === "up-to-date") {
+                if (badgeState) {
+                    badgeState.className = "badge-update-status state-up-to-date";
+                    badgeState.innerHTML = '<i class="fas fa-check-circle"></i> Up to date';
+                }
+                if (availableCard) availableCard.style.display = "none";
+                if (availableVal) availableVal.textContent = "";
+                if (versionBadge) versionBadge.style.display = "none";
+                if (dotBadge) dotBadge.style.display = "none";
             } else {
                 if (badgeState) {
                     badgeState.className = "badge-update-status state-unknown";
                     badgeState.innerHTML = '<i class="fas fa-question-circle"></i> Status unknown';
                 }
-                if (btnApply) {
-                    btnApply.disabled = true;
-                    btnApply.classList.remove("has-update");
-                }
+                if (availableCard) availableCard.style.display = "none";
+                if (availableVal) availableVal.textContent = "";
+                if (versionBadge) versionBadge.style.display = "none";
+                if (dotBadge) dotBadge.style.display = "none";
             }
         } catch (err) {
             if (badgeState) {
@@ -687,7 +705,7 @@
         } finally {
             if (btnCheck) {
                 btnCheck.disabled = false;
-                btnCheck.innerHTML = '<i class="fas fa-sync-alt"></i> Check Update';
+                btnCheck.innerHTML = '<i class="fas fa-sync-alt"></i> Check for updates';
             }
         }
     }
@@ -744,10 +762,10 @@
             isApplyingUpdate = false;
             if (btnApply) {
                 btnApply.disabled = false;
-                btnApply.innerHTML = '<i class="fas fa-download"></i> Update Now';
+                btnApply.innerHTML = '<i class="fas fa-download"></i> Update now';
             }
             if (btnCheck) btnCheck.disabled = false;
-            if (btnSave) btnSave.disabled = false;
+            updateSaveButtonState();
             if (btnCloseModal) btnCloseModal.style.visibility = "visible";
             if (btnCancelModal) btnCancelModal.disabled = false;
         }
@@ -780,21 +798,28 @@
                 if (enabled) wrapper.classList.remove("disabled");
                 else wrapper.classList.add("disabled");
             }
+
+            initialAutoUpdateEnabled = enabled;
+            initialIntervalHours = hours;
+            updateSaveButtonState();
         } catch (e) {
             console.error("Error loading auto update config:", e);
         }
     }
 
-    function onAutoUpdateToggleChange(checkbox) {
-        const isChecked = checkbox ? checkbox.checked : false;
+    function onAutoUpdateFieldChange() {
+        const toggle = document.getElementById("auto-update-toggle");
         const intervalInp = document.getElementById("update-interval-hours");
         const wrapper = document.getElementById("auto-update-interval-wrapper");
+        const isChecked = toggle ? toggle.checked : false;
 
         if (intervalInp) intervalInp.disabled = !isChecked;
         if (wrapper) {
             if (isChecked) wrapper.classList.remove("disabled");
             else wrapper.classList.add("disabled");
         }
+
+        updateSaveButtonState();
     }
 
     async function saveAutoUpdateConfig() {
@@ -832,16 +857,18 @@
                 throw new Error(data.error || "Failed to save auto-update configuration");
             }
 
-            showUpdatesFeedback("Auto-update settings saved successfully.", "success");
+            initialAutoUpdateEnabled = enabled;
+            initialIntervalHours = hours;
+            showUpdatesFeedback("Auto-update saved", "success");
             if (window.showSuccess) window.showSuccess("Settings saved");
         } catch (err) {
             showUpdatesFeedback(err.message || "Failed to save settings", "error");
             if (window.showError) window.showError(err.message || "Failed to save settings");
         } finally {
             if (btnSave) {
-                btnSave.disabled = false;
-                btnSave.innerHTML = '<i class="fas fa-save"></i> Save Settings';
+                btnSave.innerHTML = '<i class="fas fa-save"></i> Save changes';
             }
+            updateSaveButtonState();
         }
     }
 
@@ -864,6 +891,7 @@
     window.handleUpdatesModalOverlayClick = handleUpdatesModalOverlayClick;
     window.checkPeerUpdate = checkPeerUpdate;
     window.applyPeerUpdate = applyPeerUpdate;
-    window.onAutoUpdateToggleChange = onAutoUpdateToggleChange;
+    window.onAutoUpdateFieldChange = onAutoUpdateFieldChange;
+    window.onAutoUpdateToggleChange = onAutoUpdateFieldChange;
     window.saveAutoUpdateConfig = saveAutoUpdateConfig;
 })();
