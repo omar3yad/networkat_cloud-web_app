@@ -326,14 +326,17 @@ def delete_peer(peer_id):
                 peer_name = peer_name or p.get("name")
                 break
 
-    # 1. Send uninstall command to peer agent (optional/graceful, ignore failure)
+    # 1. Send uninstall command to peer agent (optional/graceful, ignore failure).
+    # Irreversible on the peer's side (wipes config, reboots) but scoped to that
+    # device only - it does not deregister the peer from NetBird, so steps 2-3
+    # below still run regardless of whether this succeeds.
     if peer_ip:
-        agent_url = f"http://{peer_ip}:8765/uninstall-peer"
+        agent_url = f"http://{peer_ip}:8765/uninstall"
         try:
-            agent_resp = requests.post(agent_url, json={"peer_id": peer_id}, timeout=(1, 3))
-            logger.info(f"Agent uninstall-peer call to {agent_url} returned {agent_resp.status_code}")
+            agent_resp = requests.post(agent_url, timeout=(1, 3))
+            logger.info(f"Agent uninstall call to {agent_url} returned {agent_resp.status_code}")
         except Exception as agent_err:
-            logger.info(f"Agent uninstall-peer call skipped/failed for {peer_ip}: {agent_err}")
+            logger.info(f"Agent uninstall call skipped/failed for {peer_ip}: {agent_err}")
 
     # 2. Delete all NetBird routes associated with this peer
     try:

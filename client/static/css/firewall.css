@@ -494,7 +494,7 @@
     }
 
     #refresh-icon.is-spinning {
-        animation: nkFullSpin 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        animation: nkFullSpin 0.75s linear infinite;
     }
 
     .btn-action.btn-cooldown {

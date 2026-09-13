@@ -167,7 +167,7 @@
                     <i class="fas fa-exclamation-triangle"></i>
                     <span>Danger Zone</span>
                 </div>
-                <p class="danger-zone-desc">Permanently unregister and wipe this peer device.</p>
+                <p class="danger-zone-desc">Permanently unregister and delete this peer.</p>
                 <button type="button" class="btn-danger-delete" onclick="openDeletePeerModal()">
                     <i class="fas fa-trash-alt"></i>
                     <span>Delete Peer</span>
@@ -319,8 +319,8 @@
 
                         <div class="auto-update-setting-row">
                             <div class="auto-update-info">
-                                <span class="setting-title">Auto-update</span>
-                                <span class="setting-desc">Automatically check and install updates</span>
+                                <span class="setting-title">Auto update</span>
+                                <!-- <span class="setting-desc">Automatically check and install updates</span> -->
                             </div>
                             <label class="switch">
                                 <input type="checkbox" id="auto-update-toggle" onchange="onAutoUpdateFieldChange()">
@@ -331,7 +331,7 @@
                         <div class="auto-update-interval-row" id="auto-update-interval-wrapper">
                             <div class="interval-label-group">
                                 <label for="update-interval-hours" class="setting-title">Update interval</label>
-                                <span class="setting-desc">Minimum 3 hours</span>
+                                <!-- <span class="setting-desc">Minimum 3 hours</span> -->
                             </div>
                             <div class="interval-input-group">
                                 <input type="number" id="update-interval-hours" class="interval-input"
@@ -362,7 +362,7 @@
                         <i class="fas fa-exclamation-circle delete-warning-icon"></i>
                         <div class="delete-warning-text">
                             <p class="delete-warning-title">This action cannot be undone.</p>
-                            <p class="delete-warning-desc">Wipes all configurations, routes, and rules.</p>
+                            <!-- <p class="delete-warning-desc">Wipes all configurations, routes, and rules.</p> -->
                         </div>
                     </div>
 
@@ -370,7 +370,7 @@
                         <label for="delete-confirm-input" class="delete-prompt-label">
                             Please type <code>delete</code> to confirm:
                         </label>
-                        <input type="text" id="delete-confirm-input" class="delete-confirm-input" placeholder="delete"
+                        <input type="text" id="delete-confirm-input" class="delete-confirm-input" placeholder=""
                             autocomplete="off" oninput="onDeleteConfirmInput(event)"
                             onkeydown="onDeleteConfirmKeydown(event)">
                     </div>

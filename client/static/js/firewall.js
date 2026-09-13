@@ -192,15 +192,28 @@ let currentRules = [];
 let initialRulesOrder = '';
 let lastRenderedSignature = null;
 
+const SPIN_CYCLE_MS = 750; // must match the nkFullSpin CSS animation duration
+
+function getCurrentSpinAngle(icon) {
+    // Read the icon's live rotation from the CSS animation so the hand-off is seamless
+    const transform = getComputedStyle(icon).transform;
+    if (!transform || transform === 'none') return 0;
+    const match = transform.match(/^matrix\(([^)]+)\)$/);
+    if (!match) return 0;
+    const [a, b] = match[1].split(',').map(parseFloat);
+    let angle = Math.atan2(b, a) * (180 / Math.PI);
+    if (angle < 0) angle += 360;
+    return angle;
+}
+
 async function fetchRules(forceRefresh = false, silent = false) {
     const refreshIcon = document.getElementById('refresh-icon');
     const spinStartTime = Date.now();
-    const MIN_SPIN_DURATION = 750; // ms to ensure at least one full, clear 360-degree rotation
+    const MIN_SPIN_DURATION = SPIN_CYCLE_MS; // ms — ensures a full, uninterrupted turn before easing out
 
     // Spin icon on both manual and automatic fetches
-    if (refreshIcon) {
-        refreshIcon.classList.remove('is-spinning');
-        void refreshIcon.offsetWidth; // Trigger reflow to cleanly restart animation
+    if (refreshIcon && !refreshIcon.classList.contains('is-spinning')) {
+        refreshIcon.getAnimations().forEach(a => a.cancel());
         refreshIcon.classList.add('is-spinning');
     }
 
@@ -246,7 +259,29 @@ async function fetchRules(forceRefresh = false, silent = false) {
         const elapsed = Date.now() - spinStartTime;
         const remainingSpin = Math.max(0, MIN_SPIN_DURATION - elapsed);
         setTimeout(() => {
-            if (refreshIcon) refreshIcon.classList.remove('is-spinning');
+            if (!refreshIcon) return;
+            // Hand off from the live CSS spin angle into one eased-out turn to rest,
+            // so the motion never jumps or changes speed at the seam.
+            const startAngle = getCurrentSpinAngle(refreshIcon);
+            refreshIcon.classList.remove('is-spinning');
+            refreshIcon.style.transform = `rotate(${startAngle}deg)`;
+
+            const remainingDeg = 360 - (startAngle % 360) || 360;
+            const endAngle = startAngle + remainingDeg;
+            // Scale duration to the remaining distance so speed stays consistent
+            // with the spin instead of crawling when little rotation is left.
+            const duration = SPIN_CYCLE_MS * (remainingDeg / 360);
+            const anim = refreshIcon.animate(
+                [
+                    { transform: `rotate(${startAngle}deg)` },
+                    { transform: `rotate(${endAngle}deg)` }
+                ],
+                { duration, easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)', fill: 'forwards' }
+            );
+            anim.onfinish = () => {
+                refreshIcon.style.transform = '';
+                anim.cancel();
+            };
         }, remainingSpin);
     }
 }

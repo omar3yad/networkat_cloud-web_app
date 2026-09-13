@@ -259,6 +259,20 @@ def delete_peer(peer_id):
     base_url = _get_api_base_url()
 
     try:
+        # الخطوة 0: استدعاء uninstall على جهاز الـ peer نفسه (best-effort، مش هيوقف الحذف لو فشل)
+        try:
+            peer_resp = requests.get(f"{base_url}/api/v2/netbird/peers/{peer_id}", headers=headers, timeout=5)
+            peer_ip = peer_resp.json().get("ip") if peer_resp.ok else None
+        except Exception:
+            peer_ip = None
+
+        if peer_ip:
+            try:
+                agent_resp = requests.post(f"http://{peer_ip}:8765/uninstall", timeout=(1, 3))
+                current_app.logger.info(f"Agent uninstall call to {peer_ip} returned {agent_resp.status_code}")
+            except Exception as agent_err:
+                current_app.logger.info(f"Agent uninstall call skipped/failed for {peer_ip}: {agent_err}")
+
         # الخطوة 1: جلب كل الـ Routes وفحص المرتبط منها بالـ Peer ده
         routes_url = f"{base_url}/api/v2/netbird/routes"
         routes_res = requests.get(routes_url, headers=headers)
