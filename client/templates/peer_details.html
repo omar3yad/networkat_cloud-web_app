@@ -100,9 +100,13 @@
 
                 <div class="info-item">
                     <span class="info-label">Version</span>
-                    <div class="info-value-wrapper">
+                    <div class="info-value-wrapper version-value-wrapper">
                         <span class="info-value" id="peer-version-display">{{ peer_version or '—' }}</span>
-                        <span class="badge-status-pill badge-pill-update" id="peer-version-badge" style="display: none;"></span>
+                        <button type="button" class="version-update-lamp" id="peer-version-badge" style="display: none;"
+                            onclick="openUpdatesModal()" title="" aria-label="Software update available">
+                            <i class="fas fa-info-circle"></i>
+                            <span class="version-update-tooltip" id="peer-version-tooltip"></span>
+                        </button>
                     </div>
                 </div>
 <!-- 
@@ -330,13 +334,17 @@
 
                         <div class="auto-update-interval-row" id="auto-update-interval-wrapper">
                             <div class="interval-label-group">
-                                <label for="update-interval-hours" class="setting-title">Update check interval</label>
-                                <span class="setting-desc">The time interval between checking for new updates</span>
+                                <label for="update-interval-hours" class="setting-title">Update interval</label>
                             </div>
-                            <div class="interval-input-group">
-                                <input type="number" id="update-interval-hours" class="interval-input"
-                                    min="3" max="168" step="1" value="12" placeholder="Hours" oninput="onAutoUpdateFieldChange()">
-                                <span class="interval-unit">hours</span>
+                            <div class="interval-input-wrapper">
+                                <div class="interval-input-group">
+                                    <input type="number" id="update-interval-hours" class="interval-input"
+                                        min="3" max="168" step="1" value="12" placeholder="Hours" oninput="onAutoUpdateFieldChange()">
+                                    <span class="interval-unit">hours</span>
+                                </div>
+                                <div class="inline-error-msg interval-error-msg" id="auto-update-interval-error" style="display: none;">
+                                    <i class="fas fa-exclamation-circle"></i> <span>Min 3 hours</span>
+                                </div>
                             </div>
                         </div>
                     </div>

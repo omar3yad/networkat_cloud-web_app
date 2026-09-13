@@ -181,6 +181,109 @@
                 }
             }
         });
+
+        setupUpdateIntervalValidation();
+    }
+
+    function showIntervalError(msg = "Min 3 hours") {
+        const errEl = document.getElementById("auto-update-interval-error");
+        const intervalInp = document.getElementById("update-interval-hours");
+        if (errEl) {
+            errEl.innerHTML = `<i class="fas fa-exclamation-circle"></i> <span>${escapeHtml(msg)}</span>`;
+            errEl.style.display = "flex";
+            errEl.classList.remove("shake-error");
+            void errEl.offsetWidth;
+            errEl.classList.add("shake-error");
+        }
+        if (intervalInp) {
+            intervalInp.classList.add("is-invalid");
+            intervalInp.classList.remove("shake-error");
+            void intervalInp.offsetWidth;
+            intervalInp.classList.add("shake-error");
+        }
+    }
+
+    function hideIntervalError() {
+        const errEl = document.getElementById("auto-update-interval-error");
+        const intervalInp = document.getElementById("update-interval-hours");
+        if (errEl) {
+            errEl.style.display = "none";
+            errEl.textContent = "";
+        }
+        if (intervalInp) {
+            intervalInp.classList.remove("is-invalid");
+        }
+    }
+
+    function setupUpdateIntervalValidation() {
+        const intervalInp = document.getElementById("update-interval-hours");
+        if (!intervalInp) return;
+
+        function handleSpinnerDown(e) {
+            const rect = intervalInp.getBoundingClientRect();
+            const isSpinnerX = (e.clientX >= rect.right - 28);
+            if (!isSpinnerX) return;
+
+            const isDownSpinner = (e.clientY >= rect.top + (rect.height / 2));
+            if (isDownSpinner) {
+                const val = parseInt(intervalInp.value, 10);
+                if (isNaN(val) || val <= 3) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    intervalInp.value = 3;
+                    showIntervalError("Min 3 hours");
+                    updateSaveButtonState();
+                }
+            }
+        }
+
+        intervalInp.addEventListener("pointerdown", handleSpinnerDown);
+        intervalInp.addEventListener("mousedown", handleSpinnerDown);
+
+        intervalInp.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowDown") {
+                const val = parseInt(intervalInp.value, 10);
+                if (isNaN(val) || val <= 3) {
+                    e.preventDefault();
+                    intervalInp.value = 3;
+                    showIntervalError("Min 3 hours");
+                    updateSaveButtonState();
+                }
+            }
+        });
+
+        intervalInp.addEventListener("wheel", (e) => {
+            if (e.deltaY > 0) {
+                const val = parseInt(intervalInp.value, 10);
+                if (isNaN(val) || val <= 3) {
+                    e.preventDefault();
+                    intervalInp.value = 3;
+                    showIntervalError("Min 3 hours");
+                    updateSaveButtonState();
+                }
+            }
+        }, { passive: false });
+
+        intervalInp.addEventListener("input", () => {
+            const rawVal = intervalInp.value.trim();
+            const val = parseInt(rawVal, 10);
+            if (rawVal === "" || isNaN(val) || val < 3) {
+                showIntervalError("Min 3 hours");
+            } else {
+                hideIntervalError();
+            }
+            onAutoUpdateFieldChange();
+        });
+
+        intervalInp.addEventListener("blur", () => {
+            const rawVal = intervalInp.value.trim();
+            const val = parseInt(rawVal, 10);
+            if (rawVal === "" || isNaN(val) || val < 3) {
+                intervalInp.value = 3;
+                hideIntervalError();
+                updateSaveButtonState();
+            }
+        });
     }
 
     async function savePeerField(field) {
@@ -574,7 +677,11 @@
             if (update.state === "update-available" && availableVersion && availableVersion !== installedVersion) {
                 const badgeEl = document.getElementById("peer-version-badge");
                 if (badgeEl) {
-                    badgeEl.textContent = "Update available";
+                    const titleText = `available update: ${availableVersion}`;
+                    badgeEl.title = titleText;
+                    badgeEl.setAttribute("aria-label", titleText);
+                    const tooltipEl = document.getElementById("peer-version-tooltip");
+                    if (tooltipEl) tooltipEl.textContent = titleText;
                     badgeEl.style.display = "inline-flex";
                 }
                 const dotEl = document.getElementById("update-badge-dot");
@@ -588,6 +695,7 @@
     function openUpdatesModal() {
         const modal = document.getElementById("updatesModal");
         if (modal) modal.classList.add("active");
+        hideIntervalError();
         clearUpdatesFeedback();
         checkPeerUpdate();
         loadAutoUpdateConfig();
@@ -633,7 +741,13 @@
         const toggle = document.getElementById("auto-update-toggle");
         const intervalInp = document.getElementById("update-interval-hours");
         const curEnabled = toggle ? toggle.checked : false;
-        const curHours = intervalInp ? parseInt(intervalInp.value, 10) : 12;
+        const curValStr = intervalInp ? intervalInp.value.trim() : "";
+        const curHours = parseInt(curValStr, 10);
+
+        if (curEnabled && (curValStr === "" || isNaN(curHours) || curHours < 3)) {
+            btnSave.disabled = true;
+            return;
+        }
 
         const isDirty = (curEnabled !== initialAutoUpdateEnabled) || (curHours !== initialIntervalHours);
         btnSave.disabled = !isDirty;
@@ -691,7 +805,11 @@
                 if (availableCard) availableCard.style.display = "flex";
                 if (availableVal) availableVal.textContent = available;
                 if (versionBadge) {
-                    versionBadge.textContent = "Update available";
+                    const titleText = `available update: ${available}`;
+                    versionBadge.title = titleText;
+                    versionBadge.setAttribute("aria-label", titleText);
+                    const tooltipEl = document.getElementById("peer-version-tooltip");
+                    if (tooltipEl) tooltipEl.textContent = titleText;
                     versionBadge.style.display = "inline-flex";
                 }
                 if (dotBadge) dotBadge.style.display = "inline-block";
@@ -819,6 +937,7 @@
 
             initialAutoUpdateEnabled = enabled;
             initialIntervalHours = hours;
+            hideIntervalError();
             updateSaveButtonState();
         } catch (e) {
             console.error("Error loading auto update config:", e);
@@ -837,6 +956,10 @@
             else wrapper.classList.add("disabled");
         }
 
+        if (!isChecked) {
+            hideIntervalError();
+        }
+
         updateSaveButtonState();
     }
 
@@ -850,8 +973,7 @@
         let hours = intervalInp ? parseInt(intervalInp.value, 10) : 12;
 
         if (enabled && (isNaN(hours) || hours < 3)) {
-            showUpdatesFeedback("Update interval must be at least 3 hours.", "error");
-            if (window.showWarning) window.showWarning("Minimum update interval is 3 hours");
+            showIntervalError("Min 3 hours");
             return;
         }
 

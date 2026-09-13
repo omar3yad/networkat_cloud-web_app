@@ -1010,10 +1010,45 @@ input:disabled + .slider {
     pointer-events: none;
 }
 
+.interval-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
 .interval-input-group {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.interval-input.is-invalid {
+    border-color: #ef4444 !important;
+    background-color: #fff5f5 !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+    color: #dc2626 !important;
+}
+
+.interval-error-msg {
+    color: #dc2626;
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.2;
+    animation: fadeInError 0.2s ease-in-out;
+}
+
+.shake-error {
+    animation: errorShake 0.3s ease-in-out;
+}
+
+@keyframes errorShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-3px); }
+    40%, 80% { transform: translateX(3px); }
 }
 
 .interval-input {
@@ -1053,7 +1088,85 @@ input:disabled + .slider {
     box-shadow: none;
 }
 
-/* Badge in Peer Info card */
+/* Version Update Indicator Lamp (in Peer Info card) */
+.version-value-wrapper {
+    display: inline-flex;
+    align-items: flex-start;
+    white-space: nowrap;
+    position: relative;
+}
+
+.version-update-lamp {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    background: rgba(245, 158, 11, 0.16);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    font-size: 0.72rem;
+    cursor: pointer;
+    position: relative;
+    top: -4px;
+    margin-left: 4px;
+    padding: 0;
+    line-height: 1;
+    box-sizing: border-box;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.version-update-lamp:hover {
+    background: rgba(245, 158, 11, 0.28);
+    border-color: #f59e0b;
+    color: #b45309;
+    transform: scale(1.15);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+}
+
+.version-update-lamp i {
+    pointer-events: none;
+}
+
+.version-update-tooltip {
+    position: absolute;
+    bottom: calc(100% + 7px);
+    right: -2px;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 50;
+    font-family: inherit;
+    text-transform: none;
+}
+
+.version-update-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 6px;
+    border-width: 4px;
+    border-style: solid;
+    border-color: #fcd34d transparent transparent transparent;
+}
+
+.version-update-lamp:hover .version-update-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-2px);
+}
+
 .badge-pill-update {
     display: inline-flex;
     align-items: center;
