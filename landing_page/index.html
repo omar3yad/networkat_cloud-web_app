@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Networkat Guard — أول جدار حماية عربي بفكر عالمي</title>
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<meta name="description" content="Networkat Guard: جدار حماية عربي عالي الأداء وحل SD-WAN يربط فروع مؤسستك بأمان عبر WireGuard، بديل حديث لـ MPLS بتكلفة أقل وموثوقية أعلى، مع إدارة مركزية وتنصيب في أقل من عشر دقائق.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css?v=13">
+</head>
+<body dir="rtl">
+
+<!-- ===== NAV ===== -->
+<header class="nav">
+  <div class="wrap nav__inner">
+    <a href="index.html" class="brand"><img class="brand__logo" src="assets/img/logo-mark.png?v=2" alt="Networkat Guard"><span class="brand__wordmark">Networkat <b>Guard</b></span></a>
+    <nav class="nav__links">
+      <a href="#how" data-ar="كيف يعمل" data-en="How it works">كيف يعمل</a>
+      <a href="#sdwan" data-ar="SD-WAN" data-en="SD-WAN">SD-WAN</a>
+      <a href="#install" data-ar="التنصيب" data-en="Install">التنصيب</a>
+      <a href="#deploy" data-ar="التشغيل" data-en="Deploy">التشغيل</a>
+      <a href="#compare" data-ar="المقارنة" data-en="Compare">المقارنة</a>
+      <a href="#contact" data-ar="تواصل" data-en="Contact">تواصل</a>
+    </nav>
+    <div class="nav__actions">
+      <button class="lang-toggle" aria-label="Switch language">EN</button>
+      <a href="#contact" class="btn btn--primary" data-ar="اطلب عرضا" data-en="Request a demo" style="padding:11px 22px">اطلب عرضا</a>
+      <button class="nav__burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="wrap hero__grid">
+    <div>
+      <span class="hero__badge"><span class="dot"></span><span data-ar="الأول عربيا · بمعايير عالمية" data-en="First in the Arab world · Built to a global standard">الأول عربيا · بمعايير عالمية</span></span>
+      <h1 class="h-xl hero__title" data-ar="Networkat Guard" data-en="Networkat Guard">Networkat Guard</h1>
+      <p class="lead hero__lead" data-ar="أول جدار حماية عربي بفكر عالمي لم يقدم من قبل. يربط فروع مؤسستك في شبكة واحدة آمنة عبر WireGuard، بأداء عال وإدارة مركزية — بديل حديث لـ MPLS بتكلفة أقل وموثوقية أعلى." data-en="The first Arabic firewall engineered to a global standard. It unites your branches into one secure network over WireGuard — high performance, central control, and a modern alternative to MPLS at a fraction of the cost.">أول جدار حماية عربي بفكر عالمي لم يقدم من قبل. يربط فروع مؤسستك في شبكة واحدة آمنة عبر WireGuard، بأداء عال وإدارة مركزية — بديل حديث لـ MPLS بتكلفة أقل وموثوقية أعلى.</p>
+      <div class="hero__cta">
+        <a href="#contact" class="btn btn--primary" data-ar="اطلب عرضا تقديميا" data-en="Request a demo">اطلب عرضا تقديميا
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></a>
+        <a href="#watch" class="btn btn--ghost" data-ar="شاهد كيف يعمل" data-en="See how it works">شاهد كيف يعمل</a>
+      </div>
+    </div>
+    <div class="hero__visual">
+      <!-- animated secure-branch topology: branches linked to HQ, internet bypassed -->
+      <svg class="topo" viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg" aria-label="فروع مترابطة بأمان دون المرور بالإنترنت">
+        <!-- secure tunnels -->
+        <path class="topo__link" d="M250 250 L110 380"/>
+        <path class="topo__link" d="M250 250 L395 380"/>
+        <path class="topo__link" d="M250 250 L410 155"/>
+        <!-- blocked internet link -->
+        <path class="topo__blocked" d="M250 250 L110 130"/>
+        <line class="topo__x" x1="172" y1="180" x2="188" y2="196"/>
+        <line class="topo__x" x1="188" y1="180" x2="172" y2="196"/>
+        <!-- internet cloud (dimmed / bypassed) -->
+        <g opacity="0.5">
+          <ellipse cx="110" cy="120" rx="52" ry="30" fill="#1a2740" stroke="#3f4d63" stroke-width="1.5"/>
+          <text class="topo__lbl topo__lbl--mute" x="110" y="124" text-anchor="middle">Internet</text>
+        </g>
+        <!-- HQ node -->
+        <circle class="topo__ring" cx="250" cy="250" r="34"/>
+        <circle cx="250" cy="250" r="30" fill="#1C7FB8"/>
+        <path d="M250 236 l-13 5 v8 c0 8 6 12 13 16 7-4 13-8 13-16 v-8z" fill="#04121f"/>
+        <text class="topo__lbl" x="250" y="300" text-anchor="middle" data-ar="المقر" data-en="HQ">المقر</text>
+        <!-- branch nodes -->
+        <g>
+          <circle cx="110" cy="380" r="20" fill="#12324f" stroke="var(--cyan)" stroke-width="2"/>
+          <rect x="101" y="372" width="18" height="14" rx="2" fill="none" stroke="#45B0E4" stroke-width="1.6"/>
+          <text class="topo__lbl" x="110" y="418" text-anchor="middle" data-ar="فرع 1" data-en="Branch 1">فرع 1</text>
+        </g>
+        <g>
+          <circle cx="395" cy="380" r="20" fill="#12324f" stroke="var(--cyan)" stroke-width="2"/>
+          <rect x="386" y="372" width="18" height="14" rx="2" fill="none" stroke="#45B0E4" stroke-width="1.6"/>
+          <text class="topo__lbl" x="395" y="418" text-anchor="middle" data-ar="فرع 2" data-en="Branch 2">فرع 2</text>
+        </g>
+        <g>
+          <circle cx="410" cy="155" r="20" fill="#12324f" stroke="var(--cyan)" stroke-width="2"/>
+          <rect x="401" y="147" width="18" height="14" rx="2" fill="none" stroke="#45B0E4" stroke-width="1.6"/>
+          <text class="topo__lbl" x="410" y="193" text-anchor="middle" data-ar="فرع 3" data-en="Branch 3">فرع 3</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- value strip -->
+  <div class="wrap" style="margin-top:clamp(40px,6vw,68px)">
+    <div class="vstrip reveal">
+      <div class="vstrip__cell">
+        <span class="vstrip__ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M12 3v18"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <div><b data-ar="بديل لـ MPLS" data-en="An MPLS alternative">بديل لـ MPLS</b><span data-ar="تكلفة أقل بكثير" data-en="At a fraction of the cost">تكلفة أقل بكثير</span></div>
+      </div>
+      <div class="vstrip__cell">
+        <span class="vstrip__ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></span>
+        <div><b data-ar="ربط بضغطة زر" data-en="One-click linking">ربط بضغطة زر</b><span data-ar="عبر WireGuard VPN" data-en="Over WireGuard VPN">عبر WireGuard VPN</span></div>
+      </div>
+      <div class="vstrip__cell">
+        <span class="vstrip__ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <div><b data-ar="تنصيب < 10 دقائق" data-en="Setup < 10 min">تنصيب < 10 دقائق</b><span data-ar="للفرع الواحد" data-en="Per branch">للفرع الواحد</span></div>
+      </div>
+      <div class="vstrip__cell">
+        <span class="vstrip__ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>
+        <div><b data-ar="إدارة مركزية" data-en="Central control">إدارة مركزية</b><span data-ar="داشبورد واحدة + موبايل" data-en="One dashboard + mobile">داشبورد واحدة + موبايل</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== DEMO VIDEO (before core idea) ===== -->
+<section class="section section--grey" id="watch">
+  <div class="wrap">
+    <div class="section-head section-head--center reveal">
+      <span class="eyebrow" data-ar="شاهد كيف يعمل" data-en="See how it works">شاهد كيف يعمل</span>
+      <h2 class="h-lg" data-ar="Networkat Guard أثناء العمل" data-en="Networkat Guard in action">Networkat Guard أثناء العمل</h2>
+    </div>
+    <div class="video-frame reveal">
+      <video controls preload="metadata" playsinline poster="assets/img/guard-demo-poster.jpg">
+        <source src="assets/video/netguard.mp4" type="video/mp4">
+        <span data-ar="متصفحك لا يدعم تشغيل الفيديو." data-en="Your browser does not support video playback.">متصفحك لا يدعم تشغيل الفيديو.</span>
+      </video>
+    </div>
+    <p class="video-cap reveal" data-ar="فيديو توضيحي: التنصيب، ربط فرع، الداشبورد، وحجب المواقع." data-en="Walkthrough: install, link a branch, the dashboard, and web blocking.">فيديو توضيحي: التنصيب، ربط فرع، الداشبورد، وحجب المواقع.</p>
+  </div>
+</section>
+
+<!-- ===== COMPARISON ===== -->
+<section class="section" id="compare">
+  <div class="wrap">
+    <div class="section-head section-head--center reveal">
+      <span class="eyebrow" data-ar="المقارنة" data-en="Comparison">المقارنة</span>
+      <h2 class="h-lg" data-ar="Networkat Guard مقابل الحلول العالمية" data-en="Networkat Guard vs. the global players">Networkat Guard مقابل الحلول العالمية</h2>
+      <p class="lead" style="margin-inline:auto" data-ar="نفس القدرات المؤسسية التي تقدمها الأسماء الكبرى — مع مزايا في اللغة والتكلفة وسهولة التشغيل مصممة لسوقنا." data-en="The same enterprise capabilities the big names offer — with advantages in language, cost, and ease of operation, built for our market.">نفس القدرات المؤسسية التي تقدمها الأسماء الكبرى — مع مزايا في اللغة والتكلفة وسهولة التشغيل مصممة لسوقنا.</p>
+    </div>
+
+    <div class="compare-wrap reveal">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="g">Networkat Guard</th>
+            <th>Cisco</th>
+            <th>Fortinet</th>
+            <th>Palo Alto</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th data-ar="جدار حماية عالي الأداء" data-en="High-performance firewall">جدار حماية عالي الأداء</th>
+            <td class="g"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+          </tr>
+          <tr>
+            <th data-ar="SD-WAN: تحول تلقائي وتوزيع حمل" data-en="SD-WAN: failover &amp; load balancing">SD-WAN: تحول تلقائي وتوزيع حمل</th>
+            <td class="g"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+          </tr>
+          <tr>
+            <th data-ar="حجب المواقع وتصفية المحتوى" data-en="Web filtering &amp; blocking">حجب المواقع وتصفية المحتوى</th>
+            <td class="g"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-yes">✓</span></td>
+          </tr>
+          <tr>
+            <th data-ar="ربط الفروع عبر WireGuard بضغطة زر" data-en="One-click WireGuard branch mesh">ربط الفروع عبر WireGuard بضغطة زر</th>
+            <td class="g"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">—</span></td>
+            <td><span class="cmp-no">—</span></td>
+            <td><span class="cmp-no">—</span></td>
+          </tr>
+          <tr>
+            <th data-ar="واجهة ودعم فني بالعربية" data-en="Arabic interface &amp; support">واجهة ودعم فني بالعربية</th>
+            <td class="g"><span class="cmp-yes">✓</span></td>
+            <td><span class="cmp-no">—</span></td>
+            <td><span class="cmp-no">—</span></td>
+            <td><span class="cmp-no">—</span></td>
+          </tr>
+          <tr>
+            <th data-ar="عتاد اقتصادي ومتطلبات منخفضة (~4GB RAM)" data-en="Economical hardware, low requirements (~4GB RAM)">عتاد اقتصادي ومتطلبات منخفضة (~4GB RAM)</th>
+            <td class="g"><span class="cmp-yes">✓</span></td>
+            <td><span class="cell-txt" data-ar="متطلبات أعلى" data-en="Higher requirements">متطلبات أعلى</span></td>
+            <td><span class="cell-txt" data-ar="متطلبات أعلى" data-en="Higher requirements">متطلبات أعلى</span></td>
+            <td><span class="cell-txt" data-ar="متطلبات أعلى" data-en="Higher requirements">متطلبات أعلى</span></td>
+          </tr>
+          <tr>
+            <th data-ar="تنصيب الفرع" data-en="Branch setup">تنصيب الفرع</th>
+            <td class="g"><span class="cell-txt" data-ar="أقل من 10 دقائق" data-en="Under 10 minutes">أقل من 10 دقائق</span></td>
+            <td><span class="cell-txt" data-ar="يتطلب خبرة" data-en="Needs expertise">يتطلب خبرة</span></td>
+            <td><span class="cell-txt" data-ar="يتطلب خبرة" data-en="Needs expertise">يتطلب خبرة</span></td>
+            <td><span class="cell-txt" data-ar="يتطلب خبرة" data-en="Needs expertise">يتطلب خبرة</span></td>
+          </tr>
+          <tr>
+            <th data-ar="إدارة مركزية + تطبيق موبايل مدمج" data-en="Central dashboard + built-in mobile app">إدارة مركزية + تطبيق موبايل مدمج</th>
+            <td class="g"><span class="cmp-yes">✓</span></td>
+            <td><span class="cell-txt" data-ar="منتج منفصل" data-en="Separate product">منتج منفصل</span></td>
+            <td><span class="cell-txt" data-ar="منتج منفصل" data-en="Separate product">منتج منفصل</span></td>
+            <td><span class="cell-txt" data-ar="منتج منفصل" data-en="Separate product">منتج منفصل</span></td>
+          </tr>
+          <tr>
+            <th data-ar="التكلفة الإجمالية" data-en="Total cost of ownership">التكلفة الإجمالية</th>
+            <td class="g"><span class="cell-txt" data-ar="منخفضة" data-en="Low">منخفضة</span></td>
+            <td><span class="cell-txt" data-ar="مرتفعة" data-en="High">مرتفعة</span></td>
+            <td><span class="cell-txt" data-ar="مرتفعة" data-en="High">مرتفعة</span></td>
+            <td><span class="cell-txt" data-ar="مرتفعة" data-en="High">مرتفعة</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="compare-note reveal" data-ar="مقارنة توضيحية بناء على الإعدادات القياسية الشائعة لكل حل. الأسماء التجارية ملك لأصحابها." data-en="Illustrative comparison based on each solution's common standard configurations. Trademarks belong to their respective owners.">مقارنة توضيحية بناء على الإعدادات القياسية الشائعة لكل حل. الأسماء التجارية ملك لأصحابها.</p>
+  </div>
+</section>
+
+<!-- ===== MPLS ALTERNATIVE (flagship / banks) ===== -->
+<section class="section section--grey" id="how">
+  <div class="wrap split">
+    <div class="reveal">
+      <span class="eyebrow" data-ar="الفكرة الأساسية" data-en="The core idea">الفكرة الأساسية</span>
+      <h2 class="h-lg" data-ar="ربط داخلي آمن دون الخروج إلى الإنترنت" data-en="Secure internal connectivity, without touching the internet">ربط داخلي آمن دون الخروج إلى الإنترنت</h2>
+      <p class="lead" style="margin-top:14px" data-ar="يمكن Networkat Guard الشركات من ربط فروعها داخليا فقط، دون أن تمر بياناتها عبر الإنترنت أو تتعرض لمخاطره. هذا يجعله بديلا حديثا لـ MPLS وتكلفته العالية، وأعلى موثوقية واعتمادية للبنوك والمؤسسات التي تتطلب مصداقية عالية." data-en="Networkat Guard lets organizations connect their branches internally only — data never traverses the public internet or its risks. That makes it a modern alternative to costly MPLS, with the reliability and trust that banks and high-credibility institutions demand.">يمكن Networkat Guard الشركات من ربط فروعها داخليا فقط، دون أن تمر بياناتها عبر الإنترنت أو تتعرض لمخاطره. هذا يجعله بديلا حديثا لـ MPLS وتكلفته العالية، وأعلى موثوقية واعتمادية للبنوك والمؤسسات التي تتطلب مصداقية عالية.</p>
+      <ul class="feature-list">
+        <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg></span><span data-ar="حركة البيانات بين الفروع داخلية بالكامل ومعزولة عن الإنترنت" data-en="Branch-to-branch traffic stays fully internal, isolated from the internet">حركة البيانات بين الفروع داخلية بالكامل ومعزولة عن الإنترنت</span></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg></span><span data-ar="تكلفة تشغيل أقل بكثير من خطوط MPLS التقليدية" data-en="Far lower running cost than traditional MPLS circuits">تكلفة تشغيل أقل بكثير من خطوط MPLS التقليدية</span></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg></span><span data-ar="موثوقية واعتمادية مناسبة للبنوك والقطاعات الحساسة" data-en="Reliability suited to banks and sensitive sectors">موثوقية واعتمادية مناسبة للبنوك والقطاعات الحساسة</span></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <!-- IMAGE SLOT 1 -->
+      <img class="media-img" src="assets/img/topology-mpls-alt.png" alt="A diagram comparing MPLS (routed via a provider) with Networkat (direct, encrypted internal linking between branches, away from the internet)." loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <div class="media-ph media-ph--tall" style="display:none">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
+        <b>topology-mpls-alt.png</b>
+        <p class="desc" data-ar="رسم يقارن بين MPLS (المرور عبر مزود الخدمة) وبين Networkat (ربط داخلي مباشر ومشفر بين الفروع بعيدا عن الإنترنت)." data-en="A diagram comparing MPLS (routed via a provider) with Networkat (direct, encrypted internal linking between branches, away from the internet).">رسم يقارن بين MPLS (المرور عبر مزود الخدمة) وبين Networkat (ربط داخلي مباشر ومشفر بين الفروع بعيدا عن الإنترنت).</p>
+        <span class="spec">PNG · 1000×800 · شفاف الخلفية مفضل</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== WIREGUARD ONE-CLICK ===== -->
+<section class="section">
+  <div class="wrap split">
+    <div class="reveal">
+      <!-- IMAGE SLOT 2 -->
+      <img class="media-img" src="assets/img/dashboard-link-branch.png" alt="A dashboard screenshot showing a new branch being linked with a single click over WireGuard." loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <div class="media-ph media-ph--tall" style="display:none">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3M7 9l2 2 3-3"/></svg></span>
+        <b>dashboard-link-branch.png</b>
+        <p class="desc" data-ar="لقطة من الداشبورد توضح ربط فرع جديد بضغطة زر واحدة عبر WireGuard." data-en="A dashboard screenshot showing a new branch being linked with a single click over WireGuard.">لقطة من الداشبورد توضح ربط فرع جديد بضغطة زر واحدة عبر WireGuard.</p>
+        <span class="spec">PNG · 1200×800</span>
+      </div>
+    </div>
+    <div class="reveal">
+      <span class="eyebrow" data-ar="الربط الآمن" data-en="Secure linking">الربط الآمن</span>
+      <h2 class="h-lg" data-ar="اربط فرعا جديدا بضغطة زر" data-en="Link a new branch in one click">اربط فرعا جديدا بضغطة زر</h2>
+      <p class="lead" style="margin-top:14px" data-ar="أنشئ نفقا مشفرا عبر WireGuard VPN بين أي فرع والمقر أو بقية الفروع بضغطة زر واحدة، لتتواصل الشبكات الداخلية بأمان تام وكأنها في مبنى واحد." data-en="Spin up an encrypted WireGuard tunnel between any branch and HQ — or the rest of your branches — in a single click, so your internal networks talk securely as if they were in one building.">أنشئ نفقا مشفرا عبر WireGuard VPN بين أي فرع والمقر أو بقية الفروع بضغطة زر واحدة، لتتواصل الشبكات الداخلية بأمان تام وكأنها في مبنى واحد.</p>
+      <ul class="feature-list">
+        <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg></span><span data-ar="تشفير حديث وسريع عبر WireGuard" data-en="Modern, fast encryption via WireGuard">تشفير حديث وسريع عبر WireGuard</span></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg></span><span data-ar="شبكات داخلية تتواصل بأمان بين كل الفروع" data-en="Internal networks connect securely across all branches">شبكات داخلية تتواصل بأمان بين كل الفروع</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FIREWALL + WEB FILTERING ===== -->
+<section class="section section--grey">
+  <div class="wrap split">
+    <div class="reveal">
+      <span class="eyebrow" data-ar="الحماية" data-en="Protection">الحماية</span>
+      <h2 class="h-lg" data-ar="جدار حماية عالي الأداء وحجب فعال للمواقع" data-en="A high-performance firewall with powerful web filtering">جدار حماية عالي الأداء وحجب فعال للمواقع</h2>
+      <p class="lead" style="margin-top:14px" data-ar="محرك جدار حماية عالي الأداء يحمي شبكتك من التهديدات، مع نظام حجب للمواقع قوي وفعال يمنحك تحكما كاملا في ما يمكن الوصول إليه داخل المؤسسة." data-en="A high-performance firewall engine protects your network from threats, paired with strong, effective website blocking that gives you full control over what can be reached inside the organization.">محرك جدار حماية عالي الأداء يحمي شبكتك من التهديدات، مع نظام حجب للمواقع قوي وفعال يمنحك تحكما كاملا في ما يمكن الوصول إليه داخل المؤسسة.</p>
+      <ul class="feature-list">
+        <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg></span><span data-ar="أداء عال دون التأثير على سرعة الشبكة" data-en="High throughput without slowing the network">أداء عال دون التأثير على سرعة الشبكة</span></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-11"/></svg></span><span data-ar="حجب المواقع والفئات غير المرغوبة بسياسات مرنة" data-en="Block unwanted sites and categories with flexible policies">حجب المواقع والفئات غير المرغوبة بسياسات مرنة</span></li>
+      </ul>
+    </div>
+    <div class="reveal">
+      <!-- IMAGE SLOT 3 -->
+      <img class="media-img" src="assets/img/web-filtering.png" alt="A screenshot of the security-policy and web-blocking screen (blocked categories/sites list)." loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <div class="media-ph media-ph--tall" style="display:none">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 8 8 11 4.5-3 8-6 8-11V5z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <b>web-filtering.png</b>
+        <p class="desc" data-ar="لقطة من شاشة سياسات الحماية وحجب المواقع (قائمة الفئات/المواقع المحجوبة)." data-en="A screenshot of the security-policy and web-blocking screen (blocked categories/sites list).">لقطة من شاشة سياسات الحماية وحجب المواقع (قائمة الفئات/المواقع المحجوبة).</p>
+        <span class="spec">PNG · 1200×800</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SD-WAN DUAL INTERNET ===== -->
+<section class="section" id="sdwan">
+  <div class="wrap">
+    <div class="section-head section-head--center reveal">
+      <span class="eyebrow">SD-WAN</span>
+      <h2 class="h-lg" data-ar="مصدرا إنترنت، تحول تلقائي وتوزيع للحمل" data-en="Two internet links, automatic failover and load balancing">مصدرا إنترنت، تحول تلقائي وتوزيع للحمل</h2>
+      <p class="lead" style="margin-inline:auto" data-ar="وصل مصدري إنترنت واترك النظام يوزع الحمل بينهما تلقائيا، ويتحول فورا إلى المصدر السليم إذا انقطع أحدهما — اتصال لا يتوقف." data-en="Connect two internet sources and let the system balance the load between them automatically, switching instantly to the healthy link if one drops — connectivity that never stops.">وصل مصدري إنترنت واترك النظام يوزع الحمل بينهما تلقائيا، ويتحول فورا إلى المصدر السليم إذا انقطع أحدهما — اتصال لا يتوقف.</p>
+    </div>
+    <div class="grid grid--3">
+      <article class="card reveal">
+        <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16M4 8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4M4 16h16M4 16a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4"/></svg></div>
+        <h3 class="card__title h-md" data-ar="مصدرا إنترنت" data-en="Dual internet">مصدرا إنترنت</h3>
+        <p class="card__text" data-ar="اربط خطي إنترنت من مزودين مختلفين للحصول على أعلى جاهزية." data-en="Connect two links from different providers for maximum uptime.">اربط خطي إنترنت من مزودين مختلفين للحصول على أعلى جاهزية.</p>
+      </article>
+      <article class="card card--fill reveal">
+        <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h6l2-4 2 8 2-4h6"/></svg></div>
+        <h3 class="card__title h-md" data-ar="توزيع الحمل" data-en="Load balancing">توزيع الحمل</h3>
+        <p class="card__text" data-ar="توزيع تلقائي لحركة البيانات بين المصدرين لاستغلال السرعة كاملة." data-en="Traffic is spread automatically across both links to use full bandwidth.">توزيع تلقائي لحركة البيانات بين المصدرين لاستغلال السرعة كاملة.</p>
+      </article>
+      <article class="card reveal">
+        <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg></div>
+        <h3 class="card__title h-md" data-ar="تحول تلقائي" data-en="Automatic failover">تحول تلقائي</h3>
+        <p class="card__text" data-ar="عند انقطاع أحد المصدرين ينتقل النظام فورا للآخر دون تدخل." data-en="If one link fails, the system switches to the other instantly, hands-free.">عند انقطاع أحد المصدرين ينتقل النظام فورا للآخر دون تدخل.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ===== INSTALL ===== -->
+<section class="section section--grey" id="install">
+  <div class="wrap">
+    <div class="section-head section-head--center reveal">
+      <span class="eyebrow" data-ar="التنصيب" data-en="Installation">التنصيب</span>
+      <h2 class="h-lg" data-ar="لا تنصيب أسهل من هذا" data-en="No setup is easier than this">لا تنصيب أسهل من هذا</h2>
+      <p class="lead" style="margin-inline:auto" data-ar="من إنشاء الحساب حتى تشغيل الجدار في دقائق معدودة." data-en="From creating your account to a running firewall in minutes.">من إنشاء الحساب حتى تشغيل الجدار في دقائق معدودة.</p>
+    </div>
+
+    <div class="isteps reveal">
+      <div class="istep">
+        <span class="istep__n"></span>
+        <div>
+          <h4 data-ar="أنشئ حسابك" data-en="Create your account">أنشئ حسابك</h4>
+          <p data-ar="سجل على منصة dashboard.networkat.cloud لإدارة فروعك ومنتجك." data-en="Sign up on dashboard.networkat.cloud to manage your branches and product.">سجل على منصة dashboard.networkat.cloud لإدارة فروعك ومنتجك.</p>
+          <a href="https://dashboard.networkat.cloud" target="_blank" rel="noopener" class="btn btn--ghost mini" data-ar="إنشاء حساب" data-en="Create account">إنشاء حساب</a>
+        </div>
+      </div>
+
+      <div class="istep">
+        <span class="istep__n"></span>
+        <div>
+          <h4 data-ar="حمل نسخة الـ VM" data-en="Download the VM">حمل نسخة الـ VM</h4>
+          <p data-ar="نزل ملف الـ OVA الجاهز للتشغيل." data-en="Get the ready-to-run OVA image.">نزل ملف الـ OVA الجاهز للتشغيل.</p>
+          <a href="https://drive.google.com/file/d/1TiwKba6Xx-h376kQGaLYEgHKReqxqg74/view?usp=drive_link" target="_blank" rel="noopener" class="btn btn--primary mini" data-ar="تحميل نسخة OVA" data-en="Download OVA">تحميل نسخة OVA
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></a>
+        </div>
+      </div>
+
+      <div class="istep">
+        <span class="istep__n"></span>
+        <div>
+          <h4 data-ar="افتحها في VMware" data-en="Open it in VMware">افتحها في VMware</h4>
+          <p data-ar="استورد ملف الـ OVA وشغل الجهاز الافتراضي عبر VMware." data-en="Import the OVA and boot the virtual machine in VMware.">استورد ملف الـ OVA وشغل الجهاز الافتراضي عبر VMware.</p>
+        </div>
+      </div>
+
+      <div class="istep">
+        <span class="istep__n"></span>
+        <div>
+          <h4 data-ar="سجل الدخول للجهاز" data-en="Log in to the VM">سجل الدخول للجهاز</h4>
+          <p data-ar="أدخل اسم المستخدم وكلمة المرور:" data-en="Enter the username and password:">أدخل اسم المستخدم وكلمة المرور:</p>
+          <div class="cred">
+            <code><span class="cred__k" data-ar="المستخدم" data-en="user">المستخدم</span>: networkat</code>
+            <code><span class="cred__k" data-ar="كلمة المرور" data-en="pass">كلمة المرور</span>: networkat</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="istep">
+        <span class="istep__n"></span>
+        <div>
+          <h4 data-ar="شغل أمر التنصيب" data-en="Run the install command">شغل أمر التنصيب</h4>
+          <p data-ar="نفذ الأمر التالي داخل الجهاز:" data-en="Run this command inside the VM:">نفذ الأمر التالي داخل الجهاز:</p>
+          <div class="terminal mini">
+            <div class="terminal__bar">
+              <span class="terminal__dot terminal__dot--r"></span><span class="terminal__dot terminal__dot--y"></span><span class="terminal__dot terminal__dot--g"></span>
+              <span class="terminal__title">install</span>
+            </div>
+            <div class="terminal__body">
+              <div class="terminal__line">
+                <span class="prompt">$</span>
+                <code id="install-cmd">curl -fsSL https://pkgs.networkat.cloud/install.sh | sudo bash</code>
+                <button class="copy-btn" data-copy="#install-cmd" data-ar="نسخ" data-en="Copy">نسخ</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="istep">
+        <span class="istep__n"></span>
+        <div>
+          <h4 data-ar="أدخل بيانات حسابك" data-en="Enter your account details">أدخل بيانات حسابك</h4>
+          <p data-ar="سيطلب منك اسم المستخدم وكلمة المرور الخاصين بحسابك على dashboard.networkat.cloud، ثم أكمل عملية التنصيب." data-en="You will be asked for your dashboard.networkat.cloud username and password, then finish the installation.">سيطلب منك اسم المستخدم وكلمة المرور الخاصين بحسابك على dashboard.networkat.cloud، ثم أكمل عملية التنصيب.</p>
+        </div>
+      </div>
+
+      <div class="istep istep--done">
+        <span class="istep__n"></span>
+        <div>
+          <h4 data-ar="وبووم… الجدار جاهز 🎉" data-en="Boom — you are live 🎉">وبووم… الجدار جاهز 🎉</h4>
+          <p data-ar="أصبح جدار الحماية جاهزا للعمل، وابدأ بربط فروعك من الداشبورد." data-en="Your firewall is ready — start linking your branches from the dashboard.">أصبح جدار الحماية جاهزا للعمل، وابدأ بربط فروعك من الداشبورد.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CENTRAL DASHBOARD + MOBILE ===== -->
+<section class="section">
+  <div class="wrap split">
+    <div class="reveal">
+      <span class="eyebrow" data-ar="الإدارة" data-en="Management">الإدارة</span>
+      <h2 class="h-lg" data-ar="إدارة مركزية لكل الفروع من مكان واحد" data-en="Manage every branch from one place">إدارة مركزية لكل الفروع من مكان واحد</h2>
+      <p class="lead" style="margin-top:14px" data-ar="تحكم في فروع شركاتك كلها من داشبورد واحدة على الويب، ومن تطبيق الموبايل أينما كنت — حالة الاتصال، السياسات، الفروع، ومصادر الإنترنت في لوحة واحدة." data-en="Control all your company's branches from one web dashboard — and from the mobile app wherever you are. Connectivity status, policies, branches and internet links, all in one view.">تحكم في فروع شركاتك كلها من داشبورد واحدة على الويب، ومن تطبيق الموبايل أينما كنت — حالة الاتصال، السياسات، الفروع، ومصادر الإنترنت في لوحة واحدة.</p>
+      <!-- IMAGE SLOT 4 -->
+      <img class="media-img" src="assets/img/dashboard-overview.png" alt="A wide screenshot of the central dashboard (branches overview and status)." loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      <div class="media-ph media-ph--wide" style="display:none;margin-top:26px">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 9h18M7 21h10"/></svg></span>
+        <b>dashboard-overview.png</b>
+        <p class="desc" data-ar="لقطة عريضة من الداشبورد المركزية (نظرة عامة على الفروع وحالتها)." data-en="A wide screenshot of the central dashboard (branches overview and status).">لقطة عريضة من الداشبورد المركزية (نظرة عامة على الفروع وحالتها).</p>
+        <span class="spec">PNG · 1400×900</span>
+      </div>
+    </div>
+    <div class="reveal">
+      <div class="phone">
+        <div class="phone__screen">
+          <div class="phone__row"><span class="k" data-ar="الفروع" data-en="Branches">الفروع</span><span class="v">Networkat</span></div>
+          <div class="phone__row"><span class="k">Cairo HQ</span><span class="v" style="color:var(--cyan)">● Online</span></div>
+          <div class="phone__row"><span class="k">Alexandria</span><span class="v" style="color:var(--cyan)">● Online</span></div>
+          <div class="phone__row"><span class="k">Riyadh</span><span class="v" style="color:var(--cyan)">● Online</span></div>
+          <div class="phone__bar"><i></i></div>
+          <div class="phone__row"><span class="k">WireGuard VPN</span><span class="v" style="color:var(--cyan)">🔒 Secure</span></div>
+          <div style="margin-top:16px;text-align:center"><span class="phone__pill" data-ar="ربط فرع جديد" data-en="Link new branch">ربط فرع جديد</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== DEPLOYMENT OPTIONS ===== -->
+<section class="section" id="deploy">
+  <div class="wrap">
+    <div class="section-head section-head--center reveal">
+      <span class="eyebrow" data-ar="التشغيل" data-en="Deployment">التشغيل</span>
+      <h2 class="h-lg" data-ar="طريقتان للتشغيل في بيئة الإنتاج" data-en="Two ways to run it in production">طريقتان للتشغيل في بيئة الإنتاج</h2>
+    </div>
+    <div class="grid grid--2">
+      <article class="card reveal">
+        <span class="card__tag">Virtual</span>
+        <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
+        <h3 class="card__title h-md" data-ar="جهاز افتراضي (VM)" data-en="Virtual machine (VM)">جهاز افتراضي (VM)</h3>
+        <p class="card__text" data-ar="شغله على جهاز افتراضي داخل بيئتك مع تخصيص ثلاثة كروت شبكة." data-en="Run it on a virtual machine in your environment with three network cards assigned.">شغله على جهاز افتراضي داخل بيئتك مع تخصيص ثلاثة كروت شبكة.</p>
+        <ul class="spec-list">
+          <li><span class="k" data-ar="كروت الشبكة" data-en="Network cards">كروت الشبكة</span><span class="v">3× NIC</span></li>
+          <li><span class="k" data-ar="النظام" data-en="OS">النظام</span><span class="v">Linux · Debian</span></li>
+        </ul>
+      </article>
+      <article class="card card--dark reveal">
+        <span class="card__tag">Appliance</span>
+        <div class="card__icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/><path d="M7 7h.01M7 17h.01"/></svg></div>
+        <h3 class="card__title h-md" data-ar="جهاز حقيقي" data-en="Physical device">جهاز حقيقي</h3>
+        <p class="card__text" data-ar="ثبته على جهاز فعلي كمعدة حماية مخصصة للفرع أو المقر." data-en="Install it on physical hardware as a dedicated security appliance for a branch or HQ.">ثبته على جهاز فعلي كمعدة حماية مخصصة للفرع أو المقر.</p>
+        <ul class="spec-list">
+          <li><span class="k" data-ar="الذاكرة" data-en="RAM">الذاكرة</span><span class="v">~4 GB</span></li>
+          <li><span class="k" data-ar="التخزين" data-en="Storage">التخزين</span><span class="v">20 GB+</span></li>
+          <li><span class="k" data-ar="المعالج" data-en="CPU">المعالج</span><span class="v" data-ar="أي معالج" data-en="Any CPU">أي معالج</span></li>
+          <li><span class="k" data-ar="كروت الشبكة" data-en="Network cards">كروت الشبكة</span><span class="v">3× NIC</span></li>
+        </ul>
+      </article>
+    </div>
+    <p class="lead" style="text-align:center;margin-top:28px;font-size:1rem" data-ar="يعمل على أي توزيعة Linux مبنية على Debian." data-en="Runs on any Debian-based Linux distribution.">يعمل على أي توزيعة Linux مبنية على Debian.</p>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<section class="section" id="contact">
+  <div class="wrap">
+    <div class="cta-banner reveal">
+      <span class="eyebrow" style="justify-content:center" data-ar="ابدأ اليوم" data-en="Start today">ابدأ اليوم</span>
+      <h2 class="h-lg" data-ar="اربط فروعك بأمان مع Networkat Guard" data-en="Connect your branches securely with Networkat Guard">اربط فروعك بأمان مع Networkat Guard</h2>
+      <p class="lead" style="margin-inline:auto" data-ar="تواصل معنا للحصول على عرض تقديمي واستشارة حول ربط فروع مؤسستك." data-en="Get in touch for a demo and a consultation on connecting your organization's branches.">تواصل معنا للحصول على عرض تقديمي واستشارة حول ربط فروع مؤسستك.</p>
+      <div class="btn-row">
+        <a href="https://wa.me/201006679920" target="_blank" rel="noopener" class="btn btn--primary" data-ar="تواصل عبر واتساب" data-en="Chat on WhatsApp">تواصل عبر واتساب</a>
+        <a href="tel:+201006679920" class="btn btn--ghost" data-ar="اتصل بنا" data-en="Call us">اتصل بنا</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__top">
+      <div class="footer__col">
+        <a href="index.html" class="brand"><img class="brand__logo" src="assets/img/logo-mark.png?v=2" alt="Networkat Guard"><span class="brand__wordmark">Networkat <b>Guard</b></span></a>
+        <p class="footer__about" data-ar="أول جدار حماية عربي بفكر عالمي: يربط فروع مؤسستك بأمان عبر WireGuard، كبديل حديث لـ MPLS بإدارة مركزية وتنصيب في دقائق." data-en="The first Arabic firewall built to a global standard: securely connects your branches over WireGuard as a modern MPLS alternative, with central management and setup in minutes.">أول جدار حماية عربي بفكر عالمي: يربط فروع مؤسستك بأمان عبر WireGuard، كبديل حديث لـ MPLS بإدارة مركزية وتنصيب في دقائق.</p>
+        <div class="footer__social">
+          <a href="https://www.facebook.com/share/1B9ca84mSV/" target="_blank" rel="noopener" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/></svg></a>
+          <a href="https://t.me/Networkat20" target="_blank" rel="noopener" aria-label="Telegram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.7 19.5c-.2 1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-4.9 9-8.1c.4-.3-.1-.5-.6-.2L6.4 13.4l-4.8-1.5c-1-.3-1.1-1 .2-1.5l18.7-7.2c.9-.3 1.6.2 1.4 1.1z"/></svg></a>
+          <a href="https://www.linkedin.com/company/networkat" target="_blank" rel="noopener" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5A2.5 2.5 0 1 1 5 8.5a2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.8-2 3.7-2 4 0 4.7 2.6 4.7 6V21H21v-5.3c0-1.3 0-3-1.8-3s-2.1 1.4-2.1 2.9V21H13z"/></svg></a>
+          <a href="https://www.instagram.com/network1t" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+        </div>
+      </div>
+      <div class="footer__col">
+        <h4 data-ar="المنتج" data-en="Product">المنتج</h4>
+        <a href="#how" data-ar="كيف يعمل" data-en="How it works">كيف يعمل</a>
+        <a href="#sdwan" data-ar="SD-WAN" data-en="SD-WAN">SD-WAN</a>
+        <a href="#install" data-ar="التنصيب" data-en="Installation">التنصيب</a>
+        <a href="#deploy" data-ar="التشغيل" data-en="Deployment">التشغيل</a>
+        <a href="#compare" data-ar="المقارنة" data-en="Comparison">المقارنة</a>
+      </div>
+      <div class="footer__col">
+        <h4 data-ar="تواصل" data-en="Reach us">تواصل</h4>
+        <a href="https://wa.me/201006679920" target="_blank" rel="noopener">+20 112 977 8191</a>
+        <a href="#contact" data-ar="اطلب عرضا" data-en="Request a demo">اطلب عرضا</a>
+        <a href="https://wa.me/201006679920" target="_blank" rel="noopener" data-ar="الدعم والمساعدة" data-en="Support">الدعم والمساعدة</a>
+      </div>
+      <div class="footer__col">
+        <h4 data-ar="Networkat" data-en="Networkat">Networkat</h4>
+        <a href="https://networkat.net" target="_blank" rel="noopener" data-ar="الأكاديمية" data-en="Academy">الأكاديمية</a>
+        <a href="https://netkatacad.com" target="_blank" rel="noopener" data-ar="مدرسة الشبكات" data-en="Networking School">مدرسة الشبكات</a>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span data-ar="جميع الحقوق محفوظة © Networkat" data-en="All rights reserved © Networkat">جميع الحقوق محفوظة © Networkat</span>
+      <span data-ar="أول جدار حماية عربي بفكر عالمي" data-en="The first Arabic firewall, built to a global standard">أول جدار حماية عربي بفكر عالمي</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/app.js?v=3"></script>
+</body>
+</html>

@@ -409,74 +409,7 @@
     }
 
     function checkDirtyPeerChanges() {
-        let hasChanges = false;
-        let hasErrors = false;
-        const rows = document.querySelectorAll('#peers-table-body tr[data-peer-id]');
-
-        rows.forEach(r => {
-            const peerId = r.getAttribute('data-peer-id');
-            const orig = originalPeerState[peerId];
-            if (!orig) return;
-
-            const nameInp = document.getElementById(`inline-name-${peerId}`);
-            const routeInp = document.getElementById(`inline-route-${peerId}`);
-
-            const currentName = nameInp ? nameInp.value.trim() : '';
-            const currentRoute = routeInp ? routeInp.value.trim() : '';
-
-            const nameChanged = currentName !== orig.name;
-            const routeChanged = currentRoute !== orig.route;
-
-            if (nameChanged || routeChanged) {
-                hasChanges = true;
-            }
-
-            // Real-time single input validation & golden aura for Name (only if modified)
-            if (nameInp) {
-                if (nameChanged) {
-                    const nameRes = validatePeerDeviceName(nameInp.value, peerId);
-                    if (!nameRes.valid) {
-                        hasErrors = true;
-                        setInlineError(`inline-name-${peerId}`, nameRes.error);
-                    } else {
-                        clearInlineError(`inline-name-${peerId}`);
-                        nameInp.classList.add('is-modified');
-                    }
-                } else {
-                    clearInlineError(`inline-name-${peerId}`);
-                    nameInp.classList.remove('is-modified');
-                }
-            }
-
-            // Real-time single input validation & golden aura for Route (only if modified)
-            if (routeInp) {
-                if (routeChanged) {
-                    const routeRes = validatePeerDeviceRoute(routeInp.value, peerId);
-                    if (!routeRes.valid) {
-                        hasErrors = true;
-                        setInlineError(`inline-route-${peerId}`, routeRes.error);
-                    } else {
-                        clearInlineError(`inline-route-${peerId}`);
-                        routeInp.classList.add('is-modified');
-                    }
-                } else {
-                    clearInlineError(`inline-route-${peerId}`);
-                    routeInp.classList.remove('is-modified');
-                }
-            }
-
-        });
-
-        const bar = document.getElementById('peers-apply-bar');
-        const applyBtn = document.getElementById('btn-apply-peers');
-        if (bar) {
-            bar.style.display = hasChanges ? 'flex' : 'none';
-        }
-        if (applyBtn) {
-            applyBtn.disabled = hasErrors;
-            applyBtn.style.opacity = hasErrors ? '0.5' : '1';
-            applyBtn.style.cursor = hasErrors ? 'not-allowed' : 'pointer';
-        }
+        // Per-field inline saving is now used; no bulk apply bar needed.
     }
 
     function escapeHtml(str) {
@@ -659,189 +592,185 @@
         }
     }
 
-    async function applyAllPeerChanges() {
-        const rows = document.querySelectorAll('#peers-table-body tr[data-peer-id]');
-        const dirtyPeers = [];
-
-        // 1. Validation check across all modified rows
-        for (const r of rows) {
-            const peerId = r.getAttribute('data-peer-id');
-            const orig = originalPeerState[peerId];
-            if (!orig) continue;
-
-            const nameInp = document.getElementById(`inline-name-${peerId}`);
-            const routeInp = document.getElementById(`inline-route-${peerId}`);
-
-            const currentName = nameInp ? nameInp.value.trim() : '';
-            const currentRoute = routeInp ? routeInp.value.trim() : '';
-
-            const nameChanged = currentName !== orig.name;
-            const routeChanged = currentRoute !== orig.route;
-
-            if (nameChanged || routeChanged) {
-                clearInlineError(`inline-name-${peerId}`);
-                clearInlineError(`inline-route-${peerId}`);
-
-                // Validate Name only if changed
-                if (nameChanged) {
-                    const nameRes = validatePeerDeviceName(currentName, peerId);
-                    if (!nameRes.valid) {
-                        setInlineError(`inline-name-${peerId}`, nameRes.error);
-                        enablePeerNameEditMode(peerId);
-                        if (nameInp) nameInp.focus();
-                        if (window.showError) window.showError(nameRes.error);
-                        return;
-                    }
-                }
-
-                // Validate Route only if changed
-                let normalizedRoute = currentRoute;
-                if (routeChanged) {
-                    const routeRes = validatePeerDeviceRoute(currentRoute, peerId);
-                    if (!routeRes.valid) {
-                        setInlineError(`inline-route-${peerId}`, routeRes.error);
-                        enablePeerRouteEditMode(peerId);
-                        if (routeInp) routeInp.focus();
-                        if (window.showError) window.showError(routeRes.error);
-                        return;
-                    }
-                    normalizedRoute = routeRes.normalized || '';
-                    if (routeInp && normalizedRoute && routeInp.value !== normalizedRoute) {
-                        routeInp.value = normalizedRoute;
-                    }
-                }
-
-                dirtyPeers.push({
-                    peerId,
-                    currentName,
-                    currentRoute: normalizedRoute,
-                    nameChanged,
-                    routeChanged,
-                    existingRouteId: routeInp ? routeInp.getAttribute('data-route-id') : null,
-                    existingNetworkId: routeInp ? routeInp.getAttribute('data-route-network-id') : null
-                });
-            }
-        }
-
-        if (dirtyPeers.length === 0) {
-            const bar = document.getElementById('peers-apply-bar');
-            if (bar) bar.style.display = 'none';
+    async function savePeerName(peerId) {
+        const isLocked = !!(window.IS_READONLY_SUBSCRIPTION || window.SUBSCRIPTION_STATUS === 'limit_control' || window.SUBSCRIPTION_STATUS === 'inactive');
+        if (isLocked) {
+            if (window.showError) window.showError('Modifications locked');
             return;
         }
 
-        const applyBtn = document.getElementById('btn-apply-peers');
-        if (applyBtn) {
-            applyBtn.disabled = true;
-            applyBtn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Applying...`;
+        const nameInp = document.getElementById(`inline-name-${peerId}`);
+        const saveBtn = document.getElementById(`btn-save-name-${peerId}`);
+        if (!nameInp) return;
+
+        const currentName = nameInp.value.trim();
+        clearInlineError(`inline-name-${peerId}`);
+
+        const nameRes = validatePeerDeviceName(currentName, peerId);
+        if (!nameRes.valid) {
+            setInlineError(`inline-name-${peerId}`, nameRes.error);
+            nameInp.focus();
+            return;
+        }
+
+        const originalHtml = saveBtn ? saveBtn.innerHTML : '';
+        if (saveBtn) {
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            saveBtn.disabled = true;
         }
 
         try {
-            for (const item of dirtyPeers) {
-                // 1. Save Name
-                if (item.nameChanged) {
-                    const nameResp = await fetch(`/peers/${item.peerId}/update`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: item.currentName })
-                    });
-                    const nameData = await nameResp.json();
-                    if (!nameResp.ok || nameData.error) {
-                        throw new Error(nameData.error || `Failed to update name for ${item.currentName}`);
-                    }
-                }
-
-                // 2. Save Route
-                if (item.routeChanged) {
-                    if (item.currentRoute) {
-                        const networkId = item.existingNetworkId || `route-${item.peerId.substring(0, 8)}`;
-                        const routeBody = {
-                            "description": `Route handled via inline dashboard for peer ${item.peerId}`,
-                            "network_id": networkId,
-                            "enabled": true,
-                            "peer": item.peerId,
-                            "network": item.currentRoute,
-                            "metric": 9999,
-                            "masquerade": false,
-                            "keep_route": true,
-                            "groups": []
-                        };
-
-                        if (item.existingRouteId && item.existingRouteId !== 'null' && item.existingRouteId !== 'undefined') {
-                            const routeRes = await fetch(`/api/v2/netbird/routes/${item.existingRouteId}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(routeBody)
-                            });
-                            if (!routeRes.ok) {
-                                const errData = await routeRes.json().catch(() => ({}));
-                                throw new Error(errData.detail || errData.message || errData.error || 'Failed to update route');
-                            }
-                        } else {
-                            const createRes = await fetch('/api/v2/netbird/routes', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(routeBody)
-                            });
-                            if (!createRes.ok) {
-                                const errData = await createRes.json().catch(() => ({}));
-                                throw new Error(errData.detail || errData.message || errData.error || 'Failed to create route');
-                            }
-                        }
-                    } else if (item.existingRouteId) {
-                        await fetch(`/api/v2/netbird/routes/${item.existingRouteId}`, { method: 'DELETE' });
-                    }
-                }
-
-                // Update original state cache
-                if (originalPeerState[item.peerId]) {
-                    originalPeerState[item.peerId].name = item.currentName;
-                    originalPeerState[item.peerId].route = item.currentRoute;
-                }
-
-                // Reset edit modes and clean up modified styling
-                setRowEditMode(item.peerId, false);
-                const nameLabel = document.getElementById(`peer-name-text-${item.peerId}`);
-                if (nameLabel) nameLabel.textContent = item.currentName;
-                const routeLabel = document.getElementById(`peer-route-text-${item.peerId}`);
-                if (routeLabel) {
-                    if (!item.currentRoute) {
-                        routeLabel.textContent = 'e.g. 192.168.87.0/24';
-                        routeLabel.className = 'peer-route-placeholder';
-                        routeLabel.title = 'Click to add network route';
-                        routeLabel.onclick = () => enablePeerRouteEditMode(item.peerId);
-                    } else {
-                        routeLabel.textContent = item.currentRoute;
-                        routeLabel.className = 'peer-route-text';
-                        routeLabel.title = '';
-                        routeLabel.onclick = null;
-                    }
-                }
-                const nameInp = document.getElementById(`inline-name-${item.peerId}`);
-                if (nameInp) nameInp.classList.remove('is-modified');
-                const routeInp = document.getElementById(`inline-route-${item.peerId}`);
-                if (routeInp) routeInp.classList.remove('is-modified');
+            const resp = await fetch(`/peers/${peerId}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: currentName })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok || !data.success) {
+                throw new Error(data.error || 'Failed to save');
             }
 
-            await fetchAndPopulateRoutes();
-            await fetchPeersStatus();
+            if (originalPeerState[peerId]) {
+                originalPeerState[peerId].name = currentName;
+            }
 
-            const bar = document.getElementById('peers-apply-bar');
-            if (bar) bar.style.display = 'none';
+            const nameLabel = document.getElementById(`peer-name-text-${peerId}`);
+            if (nameLabel) {
+                nameLabel.textContent = currentName;
+            }
+
+            cancelPeerNameEditMode(peerId);
 
             if (window.showSuccess) {
-                window.showSuccess('Changes applied successfully');
+                window.showSuccess('Saved');
             }
         } catch (err) {
-            console.error('Apply changes error:', err);
-            if (window.showError) {
-                window.showError(err.message || 'Failed to apply changes');
-            }
+            setInlineError(`inline-name-${peerId}`, err.message || 'Failed to save');
         } finally {
-            if (applyBtn) {
-                applyBtn.disabled = false;
-                applyBtn.innerHTML = `Apply changes`;
+            if (saveBtn) {
+                saveBtn.innerHTML = originalHtml;
+                saveBtn.disabled = false;
             }
         }
+    }
+
+    async function savePeerRoute(peerId) {
+        const isLocked = !!(window.IS_READONLY_SUBSCRIPTION || window.SUBSCRIPTION_STATUS === 'limit_control' || window.SUBSCRIPTION_STATUS === 'inactive');
+        if (isLocked) {
+            if (window.showError) window.showError('Modifications locked');
+            return;
+        }
+
+        const routeInp = document.getElementById(`inline-route-${peerId}`);
+        const saveBtn = document.getElementById(`btn-save-route-${peerId}`);
+        if (!routeInp) return;
+
+        const currentRoute = routeInp.value.trim();
+        clearInlineError(`inline-route-${peerId}`);
+
+        const routeRes = validatePeerDeviceRoute(currentRoute, peerId);
+        if (!routeRes.valid) {
+            setInlineError(`inline-route-${peerId}`, routeRes.error);
+            routeInp.focus();
+            return;
+        }
+
+        const normalizedRoute = routeRes.normalized || '';
+        if (routeInp.value !== normalizedRoute) {
+            routeInp.value = normalizedRoute;
+        }
+
+        const originalHtml = saveBtn ? saveBtn.innerHTML : '';
+        if (saveBtn) {
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            saveBtn.disabled = true;
+        }
+
+        try {
+            const existingRouteId = routeInp.getAttribute('data-route-id');
+            const existingNetworkId = routeInp.getAttribute('data-route-network-id');
+
+            if (normalizedRoute) {
+                const networkId = (existingNetworkId && existingNetworkId !== 'null' && existingNetworkId !== 'undefined') ? existingNetworkId : `route-${peerId.substring(0, 8)}`;
+                const routeBody = {
+                    "description": `Route handled via inline dashboard for peer ${peerId}`,
+                    "network_id": networkId,
+                    "enabled": true,
+                    "peer": peerId,
+                    "network": normalizedRoute,
+                    "metric": 9999,
+                    "masquerade": false,
+                    "keep_route": true,
+                    "groups": []
+                };
+
+                if (existingRouteId && existingRouteId !== 'null' && existingRouteId !== 'undefined') {
+                    const routeRes = await fetch(`/api/v2/netbird/routes/${existingRouteId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(routeBody)
+                    });
+                    if (!routeRes.ok) {
+                        const errData = await routeRes.json().catch(() => ({}));
+                        throw new Error(errData.detail || errData.message || errData.error || 'Failed to save');
+                    }
+                } else {
+                    const createRes = await fetch('/api/v2/netbird/routes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(routeBody)
+                    });
+                    if (!createRes.ok) {
+                        const errData = await createRes.json().catch(() => ({}));
+                        throw new Error(errData.detail || errData.message || errData.error || 'Failed to save');
+                    }
+                }
+            } else if (existingRouteId && existingRouteId !== 'null' && existingRouteId !== 'undefined') {
+                const delRes = await fetch(`/api/v2/netbird/routes/${existingRouteId}`, { method: 'DELETE' });
+                if (!delRes.ok) {
+                    const errData = await delRes.json().catch(() => ({}));
+                    throw new Error(errData.detail || errData.message || errData.error || 'Failed to save');
+                }
+            }
+
+            if (originalPeerState[peerId]) {
+                originalPeerState[peerId].route = normalizedRoute;
+            }
+
+            const routeLabel = document.getElementById(`peer-route-text-${peerId}`);
+            if (routeLabel) {
+                if (!normalizedRoute) {
+                    routeLabel.textContent = 'e.g. 192.168.87.0/24';
+                    routeLabel.className = 'peer-route-placeholder';
+                    routeLabel.title = 'Click to add network route';
+                    routeLabel.onclick = () => enablePeerRouteEditMode(peerId);
+                } else {
+                    routeLabel.textContent = normalizedRoute;
+                    routeLabel.className = 'peer-route-text';
+                    routeLabel.title = '';
+                    routeLabel.onclick = null;
+                }
+            }
+
+            cancelPeerRouteEditMode(peerId);
+
+            if (window.showSuccess) {
+                window.showSuccess('Saved');
+            }
+
+            fetchAndPopulateRoutes();
+        } catch (err) {
+            setInlineError(`inline-route-${peerId}`, err.message || 'Failed to save');
+        } finally {
+            if (saveBtn) {
+                saveBtn.innerHTML = originalHtml;
+                saveBtn.disabled = false;
+            }
+        }
+    }
+
+    async function applyAllPeerChanges() {
+        // Kept for backward compatibility
     }
 
     function createPeerRow(peer) {
@@ -902,11 +831,17 @@
                     <div class="peer-name-input-wrapper" id="name-input-wrapper-${peerId}" style="display: none;">
                         <div class="peer-input-row">
                             <input style="min-width: 140px;" type="text" class="table-input" id="inline-name-${peerId}"
-                                value="${escapeHtml(name)}" placeholder="Device Name" maxlength="200">
-                            <button type="button" class="btn-cancel-edit" title="Cancel edit"
-                                onclick="cancelPeerNameEditMode('${peerId}')">
-                                <i class="fas fa-times"></i>
-                            </button>
+                                value="${escapeHtml(name)}" placeholder="Device name" maxlength="200">
+                            <div class="inline-save-cancel">
+                                <button type="button" class="btn-badge-action btn-badge-save" id="btn-save-name-${peerId}"
+                                    title="Save" onclick="savePeerName('${peerId}')" ${isLocked ? 'disabled title="Modifications locked"' : ''}>
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button type="button" class="btn-badge-action btn-badge-cancel" id="btn-cancel-name-${peerId}"
+                                    title="Cancel" onclick="cancelPeerNameEditMode('${peerId}')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="table-error-msg" id="inline-name-${peerId}-error" style="display: none;"></div>
                     </div>
@@ -934,10 +869,16 @@
                         <input style="min-width: 140px;" type="text" class="table-input inline-route-field"
                             id="inline-route-${peerId}" data-peer-id="${peerId}"
                             placeholder="e.g. 192.168.87.0/24" value="${escapeHtml(route)}">
-                        <button type="button" class="btn-cancel-edit" title="Cancel edit"
-                            onclick="cancelPeerRouteEditMode('${peerId}')">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <div class="inline-save-cancel">
+                            <button type="button" class="btn-badge-action btn-badge-save" id="btn-save-route-${peerId}"
+                                title="Save" onclick="savePeerRoute('${peerId}')" ${isLocked ? 'disabled title="Modifications locked"' : ''}>
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button type="button" class="btn-badge-action btn-badge-cancel" id="btn-cancel-route-${peerId}"
+                                title="Cancel" onclick="cancelPeerRouteEditMode('${peerId}')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="table-error-msg" id="inline-route-${peerId}-error" style="display: none;"></div>
                 </div>
@@ -946,10 +887,10 @@
                 <div class="toggle-container${offlineCls}" id="vpn-only-container-${peerId}" ${disabledTitle}>
                     <label class="switch">
                         <input type="checkbox"
-                               id="vpn-only-toggle-${peerId}"
-                               onchange="onVpnOnlyToggleChange('${peerId}', this)"
-                               ${vpnOnlyChecked}
-                               ${isDisabled}>
+                                id="vpn-only-toggle-${peerId}"
+                                onchange="onVpnOnlyToggleChange('${peerId}', this)"
+                                ${vpnOnlyChecked}
+                                ${isDisabled}>
                         <span class="slider"></span>
                     </label>
                     <span class="toggle-status-text" id="vpn-only-text-${peerId}">${vpnOnlyText}</span>
@@ -974,14 +915,14 @@
         const nameInput = tr.querySelector(`#inline-name-${peerId}`);
         if (nameInput) {
             nameInput.addEventListener('input', () => {
-                checkDirtyPeerChanges();
+                clearInlineError(`inline-name-${peerId}`);
             });
             nameInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     cancelPeerNameEditMode(peerId);
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
-                    enablePeerRouteEditMode(peerId);
+                    savePeerName(peerId);
                 }
             });
         }
@@ -989,14 +930,14 @@
         const routeInput = tr.querySelector(`#inline-route-${peerId}`);
         if (routeInput) {
             routeInput.addEventListener('input', () => {
-                checkDirtyPeerChanges();
+                clearInlineError(`inline-route-${peerId}`);
             });
             routeInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     cancelPeerRouteEditMode(peerId);
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
-                    applyAllPeerChanges();
+                    savePeerRoute(peerId);
                 }
             });
         }
@@ -1204,6 +1145,8 @@
     window.onVpnOnlyToggleChange = onVpnOnlyToggleChange;
     window.discardAllPeerChanges = discardAllPeerChanges;
     window.applyAllPeerChanges = applyAllPeerChanges;
+    window.savePeerName = savePeerName;
+    window.savePeerRoute = savePeerRoute;
     window.enablePeerEditMode = enablePeerEditMode;
     window.cancelPeerEditMode = cancelPeerEditMode;
     window.enablePeerNameEditMode = enablePeerNameEditMode;

@@ -1,0 +1,11 @@
+اللوجو تم تركيبه بالفعل (logo-mark.png / logo.png / favicon.png موجودة).
+
+باقي ترفع الفيديو والصور بنفس الاسماء:
+فيديو:
+- guard-demo.mp4            (MP4, 1920x1080 / 16:9) — زر "شاهد كيف يعمل" يشغله
+- guard-demo-poster.jpg     (1920x1080) صورة غلاف الفيديو (يوجد غلاف مؤقت)
+صور (تظهر تلقائيا بمجرد رفعها):
+- topology-mpls-alt.png     (1000x800)  رسم بديل MPLS
+- dashboard-link-branch.png (1200x800)  ربط فرع بضغطة زر
+- web-filtering.png         (1200x800)  حجب المواقع
+- dashboard-overview.png    (1400x900)  الداشبورد المركزية

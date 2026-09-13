@@ -353,6 +353,58 @@ tbody tr {
     border-color: #fca5a5;
 }
 
+/* Inline Save / Cancel Action Badges */
+.inline-save-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.btn-badge-action {
+    border: none;
+    cursor: pointer;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.btn-badge-save {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.btn-badge-save:hover:not(:disabled) {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #10b981;
+}
+
+.btn-badge-cancel {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.btn-badge-cancel:hover:not(:disabled) {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+.btn-badge-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Read-Only State for Network Route */
 .peer-route-view {
     display: flex;

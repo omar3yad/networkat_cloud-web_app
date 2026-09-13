@@ -66,12 +66,6 @@
     </div>
 </div>
 
-<!-- Floating Apply Changes Bar -->
-<div id="peers-apply-bar" class="floating-save-bar" style="display: none;">
-    <span class="save-bar-text"><i class="fas fa-sync-alt"></i> Unsaved changes</span>
-    <button class="btn-cancel" onclick="discardAllPeerChanges()">Discard</button>
-    <button class="btn-apply" id="btn-apply-peers" onclick="applyAllPeerChanges()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>Apply changes</button>
-</div>
 {% endblock %}
 
 {% block extra_scripts %}
