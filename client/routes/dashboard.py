@@ -60,6 +60,21 @@ def dashboard():
     )
 
 
+@client_bp.route('/contact', strict_slashes=False)
+@login_required
+def contact_page():
+    customer_id = session.get('client_customer_id')
+    customer_name = session.get('client_customer_name')
+    if not customer_id:
+        flash("Customer not found", "error")
+        return redirect(url_for('client.login'))
+    
+    return render_template(
+        'contact.html',
+        customer_name=customer_name
+    )
+
+
 @client_bp.route('/peers', strict_slashes=False)
 @login_required
 def peers_page():

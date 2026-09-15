@@ -22,6 +22,11 @@ class ClientRepository:
     def get_by_email(self, email):
         return Client.query.filter_by(client_email=email).first()
 
+    def get_by_phone(self, phone):
+        if not phone:
+            return None
+        return Client.query.filter_by(client_phone_number=phone).first()
+
     def create(
         self,
         username,

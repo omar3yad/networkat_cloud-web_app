@@ -28,6 +28,20 @@ def login_required(f):
     return decorated_function
 
 
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            return redirect(url_for('admin.login'))
+        if session.get('admin_role') != 'admin':
+            if request.is_json or request.path.startswith('/api/') or request.method in ['POST', 'DELETE', 'PUT']:
+                return jsonify({'success': False, 'error': 'Permission denied. Administrator privileges required.'}), 403
+            flash('Permission denied. Administrator privileges required.', 'error')
+            return redirect(url_for('admin.dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 def _get_api_base_url():
     return current_app.config.get('NETBIRD_API_BASE_URL', 'https://api.networkat.cloud')
 
@@ -130,7 +144,7 @@ def generate_token(customer_id):
 
 
 @admin_bp.route('/customers/<uuid:customer_id>/delete', methods=['POST'])
-@login_required
+@admin_required
 def delete_customer(customer_id):
     success, err = customer_service.delete_customer(customer_id)
     if success:
@@ -187,7 +201,7 @@ def reset_user_password(user_id):
 
 
 @admin_bp.route('/api/users/<uuid:user_id>/delete', methods=['DELETE'])
-@login_required
+@admin_required
 def delete_user(user_id):
     success, err = customer_service.delete_portal_user(user_id)
     if success:
@@ -258,7 +272,7 @@ def proxy_handshake(peer_id):
         return jsonify({"peer_id": peer_id, "is_reachable": False, "error": str(e)}), 500
 
 @admin_bp.route('/api/peers/<peer_id>', methods=['DELETE'])
-@login_required
+@admin_required
 def delete_peer(peer_id):
     headers = _get_api_headers()
     base_url = _get_api_base_url()
@@ -496,3 +510,169 @@ def send_customer_renewal_reminder(customer_id):
         return jsonify({'success': True, 'message': f'Renewal reminder sent to {to_email}'})
     else:
         return jsonify({'success': False, 'error': 'Failed to send email. Check SMTP configuration.'}), 500
+
+
+# ----------------------------------------------------------------------
+# Staff / Employees Management Routes & APIs
+# ----------------------------------------------------------------------
+
+@admin_bp.route('/staff')
+@admin_required
+def staff():
+    from repositories.user_repository import UserRepository
+    users = UserRepository.get_all_desc()
+    users_data = []
+    for u in users:
+        users_data.append({
+            'id': u.id,
+            'username': u.username,
+            'full_name': u.full_name,
+            'email': u.email,
+            'role': getattr(u, 'role', 'admin') or 'admin',
+            'is_active': bool(u.is_active),
+            'last_login': u.last_login.strftime('%Y-%m-%d %H:%M') if getattr(u, 'last_login', None) else None,
+            'created_at': u.created_at.strftime('%Y-%m-%d') if getattr(u, 'created_at', None) else None
+        })
+    return render_template('staff.html', staff_members=users_data)
+
+
+@admin_bp.route('/api/staff/create', methods=['POST'])
+@admin_required
+def create_staff():
+    from repositories.user_repository import UserRepository
+    data = request.get_json() or {}
+    username = (data.get('username') or '').strip()
+    email = (data.get('email') or '').strip()
+    full_name = (data.get('full_name') or '').strip()
+    password = data.get('password') or ''
+    role = (data.get('role') or 'sales').strip().lower()
+
+    if not username or not email or not full_name or not password:
+        return jsonify({'success': False, 'error': 'All fields are required.'}), 400
+
+    if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', username):
+        return jsonify({'success': False, 'error': 'Username must be 3-32 characters (letters, numbers, _ and - only).'}), 400
+
+    if len(password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters.'}), 400
+
+    if role not in ['admin', 'sales', 'support']:
+        role = 'sales'
+
+    if UserRepository.get_by_username(username):
+        return jsonify({'success': False, 'error': f'Username "{username}" is already taken.'}), 400
+
+    if UserRepository.get_by_email(email):
+        return jsonify({'success': False, 'error': f'Email "{email}" is already registered.'}), 400
+
+    try:
+        user = UserRepository.create(
+            username=username,
+            email=email,
+            full_name=full_name,
+            raw_password=password,
+            role=role,
+            is_active=True
+        )
+        return jsonify({
+            'success': True,
+            'message': 'Staff member created successfully',
+            'staff': {
+                'id': user.id,
+                'username': user.username,
+                'full_name': user.full_name,
+                'email': user.email,
+                'role': user.role,
+                'is_active': user.is_active
+            }
+        }), 201
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/staff/<int:user_id>/update', methods=['POST'])
+@admin_required
+def update_staff(user_id):
+    from repositories.user_repository import UserRepository
+    user = UserRepository.get_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'Staff member not found.'}), 404
+
+    data = request.get_json() or {}
+    email = (data.get('email') or '').strip()
+    full_name = (data.get('full_name') or '').strip()
+    role = (data.get('role') or user.role).strip().lower()
+
+    if not email or not full_name:
+        return jsonify({'success': False, 'error': 'Email and Full Name are required.'}), 400
+
+    if role not in ['admin', 'sales', 'support']:
+        role = user.role
+
+    existing = UserRepository.get_by_email(email)
+    if existing and existing.id != user.id:
+        return jsonify({'success': False, 'error': f'Email "{email}" is already in use by another user.'}), 400
+
+    try:
+        UserRepository.update(user, email=email, full_name=full_name, role=role)
+        return jsonify({'success': True, 'message': 'Staff info updated successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/staff/<int:user_id>/password', methods=['POST'])
+@admin_required
+def reset_staff_password(user_id):
+    from repositories.user_repository import UserRepository
+    user = UserRepository.get_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'Staff member not found.'}), 404
+
+    data = request.get_json() or {}
+    password = data.get('password') or ''
+    if len(password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters.'}), 400
+
+    try:
+        UserRepository.update_password(user, password)
+        return jsonify({'success': True, 'message': 'Password reset successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/staff/<int:user_id>/toggle', methods=['POST'])
+@admin_required
+def toggle_staff_status(user_id):
+    from repositories.user_repository import UserRepository
+    user = UserRepository.get_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'Staff member not found.'}), 404
+
+    current_admin_id = session.get('admin_user_id')
+    if str(user.id) == str(current_admin_id):
+        return jsonify({'success': False, 'error': 'You cannot deactivate your own account.'}), 400
+
+    try:
+        new_status = UserRepository.toggle_status(user)
+        return jsonify({'success': True, 'is_active': new_status, 'message': 'Status updated'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/staff/<int:user_id>/delete', methods=['DELETE', 'POST'])
+@admin_required
+def delete_staff(user_id):
+    from repositories.user_repository import UserRepository
+    user = UserRepository.get_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'Staff member not found.'}), 404
+
+    current_admin_id = session.get('admin_user_id')
+    if str(user.id) == str(current_admin_id):
+        return jsonify({'success': False, 'error': 'You cannot delete your own account.'}), 400
+
+    try:
+        UserRepository.delete(user)
+        return jsonify({'success': True, 'message': 'Staff member deleted successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

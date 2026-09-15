@@ -1,0 +1,143 @@
+{% extends "client_base.html" %}
+
+{% block title %}Contact Us · تواصل معنا{% endblock %}
+
+{% block extra_head %}
+<style>
+.contact-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 160px);
+    padding: 1.5rem;
+}
+
+.contact-simple-card {
+    background: #ffffff;
+    border: 1px solid var(--nk-border, #e2e8f0);
+    border-radius: var(--nk-radius-lg, 16px);
+    padding: 3rem 2.5rem;
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+
+.contact-icon-badge {
+    width: 64px;
+    height: 64px;
+    background: #e0f2fe;
+    color: var(--nk-blue-primary, #0284c7);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.contact-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--nk-navy, #0f172a);
+    margin: 0 0 0.75rem 0;
+    line-height: 1.4;
+}
+
+.contact-subtitle {
+    font-size: 1.05rem;
+    color: var(--nk-text-muted, #64748b);
+    margin: 0 0 2rem 0;
+    line-height: 1.6;
+}
+
+.contact-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-contact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    padding: 0.85rem 1.75rem;
+    border-radius: var(--nk-radius-md, 12px);
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--nk-transition, all 0.2s ease);
+    min-width: 180px;
+}
+
+.btn-contact-wa {
+    background: #25D366;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+}
+
+.btn-contact-wa:hover {
+    background: #20ba5a;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);
+}
+
+.btn-contact-call {
+    background: var(--nk-blue-primary, #0284c7);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+}
+
+.btn-contact-call:hover {
+    background: #0369a1;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+}
+
+@media (max-width: 640px) {
+    .contact-simple-card {
+        padding: 2rem 1.5rem;
+    }
+    .contact-title {
+        font-size: 1.25rem;
+    }
+    .contact-subtitle {
+        font-size: 0.95rem;
+    }
+    .btn-contact {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="contact-wrapper">
+    <div class="contact-simple-card">
+        <div class="contact-icon-badge">
+            <i class="fas fa-headset"></i>
+        </div>
+        
+        <h1 class="contact-title">اربط فروعك بأمان مع Networkat Guard</h1>
+        
+        <p class="contact-subtitle">
+            تواصل معنا للحصول على عرض تقديمي واستشارة حول ربط فروع مؤسستك.
+        </p>
+
+        <div class="contact-actions">
+            <a href="https://wa.me/201006679920" target="_blank" rel="noopener" class="btn-contact btn-contact-wa">
+                <i class="fab fa-whatsapp"></i> تواصل عبر واتساب
+            </a>
+            
+            <a href="tel:+201006679920" class="btn-contact btn-contact-call">
+                <i class="fas fa-phone-alt"></i> اتصل بنا
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -116,7 +116,7 @@ class TestSubscriptionAdminPhase7(unittest.TestCase):
         cust_id = uuid.uuid4()
         mock_customer = MagicMock(spec=Client)
         mock_customer.user_id = cust_id
-        mock_customer.username = 'john_doe'
+        mock_customer.username = 'omar_ahmed'
         mock_client_query.get.return_value = mock_customer
 
         mock_restore.return_value = True
@@ -143,7 +143,7 @@ class TestSubscriptionAdminPhase7(unittest.TestCase):
         cust_id = uuid.uuid4()
         mock_customer = MagicMock(spec=Client)
         mock_customer.user_id = cust_id
-        mock_customer.username = 'john_doe'
+        mock_customer.username = 'omar_ahmed'
         mock_client_query.get.return_value = mock_customer
 
         mock_suspend.return_value = True

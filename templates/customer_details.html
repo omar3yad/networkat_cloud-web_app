@@ -874,6 +874,11 @@
             <a href="/customers" class="nav-item active">
                 <i class="fas fa-building"></i> Customers
             </a>
+            {% if session.get('admin_role') == 'admin' %}
+            <a href="/staff" class="nav-item">
+                <i class="fas fa-users-cog"></i> Staff & Roles
+            </a>
+            {% endif %}
             <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 1rem 0;"></div>
             <a href="/logout" class="nav-item">
                 <i class="fas fa-sign-out-alt"></i> Sign out
@@ -960,9 +965,11 @@
                     </div>
                 </div>
 
+                {% if session.get('admin_role') == 'admin' %}
                 <button class="btn-danger" onclick="deleteCustomer('{{ customer.user_id if customer.user_id else customer.id }}')">
                     <i class="fas fa-trash"></i> Delete
                 </button>
+                {% endif %}
             </div>
 
 
@@ -1041,11 +1048,15 @@
                                         </div>
                                     </td>
                                     <td>
+                                        {% if session.get('admin_role') == 'admin' %}
                                         <button class="action-btn text-danger"
                                             onclick="deletePeer('{{ peer.id }}', '{{ peer.name }}')"
                                             title="Delete Peer">
                                             <i class="fas fa-trash"></i>
                                         </button>
+                                        {% else %}
+                                        <span style="color: var(--gray-400); font-size: 0.8rem;">-</span>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}

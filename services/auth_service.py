@@ -28,6 +28,8 @@ class AuthService:
         session['admin_logged_in'] = True
         session['admin_user_id'] = str(user.id)
         session['admin_username'] = user.username
+        session['admin_role'] = getattr(user, 'role', 'admin') or 'admin'
+        session['admin_fullname'] = getattr(user, 'full_name', user.username) or user.username
         return True, "Authenticated successfully"
         
     def logout(self):

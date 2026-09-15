@@ -78,14 +78,24 @@ def register():
         client_email = request.form.get('client_email', '').strip()
         client_phone_number = request.form.get('client_phone_number', '').strip()
         client_country = request.form.get('client_country', '').strip()
-        subscription = request.form.get('subscription', 'basic').strip()
+        subscription = request.form.get('subscription', 'basic').strip() or 'basic'
 
-        if not username or not password or not client_name or not client_email:
+        if not username or not password or not client_name or not client_email or not client_phone_number:
             flash("All fields marked with * are required.", "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
         if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', username):
             flash("Username must be between 3 and 32 characters and can only contain letters, numbers, hyphens, and underscores.", "error")
+            return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
+
+        # Normalize phone number to international E.164 format
+        clean_phone = re.sub(r'[^\d+]', '', client_phone_number)
+        if clean_phone and not clean_phone.startswith('+'):
+            clean_phone = '+' + clean_phone
+        client_phone_number = clean_phone
+
+        if len(client_phone_number) < 8:
+            flash("Please enter a valid phone number with country code.", "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
         if len(password) < 6:
@@ -106,6 +116,11 @@ def register():
             flash(f'Email "{client_email}" is already registered. Please choose another.', "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
+        existing_phone = customer_service.client_repo.get_by_phone(client_phone_number)
+        if existing_phone:
+            flash(f'Phone number "{client_phone_number}" is already registered. Please use another.', "error")
+            return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
+
         code = str(random.randint(100000, 999999))
         session['reg_data'] = {
             'username': username,
@@ -113,9 +128,9 @@ def register():
             'client_name': client_name,
             'client_company_name': client_company_name or None,
             'client_email': client_email,
-            'client_phone_number': client_phone_number or None,
+            'client_phone_number': client_phone_number,
             'client_country': client_country or None,
-            'subscription': subscription
+            'subscription': 'basic'
         }
         session['reg_verification'] = {
             'code': code,
