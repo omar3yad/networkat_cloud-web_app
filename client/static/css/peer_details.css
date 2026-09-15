@@ -351,6 +351,65 @@
     background: #fafafa;
 }
 
+/* Under Development Blurred Wrappers */
+.under-dev-section {
+    position: relative;
+}
+
+.under-dev-wrapper {
+    position: relative;
+    border-radius: var(--nk-radius-md);
+    overflow: hidden;
+}
+
+.under-dev-content {
+    filter: blur(2.5px);
+    opacity: 0.55;
+    pointer-events: none;
+    user-select: none;
+    transition: var(--nk-transition);
+}
+
+.under-dev-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    background: rgba(255, 255, 255, 0.2);
+    pointer-events: none;
+}
+
+.under-dev-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 1.25rem;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--nk-border);
+    border-radius: 9999px;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    color: var(--nk-text-main);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-transform: none;
+    pointer-events: auto;
+    transition: var(--nk-transition);
+}
+
+.under-dev-badge i {
+    color: var(--nk-blue-primary);
+    font-size: 0.95rem;
+}
+
+.under-dev-badge:hover {
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+    transform: translateY(-1px);
+}
+
 /* Danger Zone Section */
 .danger-zone-section {
     margin-top: 2rem;

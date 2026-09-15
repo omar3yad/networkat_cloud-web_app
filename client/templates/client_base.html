@@ -268,8 +268,177 @@
             }
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function isOfflineOver7Days(lastSeenVal, isOnline) {
+            if (isOnline) return false;
+            if (!lastSeenVal) return false;
+            try {
+                const dt = new Date(lastSeenVal);
+                if (isNaN(dt.getTime())) return false;
+                const now = new Date();
+                const diffMs = now - dt;
+                return diffMs >= (7 * 86400 * 1000);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function getSidebarPeerUrl(pid, isOnline) {
+            const path = window.location.pathname;
+            if (isOnline) {
+                if (path.includes('/firewall')) return `/peers/${pid}/firewall`;
+                if (path.includes('/web-filter') || path.includes('/filtering')) return `/peers/${pid}/web-filter`;
+                if (path.includes('/aliases')) return `/peers/${pid}/aliases`;
+            }
+            return `/peers/${pid}`;
+        }
+
+        function updateSidebarPeers(dataOrList) {
+            if (!dataOrList) return;
+            const peers = Array.isArray(dataOrList) ? dataOrList : (dataOrList.peers || []);
+            const isInactive = (window.SUBSCRIPTION_STATUS === 'inactive');
+
+            let total = peers.length;
+            let online = isInactive ? 0 : peers.filter(p => !!(p.is_online !== undefined ? p.is_online : p.connected)).length;
+            let offline = total - online;
+
+            if (dataOrList.summary && typeof dataOrList.summary.total === 'number') {
+                total = dataOrList.summary.total;
+                online = isInactive ? 0 : dataOrList.summary.online;
+                offline = isInactive ? total : dataOrList.summary.offline;
+            }
+
+            const totalEl = document.getElementById('sidebar-peers-count');
+            if (totalEl) totalEl.textContent = total;
+
+            const onlineEl = document.getElementById('sidebar-online-count');
+            if (onlineEl) {
+                onlineEl.textContent = online;
+                onlineEl.title = `Online Peers (${online}) - Click to filter`;
+            }
+
+            const offlineEl = document.getElementById('sidebar-offline-count');
+            if (offlineEl) {
+                offlineEl.textContent = offline;
+                offlineEl.title = `Offline Peers (${offline}) - Click to filter`;
+            }
+
+            const submenu = document.getElementById('peer-submenu');
+            if (!submenu) return;
+
+            const currentPeerIds = new Set(peers.map(p => String(p.id)));
+
+            // Remove deleted peers
+            const existingLinks = submenu.querySelectorAll('a[id^="sidebar-peer-"]');
+            existingLinks.forEach(link => {
+                const pid = link.id.replace('sidebar-peer-', '');
+                if (!currentPeerIds.has(pid)) {
+                    link.remove();
+                }
+            });
+
+            // If empty
+            if (peers.length === 0) {
+                if (!submenu.querySelector('.submenu-empty')) {
+                    submenu.innerHTML = '<div class="submenu-empty">No devices available</div>';
+                }
+                applySidebarSubmenuFilter();
+                return;
+            }
+
+            // Remove empty placeholder if we now have peers
+            const emptyPlaceholder = submenu.querySelector('.submenu-empty');
+            if (emptyPlaceholder && emptyPlaceholder.id !== 'sidebar-filter-empty') {
+                emptyPlaceholder.remove();
+            }
+
+            const currentPath = window.location.pathname;
+            const sortedPeers = [...peers].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+            sortedPeers.forEach(peer => {
+                const pid = String(peer.id);
+                const isOnline = !isInactive && Boolean(peer.is_online !== undefined ? peer.is_online : peer.connected);
+                const peerName = peer.name || 'Edge Device';
+                const statusTitle = isOnline ? 'Connected' : 'Offline';
+                const isOver7d = isOfflineOver7Days(peer.last_seen, isOnline);
+                const isCurrentPeer = currentPath.includes(`/peers/${pid}`);
+                const targetUrl = isCurrentPeer && currentPath === `/peers/${pid}` ? 'javascript:void(0);' : getSidebarPeerUrl(pid, isOnline);
+
+                let item = document.getElementById(`sidebar-peer-${pid}`);
+                if (!item) {
+                    item = document.createElement('a');
+                    item.id = `sidebar-peer-${pid}`;
+                    item.className = 'submenu-item' + (isCurrentPeer ? ' active' : '');
+                    item.href = targetUrl;
+                    if (isCurrentPeer && currentPath === `/peers/${pid}`) {
+                        item.onclick = function (e) { e.preventDefault(); };
+                    }
+                    item.title = `${peerName} (${statusTitle})`;
+                    item.setAttribute('data-sidebar-online', isOnline ? 'true' : 'false');
+                    item.setAttribute('data-over-7d', isOver7d ? 'true' : 'false');
+                    if (isOver7d) item.style.display = 'none';
+
+                    item.innerHTML = `
+                        <span class="peer-status-dot ${isOnline ? 'online' : 'offline'}" id="sidebar-dot-${pid}" title="${statusTitle}"></span>
+                        <span class="submenu-label">${escapeHtml(peerName)}</span>
+                        <span class="submenu-last-seen" id="sidebar-seen-${pid}" style="display: none;"></span>
+                    `;
+                    submenu.appendChild(item);
+                } else {
+                    item.setAttribute('data-sidebar-online', isOnline ? 'true' : 'false');
+                    item.setAttribute('data-over-7d', isOver7d ? 'true' : 'false');
+                    item.title = `${peerName} (${statusTitle})`;
+                    if (!isCurrentPeer) {
+                        item.href = targetUrl;
+                    }
+
+                    const dot = document.getElementById(`sidebar-dot-${pid}`);
+                    if (dot) {
+                        dot.className = `peer-status-dot ${isOnline ? 'online' : 'offline'}`;
+                        dot.title = statusTitle;
+                    }
+
+                    const label = item.querySelector('.submenu-label');
+                    if (label && label.textContent !== peerName) {
+                        label.textContent = peerName;
+                    }
+                }
+            });
+
+            applySidebarSubmenuFilter();
+        }
+
+        (function initSidebarSync() {
+            async function fetchAndSyncSidebar() {
+                if (window.peersPollingActive) return;
+                try {
+                    const res = await fetch(`/api/peers/status?t=${Date.now()}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    if (data && data.peers) {
+                        updateSidebarPeers(data);
+                    }
+                } catch (e) {
+                    // Ignore background sync errors
+                }
+            }
+
+            setTimeout(fetchAndSyncSidebar, 1500);
+            setInterval(fetchAndSyncSidebar, 12000);
+        })();
+
         window.handleSidebarStatusFilter = handleSidebarStatusFilter;
         window.applySidebarSubmenuFilter = applySidebarSubmenuFilter;
+        window.updateSidebarPeers = updateSidebarPeers;
     </script>
     {% block extra_scripts %}{% endblock %}
 </body>

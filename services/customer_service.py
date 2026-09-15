@@ -147,7 +147,6 @@ class CustomerService:
         client_name = data.get('client_name')
 
         created_group_id = None
-        created_setup_key_id = None
         created_policy_ids = []
 
         try:
@@ -243,35 +242,6 @@ class CustomerService:
             client.netbird_group_id = group_id
             created_group_id = group_id
 
-            # 4. إنشاء Setup Key (تصحيح قاموس الحقول)
-            auto_groups_list = [ALL_PEERS_GROUP_ID, group_id]
-
-            setup_key_payload = {
-                "name": f"{username}",
-                "type": "reusable",
-                "auto_groups": auto_groups_list,
-                "allow_extra_dns_labels": False,
-                "expires_in": 0,  # Never expires
-                "ephemeral": False,
-                "usage_limit": 0
-            }
-
-            sk_res = requests.post(f"{FASTAPI_BASE_URL}/setup-keys", json=setup_key_payload, headers=headers)
-            if sk_res.status_code not in [200, 201]:
-                print(f"[CustomerService] NetBird setup-key creation failed: {sk_res.text}")
-                raise Exception("Failed to provision network access key. Please try again or contact support.")
-            
-            setup_key_data = sk_res.json()
-            netbird_plain_key = setup_key_data.get("key")
-            created_setup_key_id = setup_key_data.get("id")
-
-            if netbird_plain_key:
-                self.token_repo.create(
-                    token_value=netbird_plain_key, 
-                    client_id=client.user_id, 
-                    is_active=True
-                )
-
             # 5. إنشاء الـ Policies (3 ACLs منفصلة، بادئة {username}-)
             policy_defs = [
                 {
@@ -324,28 +294,22 @@ class CustomerService:
                     created_policy_ids.append(pid)
 
             self.client_repo.commit()
-            return True, {'id': client.user_id, 'token': netbird_plain_key, 'netbird_group_id': client.netbird_group_id}
+            return True, {'id': client.user_id, 'netbird_group_id': client.netbird_group_id}
 
         except Exception as e:
             self.client_repo.rollback()
             self._rollback_netbird(
                 FASTAPI_BASE_URL, headers,
                 policy_ids=created_policy_ids,
-                setup_key_id=created_setup_key_id,
                 group_id=created_group_id,
             )
             return False, str(e)
 
-    def _rollback_netbird(self, base_url, headers, *, policy_ids=None, setup_key_id=None, group_id=None):
+    def _rollback_netbird(self, base_url, headers, *, policy_ids=None, group_id=None):
         """تنظيف ما تم إنشاؤه في NetBird عند فشل create_customer."""
         for pid in (policy_ids or []):
             try:
                 requests.delete(f"{base_url}/policies/{pid}", headers=headers, timeout=5)
-            except Exception:
-                pass
-        if setup_key_id:
-            try:
-                requests.delete(f"{base_url}/setup-keys/{setup_key_id}", headers=headers, timeout=5)
             except Exception:
                 pass
         if group_id:

@@ -26,6 +26,26 @@
         loadFleetContext();
         bindInputListeners();
 
+        // Immediately sync current peer status in the sidebar
+        if (peerId) {
+            const sidebarDot = document.getElementById(`sidebar-dot-${peerId}`);
+            if (sidebarDot) {
+                sidebarDot.className = `peer-status-dot ${isPeerOnline ? 'online' : 'offline'}`;
+                sidebarDot.title = isPeerOnline ? 'Connected' : 'Offline';
+            }
+            const sidebarItem = document.getElementById(`sidebar-peer-${peerId}`);
+            if (sidebarItem) {
+                sidebarItem.setAttribute('data-sidebar-online', isPeerOnline ? 'true' : 'false');
+                if (currentPeerName) {
+                    const label = sidebarItem.querySelector('.submenu-label');
+                    if (label && label.textContent !== currentPeerName) {
+                        label.textContent = currentPeerName;
+                    }
+                    sidebarItem.title = `${currentPeerName} (${isPeerOnline ? 'Connected' : 'Offline'})`;
+                }
+            }
+        }
+
         if (isPeerOnline) {
             fetchPeerVersionSilent();
         }
@@ -326,6 +346,13 @@
 
                 const selfPeer = otherPeers.find(p => p.id === peerId);
                 if (selfPeer) selfPeer.name = newName;
+
+                const sidebarItem = document.getElementById(`sidebar-peer-${peerId}`);
+                if (sidebarItem) {
+                    const label = sidebarItem.querySelector('.submenu-label');
+                    if (label) label.textContent = newName;
+                    sidebarItem.title = `${newName} (${isPeerOnline ? 'Connected' : 'Offline'})`;
+                }
 
                 toggleEditField('name', false);
                 if (window.showSuccess) window.showSuccess('Saved');
@@ -641,6 +668,17 @@
             .replace(/'/g, '&#039;');
     }
 
+    function formatUptime(seconds) {
+        seconds = Math.floor(seconds);
+        const days = Math.floor(seconds / 86400);
+        const hours = Math.floor((seconds % 86400) / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        const pad = (n) => String(n).padStart(2, "0");
+        const prefix = days ? `${days}d ` : "";
+        return `${prefix}${pad(hours)}:${pad(minutes)}:${pad(secs)}`;
+    }
+
     async function fetchPeerVersionSilent() {
         if (!peerId) return;
         // 1. Fetch version directly from agent /health
@@ -654,6 +692,10 @@
                     if (versionEl) versionEl.textContent = healthVersion;
                     const updatesInstalledVal = document.getElementById("updates-installed-val");
                     if (updatesInstalledVal) updatesInstalledVal.textContent = healthVersion;
+                }
+                if (typeof hData.uptime === "number") {
+                    const uptimeEl = document.getElementById("peer-uptime-display");
+                    if (uptimeEl) uptimeEl.textContent = formatUptime(hData.uptime);
                 }
             }
         } catch (e) {

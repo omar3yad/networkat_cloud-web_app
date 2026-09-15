@@ -206,6 +206,11 @@ def update_customer_status_vpn_only(customer_id: str, peer_id: str, enabled: boo
 
 
 def clear_all_netbird_caches(customer_id=None):
+    with cache_lock:
+        if customer_id:
+            customer_groups_cache.pop(customer_id, None)
+        else:
+            customer_groups_cache.clear()
     # Remove shared cache files
     for key in ["netbird_peers", "netbird_routes"]:
         path = f"/tmp/nbcache_{key}.json"

@@ -296,6 +296,11 @@ class NetBirdService:
 def clear_all_netbird_caches(customer_id=None):
     """Invalidate customer status cache and netbird cached files."""
     import os
+    with cache_lock:
+        if customer_id:
+            customer_groups_cache.pop(customer_id, None)
+        else:
+            customer_groups_cache.clear()
     if customer_id:
         path = f"/tmp/nbcache_customer_status_{customer_id}.json"
         try:

@@ -39,6 +39,8 @@ COPY supervisord.conf /etc/supervisor/conf.d/web_app.conf
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+USER appuser:devteam
+
 EXPOSE 5000 8097 8098
 
 ENTRYPOINT ["/entrypoint.sh"]

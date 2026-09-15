@@ -463,7 +463,7 @@
             <div class="page-header">
                 <h1>Customer Management</h1>
                 <div class="btn-group">
-                    <button class="btn btn-primary" onclick="showCreateModal(false)">
+                    <button class="btn btn-primary" onclick="showCreateModal()">
                         <i class="fas fa-plus"></i> New Customer
                     </button>
                 </div>
@@ -570,41 +570,13 @@
     </div>
 </div>
 
-    <!-- Token Display Modal -->
-    <div class="modal" id="tokenModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Token Generated Successfully</h2>
-                <button class="close-btn" onclick="hideTokenModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="margin-bottom: 1rem; color: var(--gray-600);">
-                    Save this token. It will not be shown again.
-                </p>
-                <div class="token-display" id="tokenValue">
-                    token-here
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary" onclick="copyToken()">
-                    <i class="fas fa-copy"></i> Copy Token
-                </button>
-                <button class="btn btn-secondary" onclick="hideTokenModal()">Close</button>
-            </div>
-        </div>
-    </div>
-
 <script>
-    let currentGenerateToken = false;
-
-    function showCreateModal(generateToken) {
-        currentGenerateToken = generateToken;
-        
+    function showCreateModal() {
         const titleEl = document.getElementById('modalTitle');
         if (titleEl) {
-            titleEl.innerText = generateToken ? 'Create Customer + Token' : 'Create New Customer';
+            titleEl.innerText = 'Create New Customer';
         }
-        
+
         // تنظيف الحقول مع التأكد من وجودها (Null Safety)
         const fieldsToClear = [
             'portalUsername', 'portalPassword', 'clientName', 
@@ -672,8 +644,7 @@
                     client_phone_number,
                     client_country,
                     subscription,
-                    mode,
-                    generate_token: currentGenerateToken
+                    mode
                 })
             });
 
@@ -682,11 +653,7 @@
 
             if (response.ok && data.success) {
                 hideCreateModal();
-                if (data.token) {
-                    showTokenModal(data.token);
-                } else {
-                    location.reload();
-                }
+                location.reload();
             } else {
                 alert('Error: ' + (data.error || data.detail || 'Failed to create customer'));
             }
@@ -705,26 +672,4 @@
         }
     }
 
-    function showTokenModal(token) {
-        const tokenValEl = document.getElementById('tokenValue');
-        if (tokenValEl) tokenValEl.innerText = token;
-        
-        const tokenModal = document.getElementById('tokenModal');
-        if (tokenModal) tokenModal.classList.add('active');
-    }
-
-    function hideTokenModal() {
-        const tokenModal = document.getElementById('tokenModal');
-        if (tokenModal) tokenModal.classList.remove('active');
-        location.reload();
-    }
-
-    function copyToken() {
-        const tokenValEl = document.getElementById('tokenValue');
-        if (tokenValEl) {
-            navigator.clipboard.writeText(tokenValEl.innerText).then(() => {
-                alert('Token copied to clipboard!');
-            });
-        }
-    }
 </script>

@@ -1,9 +1,10 @@
 import datetime
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import session, current_app
 from models import Client
 from services.netbird_service import NetBirdService
-from utils.cache_manager import get_name_override, read_file_cache
+from utils.cache_manager import get_name_override, read_file_cache, write_file_cache
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def _is_offline_ge_7d(last_seen_val, is_connected):
     if is_connected:
         return False
     if not last_seen_val:
-        return True
+        return False
     try:
         if isinstance(last_seen_val, str):
             clean_str = last_seen_val.replace('Z', '+00:00')
@@ -46,7 +47,7 @@ def _is_offline_ge_7d(last_seen_val, is_connected):
         elif isinstance(last_seen_val, datetime.datetime):
             dt = last_seen_val
         else:
-            return True
+            return False
         now = datetime.datetime.now(datetime.timezone.utc) if dt.tzinfo else datetime.datetime.utcnow()
         diff = now - dt
         return diff.total_seconds() >= (7 * 86400)
@@ -99,7 +100,7 @@ def inject_client_sidebar():
                 sidebar_offline_count=sidebar_offline_count
             )
 
-        # 2. Fallback to NetBird cached peers list
+        # 2. Fallback to NetBird cached peers list with fast handshake check
         allowed_peer_ids = NetBirdService.get_cached_customer_peer_ids(customer)
         base_url = NetBirdService.get_api_base_url()
         headers = NetBirdService.get_api_headers()
@@ -107,32 +108,77 @@ def inject_client_sidebar():
         customer_peers = [p for p in peers_data if p.get("id") in allowed_peer_ids]
 
         sidebar_peers = []
-        for p in customer_peers:
-            peer_id = p.get("id")
-            pname = get_name_override(peer_id) or p.get("name") or "Edge Device"
-            is_connected = bool(p.get("connected", False)) and not is_inactive
-            offline_dur = _format_offline_duration(p.get("last_seen")) if not is_connected else ""
-            offline_ge_7d = _is_offline_ge_7d(p.get("last_seen"), is_connected)
-            sidebar_peers.append({
-                "id": peer_id,
-                "name": pname,
-                "connected": is_connected,
-                "ip": p.get("ip"),
-                "last_seen": p.get("last_seen"),
-                "offline_duration": offline_dur,
-                "offline_ge_7d": offline_ge_7d,
-                "last_seen_human": f"{offline_dur} ago" if offline_dur else "",
-                "status_title": f"Offline for {offline_dur}" if offline_dur else ("Connected" if is_connected else "Offline")
-            })
+        if customer_peers:
+            checked_peers_map = {}
+            try:
+                with ThreadPoolExecutor(max_workers=min(len(customer_peers), 10)) as tpe:
+                    futures = {
+                        tpe.submit(NetBirdService.check_single_peer_handshake, peer, base_url, headers): peer
+                        for peer in customer_peers
+                    }
+                    for f in as_completed(futures, timeout=2.0):
+                        try:
+                            res = f.result()
+                            checked_peers_map[res["id"]] = res
+                        except Exception:
+                            pass
+            except Exception as ex:
+                current_app.logger.warning(f"Sidebar handshake check timeout/error: {ex}")
 
-        sidebar_peers.sort(key=lambda p: (p.get("name") or "").lower())
-        sidebar_online_count = 0 if is_inactive else sum(1 for p in sidebar_peers if p.get("connected"))
-        sidebar_offline_count = len(sidebar_peers) - sidebar_online_count
-        return dict(
-            sidebar_peers=sidebar_peers,
-            sidebar_online_count=sidebar_online_count,
-            sidebar_offline_count=sidebar_offline_count
-        )
+            for p in customer_peers:
+                peer_id = p.get("id")
+                checked = checked_peers_map.get(peer_id, p)
+                pname = get_name_override(peer_id) or checked.get("name") or p.get("name") or "Edge Device"
+                is_online = checked.get("is_online")
+                if is_online is None:
+                    is_online = checked.get("connected", False)
+                is_connected = bool(is_online) and not is_inactive
+                offline_dur = _format_offline_duration(checked.get("last_seen")) if not is_connected else ""
+                offline_ge_7d = _is_offline_ge_7d(checked.get("last_seen"), is_connected)
+                sidebar_peers.append({
+                    "id": peer_id,
+                    "name": pname,
+                    "connected": is_connected,
+                    "ip": checked.get("ip"),
+                    "last_seen": checked.get("last_seen"),
+                    "offline_duration": offline_dur,
+                    "offline_ge_7d": offline_ge_7d,
+                    "last_seen_human": f"{offline_dur} ago" if offline_dur else "",
+                    "status_title": f"Offline for {offline_dur}" if offline_dur else ("Connected" if is_connected else "Offline")
+                })
+
+            sidebar_peers.sort(key=lambda p: (p.get("name") or "").lower())
+            sidebar_online_count = 0 if is_inactive else sum(1 for p in sidebar_peers if p.get("connected"))
+            sidebar_offline_count = len(sidebar_peers) - sidebar_online_count
+
+            # Write to customer_status cache so subsequent requests and pages are instantaneous
+            payload = {
+                "peers": [
+                    {
+                        "id": sp["id"],
+                        "name": sp["name"],
+                        "is_online": sp["connected"],
+                        "connected": sp["connected"],
+                        "ip": sp.get("ip"),
+                        "last_seen": sp.get("last_seen")
+                    }
+                    for sp in sidebar_peers
+                ],
+                "summary": {
+                    "total": len(sidebar_peers),
+                    "online": sidebar_online_count,
+                    "offline": sidebar_offline_count
+                }
+            }
+            write_file_cache(f"customer_status_{customer_id}", payload)
+
+            return dict(
+                sidebar_peers=sidebar_peers,
+                sidebar_online_count=sidebar_online_count,
+                sidebar_offline_count=sidebar_offline_count
+            )
+
+        return dict(sidebar_peers=[], sidebar_online_count=0, sidebar_offline_count=0)
     except Exception as e:
         current_app.logger.error(f"Error in sidebar context processor: {e}")
         return dict(sidebar_peers=[], sidebar_online_count=0, sidebar_offline_count=0)

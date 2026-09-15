@@ -4,6 +4,8 @@
 (function () {
     'use strict';
 
+    window.peersPollingActive = true;
+
     let peersPollingInterval = null;
     let originalPeerState = {};
     let filterOnline = false;
@@ -84,10 +86,10 @@
 
     function isOfflineOver7Days(lastSeenVal, isOnline) {
         if (isOnline) return false;
-        if (!lastSeenVal) return true;
+        if (!lastSeenVal) return false;
         try {
             const dt = new Date(lastSeenVal);
-            if (isNaN(dt.getTime())) return true;
+            if (isNaN(dt.getTime())) return false;
             const now = new Date();
             const diffMs = now - dt;
             return diffMs >= (7 * 86400 * 1000);
@@ -176,40 +178,9 @@
             }
         }
 
-        // Dynamically sync sidebar submenu items
-        if (sidebarSubmenu) {
-            const currentPeerIds = new Set(data.peers.map(p => p.id));
-            const existingLinks = sidebarSubmenu.querySelectorAll('a[id^="sidebar-peer-"]');
-            existingLinks.forEach(l => {
-                const pid = l.id.replace('sidebar-peer-', '');
-                if (!currentPeerIds.has(pid)) {
-                    l.remove();
-                }
-            });
-
-            data.peers.forEach(peer => {
-                let sidebarItem = document.getElementById(`sidebar-peer-${peer.id}`);
-                const statusTitle = getPeerStatusTitle(peer);
-                const isOver7d = isOfflineOver7Days(peer.last_seen, peer.is_online);
-                if (!sidebarItem) {
-                    sidebarItem = document.createElement('a');
-                    sidebarItem.href = `/peers/${peer.id}`;
-                    sidebarItem.id = `sidebar-peer-${peer.id}`;
-                    sidebarItem.className = 'submenu-item';
-                    sidebarItem.setAttribute('data-sidebar-online', peer.is_online ? 'true' : 'false');
-                    sidebarItem.setAttribute('data-over-7d', isOver7d ? 'true' : 'false');
-                    if (isOver7d) sidebarItem.style.display = 'none';
-                    sidebarItem.title = `${peer.name || 'Edge Device'} (${statusTitle})`;
-                    sidebarItem.innerHTML = `
-                        <span class="submenu-icon-wrapper">
-                            <span class="peer-status-dot ${peer.is_online ? 'online' : 'offline'}" id="sidebar-dot-${peer.id}" title="${statusTitle}"></span>
-                        </span>
-                        <span class="submenu-peer-name">${escapeHtml(peer.name || 'Edge Device')}</span>
-                        <span class="submenu-seen" id="sidebar-seen-${peer.id}" ${peer.is_online ? 'style="display: none;"' : ''}>${peer.is_online ? '' : (formatOfflineDuration(peer.last_seen) ? formatOfflineDuration(peer.last_seen) + ' ago' : '')}</span>
-                    `;
-                    sidebarSubmenu.appendChild(sidebarItem);
-                }
-            });
+        // Sync sidebar submenu items centrally
+        if (window.updateSidebarPeers) {
+            window.updateSidebarPeers(data);
         }
 
         const isLocked = !!(window.IS_READONLY_SUBSCRIPTION || window.SUBSCRIPTION_STATUS === 'limit_control' || window.SUBSCRIPTION_STATUS === 'inactive');
@@ -232,25 +203,6 @@
             }
             if (statusText) {
                 statusText.textContent = peer.is_online ? 'Connected' : 'Offline';
-            }
-
-            const sidebarDot = document.getElementById(`sidebar-dot-${peer.id}`);
-            if (sidebarDot) {
-                sidebarDot.className = `peer-status-dot ${peer.is_online ? 'online' : 'offline'}`;
-                sidebarDot.title = statusTitle;
-            }
-
-            const sidebarItem = document.getElementById(`sidebar-peer-${peer.id}`);
-            if (sidebarItem) {
-                sidebarItem.setAttribute('data-sidebar-online', peer.is_online ? 'true' : 'false');
-                const isOver7d = isOfflineOver7Days(peer.last_seen, peer.is_online);
-                sidebarItem.setAttribute('data-over-7d', isOver7d ? 'true' : 'false');
-                if (isOver7d) {
-                    sidebarItem.style.display = 'none';
-                } else {
-                    sidebarItem.style.display = '';
-                    sidebarItem.title = `${peer.name || 'Edge Device'} (${statusTitle})`;
-                }
             }
 
             // Update read-only name label if not currently in edit mode
@@ -637,6 +589,12 @@
             const nameLabel = document.getElementById(`peer-name-text-${peerId}`);
             if (nameLabel) {
                 nameLabel.textContent = currentName;
+            }
+
+            const sidebarItem = document.getElementById(`sidebar-peer-${peerId}`);
+            if (sidebarItem) {
+                const label = sidebarItem.querySelector('.submenu-label');
+                if (label) label.textContent = currentName;
             }
 
             cancelPeerNameEditMode(peerId);
@@ -1048,9 +1006,8 @@
             if (tbody && (!isLoaded || (peerSetChanged && !hasUnsavedChanges))) {
                 renderPeersTable(data.peers);
                 tbody.setAttribute('data-loaded', 'true');
-            } else {
-                updatePeerStatuses(data);
             }
+            updatePeerStatuses(data);
         } catch (err) {
             console.error("Error polling peers:", err);
         }

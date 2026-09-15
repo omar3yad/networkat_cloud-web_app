@@ -27,6 +27,15 @@ from utils.network_validators import validate_dns_name
 edge_service = EdgeService()
 
 
+def format_uptime(seconds):
+    seconds = int(seconds)
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    prefix = f"{days}d " if days else ""
+    return f"{prefix}{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
 @client_bp.route('/')
 @login_required
 def dashboard():
@@ -85,6 +94,7 @@ def peer_details(peer_id):
     peer_public_ip = "Unknown"
     peer_os = "Unknown"
     peer_version = "Unknown"
+    peer_uptime = "Unknown"
     peer_last_seen = "Never"
     
     try:
@@ -106,6 +116,8 @@ def peer_details(peer_id):
                         h_data = h_resp.json()
                         if h_data.get("version"):
                             peer_version = h_data["version"]
+                        if h_data.get("uptime") is not None:
+                            peer_uptime = format_uptime(h_data["uptime"])
                 except Exception as ex:
                     current_app.logger.warning(f"Could not fetch health version for {peer_ip}: {ex}")
             peer_last_seen = checked_peer.get("last_seen", peer_last_seen)
@@ -151,6 +163,7 @@ def peer_details(peer_id):
         peer_public_ip=peer_public_ip,
         peer_os=peer_os,
         peer_version=peer_version,
+        peer_uptime=peer_uptime,
         peer_last_seen=peer_last_seen,
         peer_network=peer_route_network,
         peer_route_id=peer_route_id,

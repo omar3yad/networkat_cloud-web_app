@@ -30,4 +30,4 @@ app = create_client_app()
 
 
 if __name__ == "__main__":
-    app.run(port=8097, debug=True)
+    app.run(port=8097, debug=False)
