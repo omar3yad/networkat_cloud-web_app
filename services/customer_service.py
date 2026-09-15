@@ -6,6 +6,8 @@ from repositories.edge_repository import EdgeRepository
 from repositories.user_repository import UserRepository
 from repositories.token_repository import TokenRepository
 from repositories.client_repository import ClientRepository
+from services.netbird_service import NetBirdService
+from models.group_peer import GroupPeer
 from werkzeug.security import generate_password_hash, check_password_hash
 
 logger = logging.getLogger("customer_service")
@@ -21,29 +23,53 @@ class CustomerService:
 
     def get_dashboard_data(self, online_window=300):
         total_customers = self.client_repo.count()
-        total_edges = self.edge_repo.count()
-        online_edges = self.edge_repo.count_online(online_window)
-        active_tokens = self.token_repo.count_active()
-        recent_edges = self.edge_repo.get_recent_edges(limit=10)
+        
+        # 1. جلب كافة الأجهزة من NetBird
+        all_nb_peers = NetBirdService.get_cached_all_netbird_peers()
+        peers_by_id = {p['id']: p for p in all_nb_peers}
+
+        # 2. حصر مجموعات العملاء الفعلية
+        client_group_ids = {c.netbird_group_id for c in self.client_repo.get_all_desc() if c.netbird_group_id}
+        
+        # 3. حصر أجهزة العملاء فقط (12 جهاز) واستبعاد السيرفرات ومتحكمات النظام
+        customer_group_peers = GroupPeer.query.filter(GroupPeer.group_id.in_(client_group_ids)).all() if client_group_ids else []
+        customer_peer_ids = {gp.peer_id for gp in customer_group_peers if gp.peer_id}
+        
+        total_peers = len(customer_peer_ids)
+        online_peers = sum(1 for pid in customer_peer_ids if peers_by_id.get(pid, {}).get('connected') is True)
+        offline_peers = max(0, total_peers - online_peers)
 
         return {
             'total_customers': total_customers,
-            'total_edges': total_edges,
-            'online_edges': online_edges,
-            'offline_edges': total_edges - online_edges,
-            'active_tokens': active_tokens,
-            'recent_edges': recent_edges,
+            'total_edges': total_peers,
+            'total_peers': total_peers,
+            'online_edges': online_peers,
+            'online_peers': online_peers,
+            'offline_edges': offline_peers,
+            'offline_peers': offline_peers,
             'online_window': online_window
         }
 
     def get_customers_list(self, online_window=300):
         clients = self.client_repo.get_all_desc()
+        
+        # جلب الأجهزة المتصلة من NetBird
+        peers = NetBirdService.get_cached_all_netbird_peers()
+        online_peer_ids = {p.get('id') for p in peers if p.get('connected') is True}
+        
+        # خريطة الأجهزة المرتبطة بمجموعات العملاء من قاعدة البيانات
+        all_gps = GroupPeer.query.all()
+        group_to_peer_ids = {}
+        for gp in all_gps:
+            if gp.group_id and gp.peer_id:
+                group_to_peer_ids.setdefault(gp.group_id, set()).add(gp.peer_id)
+
         customers_data = []
         for c in clients:
-            # استخدام الميثودز الجديدة المربوطة بـ client_id / user_id
+            c_peer_ids = group_to_peer_ids.get(c.netbird_group_id, set())
+            peers_count = len(c_peer_ids)
+            online_count = len(c_peer_ids.intersection(online_peer_ids))
             tokens_count = self.token_repo.count_by_client(c.user_id)
-            edges_count = self.edge_repo.count_by_customer(c.user_id)
-            online_count = self.edge_repo.count_online_by_customer(c.user_id, online_window)
 
             customers_data.append({
                 'id': c.user_id,
@@ -51,8 +77,11 @@ class CustomerService:
                 'username': c.username,
                 'created_at': c.created_at.strftime('%Y-%m-%d %H:%M:%S') if c.created_at else None,
                 'tokens_count': tokens_count,
-                'edges_count': edges_count,
-                'online_count': online_count
+                'peers_count': peers_count,
+                'edges_count': peers_count,
+                'online_count': online_count,
+                'allowed_peers_count': c.allowed_peers_count or 5,
+                'netbird_group_id': c.netbird_group_id
             })
         return customers_data
     

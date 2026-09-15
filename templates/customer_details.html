@@ -83,7 +83,6 @@
             background: #ef4444;
         }
 
-
         * {
             margin: 0;
             padding: 0;
@@ -119,6 +118,8 @@
             position: fixed;
             height: 100vh;
             overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .sidebar-header {
@@ -149,6 +150,23 @@
             margin-top: 0.5rem;
         }
 
+        .sidebar-close-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .sidebar-close-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         .nav-menu {
             padding: 1rem 0;
         }
@@ -171,10 +189,30 @@
             border-left-color: var(--primary);
         }
 
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(2px);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
         .main-content {
             flex: 1;
             margin-left: 260px;
             width: calc(100% - 260px);
+            min-width: 0;
         }
 
         .top-bar {
@@ -189,10 +227,34 @@
             z-index: 100;
         }
 
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 1.1rem;
+            color: var(--gray-800);
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .mobile-menu-btn:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-300);
+        }
+
         .page-title h1 {
             color: var(--gray-800);
             font-size: 1.5rem;
             font-weight: 600;
+            margin: 0;
         }
 
         .user-menu {
@@ -208,6 +270,15 @@
             border-radius: 4px;
             color: var(--gray-600);
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--gray-100);
+            color: var(--danger);
         }
 
         .container {
@@ -224,6 +295,12 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
+            gap: 1.25rem;
+        }
+
+        .customer-info {
+            flex: 1;
+            min-width: 250px;
         }
 
         .customer-info h2 {
@@ -243,9 +320,10 @@
 
         .customer-meta {
             display: flex;
-            gap: 2rem;
+            gap: 1.5rem;
             margin-top: 1rem;
             flex-wrap: wrap;
+            align-items: center;
         }
 
         .meta-item {
@@ -253,6 +331,63 @@
             align-items: center;
             gap: 0.5rem;
             color: var(--gray-600);
+            font-size: 0.9rem;
+        }
+
+        /* Phone & WhatsApp Meta Item */
+        .phone-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            transition: all 0.2s ease;
+        }
+
+        .phone-meta-item:hover {
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+
+        .phone-whatsapp-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #15803d;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .phone-whatsapp-link:hover {
+            color: #166534;
+            text-decoration: underline;
+        }
+
+        .phone-copy-btn {
+            background: transparent;
+            border: none;
+            color: #15803d;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            transition: background 0.2s, transform 0.1s, color 0.2s;
+        }
+
+        .phone-copy-btn:hover {
+            background: #bbf7d0;
+            color: #166534;
+        }
+
+        .phone-copy-btn:active {
+            transform: scale(0.92);
         }
 
         .btn-danger {
@@ -262,6 +397,15 @@
             padding: 0.75rem 1.5rem;
             border-radius: 4px;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
         }
 
         .tabs {
@@ -279,6 +423,10 @@
             cursor: pointer;
             font-weight: 500;
             border-bottom: 2px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
         }
 
         .tab.active {
@@ -309,6 +457,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
         }
 
         .card-header h3 {
@@ -318,6 +468,13 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
+            margin: 0;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .btn-sm {
@@ -345,6 +502,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 600px;
         }
 
         th {
@@ -378,18 +536,6 @@
             background: #fee2e2;
             color: #991b1b;
         }
-
-        .badge-active {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .badge-inactive {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-
 
         .token-cell {
             display: flex;
@@ -432,6 +578,7 @@
             border-radius: 4px;
             cursor: pointer;
             margin: 0 0.15rem;
+            transition: all 0.2s;
         }
 
         .action-btn:hover {
@@ -449,6 +596,7 @@
             z-index: 2000;
             align-items: center;
             justify-content: center;
+            padding: 1rem;
         }
 
         .modal.active {
@@ -461,10 +609,13 @@
             align-items: center;
             width: 100%;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
 
         .name-user-bar h2 {
             margin: 0;
+            word-break: break-word;
         }
 
         .name-user-bar .badge {
@@ -475,8 +626,10 @@
         .modal-content {
             background: white;
             border-radius: 8px;
-            width: 90%;
+            width: 100%;
             max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -489,6 +642,7 @@
 
         .modal-header h3 {
             color: var(--gray-800);
+            margin: 0;
         }
 
         .close-btn {
@@ -496,6 +650,11 @@
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
+            color: var(--gray-600);
+        }
+
+        .close-btn:hover {
+            color: var(--gray-800);
         }
 
         .modal-body {
@@ -535,6 +694,11 @@
             padding: 0.75rem 1.5rem;
             border-radius: 4px;
             cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
         }
 
         .btn-secondary {
@@ -552,11 +716,12 @@
             right: 20px;
             background: var(--success);
             color: white;
-            padding: 1rem 2rem;
-            border-radius: 4px;
+            padding: 0.85rem 1.5rem;
+            border-radius: 6px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             z-index: 3000;
             animation: slideIn 0.3s ease;
+            font-size: 0.95rem;
         }
 
         @keyframes slideIn {
@@ -570,17 +735,137 @@
                 opacity: 1;
             }
         }
+
+        /* Mobile & Responsive Breakpoints */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: 0 0 25px rgba(0, 0, 0, 0.3);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-close-btn {
+                display: block;
+            }
+
+            .mobile-menu-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .top-bar {
+                padding: 0.85rem 1rem;
+            }
+
+            .page-title h1 {
+                font-size: 1.25rem;
+            }
+
+            .user-menu .user-email-text {
+                display: none;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .customer-header {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 1.25rem;
+                gap: 1rem;
+            }
+
+            .customer-header .btn-danger {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .customer-meta {
+                gap: 0.75rem 1.25rem;
+            }
+
+            .tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 4px;
+                gap: 0.25rem;
+            }
+
+            .tab {
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+                flex-shrink: 0;
+            }
+
+            .card-header {
+                padding: 1rem 1.25rem;
+            }
+
+            td, th {
+                padding: 0.75rem 1rem;
+            }
+
+            .notification {
+                left: 20px;
+                right: 20px;
+                top: 15px;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .customer-info h2 {
+                font-size: 1.4rem;
+            }
+
+            .name-user-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.4rem;
+            }
+
+            .customer-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.6rem;
+            }
+
+            .phone-meta-item {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
     </style>
 </head>
 
 <body>
-    <div class="sidebar">
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="admin-sidebar">
         <div class="sidebar-header">
-            <div class="logo">
-                <img src="{{ url_for('static', filename='logoW.png') }}" alt="Networkat Logo"
-                    style="height: 24px; width: auto; vertical-align: middle;">
+            <div class="sidebar-header-top" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='logoW.png') }}" alt="Networkat Logo"
+                        style="height: 24px; width: auto; vertical-align: middle;">
+                </div>
+                <button type="button" class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Close Navigation">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <p> Management Portal</p>
+            <p>Management Portal</p>
         </div>
         <div class="nav-menu">
             <a href="/" class="nav-item">
@@ -598,12 +883,20 @@
 
     <div class="main-content">
         <div class="top-bar">
-            <div class="page-title">
-                <h1>Customer Details</h1>
+            <div class="top-bar-left">
+                <button type="button" class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Open Navigation">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="page-title">
+                    <h1>Customer Details</h1>
+                </div>
             </div>
             <div class="user-menu">
-                <span>admin@networkat</span>
-                <a href="/logout" class="logout-btn">Logout</a>
+                <span class="user-email-text">admin@networkat</span>
+                <a href="/logout" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
             </div>
         </div>
 
@@ -612,15 +905,40 @@
             <!-- Customer Header -->
             <div class="customer-header">
                 <div class="customer-info">
-
-                    <!-- بداية التعديل هنا: إضافة كلاس name-user-bar وتنظيف الستايل القديم -->
                     <div class="name-user-bar">
                         <h2>{{ customer.client_name }}</h2>
                         <span class="badge">{{ customer.username }}</span>
                     </div>
-                    <!-- نهاية التعديل -->
 
                     <div class="customer-meta">
+                        {% if customer.client_phone_number %}
+                        <div class="phone-meta-item" title="Click to chat on WhatsApp or copy number">
+                            <i class="fab fa-whatsapp" style="color: #25D366; font-size: 1.15rem;"></i>
+                            <a href="https://wa.me/{{ customer.client_phone_number | replace(' ', '') | replace('+', '') | replace('-', '') | replace('(', '') | replace(')', '') }}"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="phone-whatsapp-link"
+                               title="Open WhatsApp Chat">
+                                <span>{{ customer.client_phone_number }}</span>
+                            </a>
+                            <button type="button"
+                                    class="phone-copy-btn"
+                                    onclick="copyPhoneNumber('{{ customer.client_phone_number }}', this)"
+                                    title="Copy Phone Number">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+
+                        {% if customer.client_email %}
+                        <div class="meta-item">
+                            <i class="fas fa-envelope"></i>
+                            <a href="mailto:{{ customer.client_email }}" style="color: inherit; text-decoration: none;">
+                                <span>{{ customer.client_email }}</span>
+                            </a>
+                        </div>
+                        {% endif %}
+
                         <div class="meta-item">
                             <i class="fas fa-calendar"></i>
                             <span>Created: <strong>{{ customer.created_at or 'Unknown' }}</strong></span>
@@ -642,7 +960,7 @@
                     </div>
                 </div>
 
-                <button class="btn-danger" onclick="deleteCustomer('{{ customer.user_id }}')">
+                <button class="btn-danger" onclick="deleteCustomer('{{ customer.user_id if customer.user_id else customer.id }}')">
                     <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
@@ -840,7 +1158,7 @@
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <span
-                                style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase;">Current
+                                style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600);">Current
                                 Status</span>
                             <span
                                 class="badge-status-pill status-{{ subscription_info.status if subscription_info else 'active' }}"
@@ -866,7 +1184,7 @@
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <span
-                                style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase;">Peer
+                                style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600);">Peer
                                 Quota Allocation</span>
                             <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);"
                                 id="sub-card-remaining">
@@ -902,7 +1220,7 @@
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <span
-                                style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600); text-transform: uppercase;">Next
+                                style="font-size: 0.85rem; font-weight: 700; color: var(--gray-600);">Next
                                 Renewal</span>
                             {% if subscription_info and subscription_info.grace_expires_at and subscription_info.status
                             == 'grace_period' %}
@@ -1624,14 +1942,62 @@
             }
         }
 
-        // Animate quota progress bar on load
+        // Phone Number Copy Utility
+        function copyPhoneNumber(phone, btn) {
+            if (!phone) return;
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(phone).then(() => {
+                    showNotification('✓ Phone number copied');
+                    highlightCopyBtn(btn);
+                }).catch(() => {
+                    fallbackCopy(phone, btn);
+                });
+            } else {
+                fallbackCopy(phone, btn);
+            }
+        }
+
+        // Mobile Sidebar Drawer Controller
         document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('admin-sidebar');
+            const toggleBtn = document.getElementById('mobile-menu-toggle');
+            const closeBtn = document.getElementById('sidebar-close-btn');
+            const overlay = document.getElementById('sidebar-overlay');
+
+            function openSidebar() {
+                if (sidebar) sidebar.classList.add('open');
+                if (overlay) overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeSidebar() {
+                if (sidebar) sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            if (toggleBtn) toggleBtn.addEventListener('click', openSidebar);
+            if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+            if (overlay) overlay.addEventListener('click', closeSidebar);
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && sidebar && sidebar.classList.contains('open')) {
+                    closeSidebar();
+                }
+            });
+
+            window.addEventListener('resize', function () {
+                if (window.innerWidth > 768 && sidebar && sidebar.classList.contains('open')) {
+                    closeSidebar();
+                }
+            });
+
+            // Animate quota progress bar on load
             document.querySelectorAll('.quota-progress-fill[data-width]').forEach(function (el) {
                 const w = el.getAttribute('data-width');
                 if (w) setTimeout(() => { el.style.width = w + '%'; }, 150);
             });
         });
-
     </script>
 </body>
 

@@ -163,7 +163,7 @@ class Client(BaseModel):
         if self.plan and self.plan.allowed_peers_count is not None:
             return self.plan.allowed_peers_count
         return 5
-
+  
     @allowed_peers_count.setter
     def allowed_peers_count(self, value):
         try:
