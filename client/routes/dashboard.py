@@ -95,6 +95,7 @@ def peer_details(peer_id):
     peer_os = "Unknown"
     peer_version = "Unknown"
     peer_uptime = "Unknown"
+    peer_uptime_seconds = None
     peer_last_seen = "Never"
     
     try:
@@ -118,6 +119,7 @@ def peer_details(peer_id):
                             peer_version = h_data["version"]
                         if h_data.get("uptime") is not None:
                             peer_uptime = format_uptime(h_data["uptime"])
+                            peer_uptime_seconds = int(h_data["uptime"])
                 except Exception as ex:
                     current_app.logger.warning(f"Could not fetch health version for {peer_ip}: {ex}")
             peer_last_seen = checked_peer.get("last_seen", peer_last_seen)
@@ -164,6 +166,7 @@ def peer_details(peer_id):
         peer_os=peer_os,
         peer_version=peer_version,
         peer_uptime=peer_uptime,
+        peer_uptime_seconds=peer_uptime_seconds,
         peer_last_seen=peer_last_seen,
         peer_network=peer_route_network,
         peer_route_id=peer_route_id,

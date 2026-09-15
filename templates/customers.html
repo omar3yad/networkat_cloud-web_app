@@ -18,16 +18,28 @@
         :root {
             --azure-blue: #0078d4;
             --azure-dark: #106ebe;
+            --azure-light: #e6f2fa;
             --sidebar-bg: #1e2a41;
             --sidebar-hover: #2d3a55;
             --gray-50: #f8f9fa;
             --gray-100: #f0f2f4;
             --gray-200: #e1e4e8;
+            --gray-300: #d0d7de;
+            --gray-500: #8c959f;
             --gray-600: #5e6c84;
             --gray-700: #334155;
             --gray-800: #1e2a41;
             --success: #107c10;
+            --success-bg: #dcfce7;
+            --success-text: #166534;
+            --warning: #b45309;
+            --warning-bg: #fef3c7;
+            --warning-text: #92400e;
             --danger: #d83b01;
+            --danger-bg: #fee2e2;
+            --danger-text: #991b1b;
+            --purple-bg: #f3e8ff;
+            --purple-text: #6b21a8;
         }
 
         body {
@@ -67,17 +79,6 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-        }
-
-        .sidebar-header .logo i {
-            font-size: 2rem;
-            color: var(--azure-blue);
-        }
-
-        .sidebar-header .logo span {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: white;
         }
 
         .sidebar-header p {
@@ -133,6 +134,10 @@
             width: 20px;
             font-size: 1.1rem;
             text-align: center;
+        }
+
+        .nav-item span {
+            flex: 1;
         }
 
         .nav-divider {
@@ -264,29 +269,187 @@
             flex: 1;
         }
 
-        .page-header {
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--gray-200);
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            gap: 1rem;
+            gap: 1.25rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .page-header h1 {
-            color: var(--gray-800);
-            font-size: 1.8rem;
-            font-weight: 600;
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
         }
 
-        .btn-group {
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
             display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex-shrink: 0;
+        }
+
+        .stat-icon.blue {
+            background: #e6f2fa;
+            color: var(--azure-blue);
+        }
+
+        .stat-icon.green {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .stat-icon.purple {
+            background: var(--purple-bg);
+            color: var(--purple-text);
+        }
+
+        .stat-icon.amber {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        .stat-details {
+            min-width: 0;
+            flex: 1;
+        }
+
+        .stat-label {
+            color: var(--gray-600);
+            font-size: 0.825rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stat-value {
+            color: var(--gray-800);
+            font-size: 1.65rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .stat-sub {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-top: 0.2rem;
+        }
+
+        /* Card Section */
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid var(--gray-200);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Toolbar Header */
+        .card-toolbar {
+            padding: 1.25rem 1.5rem;
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
             gap: 1rem;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+            min-width: 280px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 240px;
+            max-width: 420px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-500);
+            font-size: 0.9rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.65rem 0.85rem 0.65rem 2.4rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--gray-800);
+            background: var(--gray-50);
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            background: white;
+            border-color: var(--azure-blue);
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.12);
+        }
+
+        .filter-select {
+            padding: 0.65rem 2rem 0.65rem 0.85rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: var(--gray-700);
+            background: white;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235e6c84' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.7rem center;
+            background-size: 0.9em;
+        }
+
+        .filter-select:focus {
+            border-color: var(--azure-blue);
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.12);
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
+            padding: 0.65rem 1.25rem;
+            border-radius: 8px;
             border: none;
             cursor: pointer;
             font-weight: 500;
@@ -294,7 +457,8 @@
             align-items: center;
             gap: 0.5rem;
             transition: all 0.2s;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+            text-decoration: none;
         }
 
         .btn-primary {
@@ -304,15 +468,6 @@
 
         .btn-primary:hover {
             background: var(--azure-dark);
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #0b5e0b;
         }
 
         .btn-secondary {
@@ -325,148 +480,442 @@
             background: var(--gray-200);
         }
 
-        /* Customers Grid */
-        .customers-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
+        .btn-success {
+            background: var(--success);
+            color: white;
         }
 
-        .customer-card {
-            background: white;
-            border-radius: 10px;
-            border: 1px solid var(--gray-200);
-            overflow: hidden;
-            transition: all 0.25s ease;
+        .btn-success:hover {
+            background: #0b5e0b;
+        }
+
+        /* Table Responsive Container */
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+        }
+
+        .customers-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 960px;
+        }
+
+        .customers-table th {
+            padding: 0.9rem 1.25rem;
+            background: var(--gray-50);
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 0.8rem;
+            border-bottom: 1px solid var(--gray-200);
+            white-space: nowrap;
+            letter-spacing: 0.02em;
+        }
+
+        .customers-table td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-800);
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+
+        .customer-row {
+            transition: background-color 0.15s ease;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .customer-row:hover {
+            background-color: #f1f7fd;
+        }
+
+        /* Customer Cell */
+        .customer-info-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        .customer-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #0078d4, #106ebe);
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0, 120, 212, 0.25);
+        }
+
+        .customer-name-group {
+            min-width: 0;
             display: flex;
             flex-direction: column;
+            gap: 0.15rem;
         }
 
-        .customer-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-            border-color: var(--azure-blue);
-        }
-
-        .card-header {
-            padding: 1.25rem;
-            background: white;
-            border-bottom: 1px solid var(--gray-200);
+        .customer-title-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
         }
 
-        .card-header h3 {
+        .customer-name-link {
+            font-weight: 600;
             color: var(--gray-800);
-            font-size: 1.1rem;
-            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.15s;
+        }
+
+        .customer-row:hover .customer-name-link {
+            color: var(--azure-blue);
+        }
+
+        .customer-company {
+            font-size: 0.8rem;
+            color: var(--gray-600);
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            gap: 0.35rem;
         }
 
-        .card-header i {
-            color: var(--azure-blue);
-            flex-shrink: 0;
-        }
-
-        .badge-id {
-            background: var(--gray-100);
+        .customer-username-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
             color: var(--gray-600);
-            padding: 0.25rem 0.65rem;
-            border-radius: 100px;
-            font-size: 0.8rem;
-            white-space: nowrap;
-            flex-shrink: 0;
-            font-weight: 500;
+            background: var(--gray-100);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-family: monospace;
         }
 
-        .badge-peers {
-            background: #e6f2fa;
-            color: var(--azure-dark);
-            padding: 0.3rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            border: 1px solid #cce4f7;
-            white-space: nowrap;
+        /* Contact Cell */
+        .contact-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .contact-item {
+            font-size: 0.825rem;
+            color: var(--gray-700);
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            flex-shrink: 0;
-            transition: all 0.2s;
         }
 
-        .customer-card:hover .badge-peers {
-            background: var(--azure-blue);
-            color: white;
-            border-color: var(--azure-blue);
+        .contact-item i {
+            width: 14px;
+            color: var(--gray-500);
+            font-size: 0.75rem;
         }
 
-        .card-footer {
-            padding: 0.85rem 1.25rem;
-            background: var(--gray-50);
-            border-top: 1px solid var(--gray-200);
-            display: flex;
-            justify-content: space-between;
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            padding: 0.1rem 0.25rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            transition: all 0.15s;
+            opacity: 0.6;
+        }
+
+        .contact-item:hover .copy-btn {
+            opacity: 1;
+            color: var(--azure-blue);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.65rem;
+            border-radius: 100px;
+            font-size: 0.775rem;
+            font-weight: 600;
+            display: inline-flex;
             align-items: center;
-            margin-top: auto;
-            gap: 0.5rem;
+            gap: 0.35rem;
+            white-space: nowrap;
         }
 
-        .card-status-info {
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .badge-status-active {
+            background: var(--success-bg);
+            color: var(--success-text);
+        }
+
+        .badge-status-active .badge-dot {
+            background: var(--success);
+        }
+
+        .badge-status-grace {
+            background: var(--warning-bg);
+            color: var(--warning-text);
+        }
+
+        .badge-status-grace .badge-dot {
+            background: var(--warning);
+        }
+
+        .badge-status-limit {
+            background: var(--purple-bg);
+            color: var(--purple-text);
+        }
+
+        .badge-status-limit .badge-dot {
+            background: var(--purple-text);
+        }
+
+        .badge-status-inactive {
+            background: var(--danger-bg);
+            color: var(--danger-text);
+        }
+
+        .badge-status-inactive .badge-dot {
+            background: var(--danger);
+        }
+
+        .badge-plan {
+            background: #f1f5f9;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.775rem;
+        }
+
+        .badge-plan.pro {
+            background: #eff6ff;
+            color: var(--azure-blue);
+            border-color: #bfdbfe;
+        }
+
+        .badge-plan.enterprise {
+            background: var(--purple-bg);
+            color: var(--purple-text);
+            border-color: #e9d5ff;
+        }
+
+        .sub-details {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .sub-cycle-text {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+
+        /* Peers & Devices */
+        .peers-status-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            padding: 0.35rem 0.7rem;
+            border-radius: 6px;
+            font-size: 0.825rem;
+        }
+
+        .peers-online-indicator {
+            color: var(--success);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .peers-online-indicator.zero {
+            color: var(--gray-500);
+        }
+
+        /* Date Cell */
+        .date-cell {
+            font-size: 0.825rem;
+            color: var(--gray-700);
+            white-space: nowrap;
+        }
+
+        .date-cell small {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-top: 2px;
+        }
+
+        /* Actions Cell */
+        .action-cell {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .btn-table-action {
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
             font-size: 0.825rem;
             font-weight: 500;
-        }
-
-        .status-online {
-            color: var(--success);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .status-online i {
-            font-size: 0.45rem;
-        }
-
-        .status-offline {
-            color: var(--gray-600);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-        }
-
-        .status-offline i {
-            font-size: 0.45rem;
-        }
-
-        .btn-sm {
-            padding: 0.45rem 1rem;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: all 0.2s;
             border: 1px solid var(--gray-200);
-            color: var(--gray-700);
             background: white;
+            color: var(--azure-blue);
+            cursor: pointer;
+            text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
+            transition: all 0.15s;
         }
 
-        .btn-sm:hover {
+        .btn-table-action:hover {
             background: var(--azure-blue);
             color: white;
             border-color: var(--azure-blue);
+        }
+
+        /* Pagination Footer */
+        .pagination-container {
+            padding: 1rem 1.5rem;
+            background: white;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .pagination-info {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .page-btn {
+            min-width: 34px;
+            height: 34px;
+            padding: 0 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--gray-200);
+            background: white;
+            color: var(--gray-700);
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: var(--gray-100);
+            border-color: var(--gray-300);
+            color: var(--gray-800);
+        }
+
+        .page-btn.active {
+            background: var(--azure-blue);
+            border-color: var(--azure-blue);
+            color: white;
+            font-weight: 600;
+        }
+
+        .page-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--gray-600);
+        }
+
+        .empty-state i {
+            opacity: 0.35;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.2rem;
+            color: var(--gray-800);
+            margin-bottom: 0.35rem;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+            color: var(--gray-600);
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
+
+        .toast-msg {
+            background: #1e293b;
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            animation: toastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: auto;
+        }
+
+        .toast-msg.success {
+            background: #0f172a;
+            border-left: 4px solid var(--success);
+        }
+
+        .toast-msg.error {
+            background: #0f172a;
+            border-left: 4px solid var(--danger);
+        }
+
+        @keyframes toastSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Modal Styles */
@@ -494,7 +943,7 @@
             background: white;
             border-radius: 12px;
             width: 100%;
-            max-width: 650px;
+            max-width: 620px;
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -516,7 +965,7 @@
 
         .modal-header h2 {
             color: var(--gray-800);
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 600;
         }
 
@@ -545,25 +994,35 @@
             overflow-y: auto;
         }
 
+        .form-section-title {
+            margin-bottom: 0.75rem;
+            color: var(--gray-700);
+            font-size: 0.925rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
         .form-group {
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.15rem;
         }
 
         .form-group label {
             display: block;
             color: var(--gray-700);
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
             font-weight: 600;
         }
 
         .form-group input,
         .form-group select {
             width: 100%;
-            padding: 0.75rem 0.875rem;
-            border: 1px solid var(--gray-200);
+            padding: 0.7rem 0.85rem;
+            border: 1px solid var(--gray-300);
             border-radius: 6px;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--gray-800);
             background: white;
             transition: border-color 0.2s;
@@ -582,12 +1041,6 @@
             gap: 1rem;
         }
 
-        .modal-form-grid-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 1rem;
-        }
-
         .modal-footer {
             padding: 1.25rem 1.5rem;
             border-top: 1px solid var(--gray-200);
@@ -601,6 +1054,12 @@
         }
 
         /* Responsive Breakpoints */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 991px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -657,60 +1116,50 @@
                 padding: 1rem 0.75rem;
             }
 
-            .page-header {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .card-toolbar {
+                padding: 1rem;
                 flex-direction: column;
                 align-items: stretch;
-                margin-bottom: 1.25rem;
-                gap: 0.75rem;
             }
 
-            .page-header h1 {
-                font-size: 1.35rem;
+            .toolbar-left {
+                min-width: 100%;
+                flex-direction: column;
+                align-items: stretch;
             }
 
-            .btn-group {
+            .search-box {
+                max-width: 100%;
+            }
+
+            .toolbar-right {
                 width: 100%;
             }
 
-            .btn-group .btn {
-                flex: 1;
+            .toolbar-right .btn {
+                width: 100%;
                 justify-content: center;
             }
 
-            .customers-grid {
-                grid-template-columns: 1fr;
-                gap: 0.875rem;
+            .pagination-container {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.75rem;
             }
 
-            .customer-card {
-                border-radius: 8px;
-            }
-
-            .card-header {
-                padding: 1rem;
-            }
-
-            .card-footer {
-                padding: 0.75rem 1rem;
-            }
-
-            .modal-body {
-                padding: 1rem;
-            }
-
-            .modal-form-grid-2,
-            .modal-form-grid-3 {
+            .modal-form-grid-2 {
                 grid-template-columns: 1fr;
                 gap: 0;
-            }
-
-            .modal-footer {
-                padding: 1rem;
-            }
-
-            .modal-footer .btn {
-                flex: 1;
-                justify-content: center;
             }
         }
     </style>
@@ -771,54 +1220,276 @@
         </div>
 
         <div class="container">
-            <div class="page-header">
-                <h1>Customer Management</h1>
-                <div class="btn-group">
-                    <button class="btn btn-primary" onclick="showCreateModal()">
-                        <i class="fas fa-plus"></i> <span>New Customer</span>
-                    </button>
+            <!-- Stats Overview Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-label">Total Customers</div>
+                        <div class="stat-value" id="stat-total-customers">{{ customers | length }}</div>
+                        <div class="stat-sub">Registered client accounts</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-label">Active Accounts</div>
+                        <div class="stat-value" id="stat-active-customers">
+                            {{ customers | selectattr('subscription_status', 'equalto', 'active') | list | length }}
+                        </div>
+                        <div class="stat-sub">Active subscriptions</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-label">Connected Peers</div>
+                        <div class="stat-value" id="stat-online-peers">
+                            {{ customers | sum(attribute='online_count') }}
+                        </div>
+                        <div class="stat-sub">{{ customers | sum(attribute='peers_count') }} total devices configured</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon amber">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-label">In Grace / Review</div>
+                        <div class="stat-value" id="stat-grace-customers">
+                            {{ customers | selectattr('subscription_status', 'equalto', 'grace_period') | list | length }}
+                        </div>
+                        <div class="stat-sub">Expiring or pending renewal</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="customers-grid">
-                {% for customer in customers %}
-                <div class="customer-card" onclick="location.href='/customers/{{ customer.id }}'">
-                    <div class="card-header">
-                        <div style="min-width: 0; flex: 1;">
-                            <h3>
-                                <i class="fas fa-building"></i>
-                                {{ customer.name }}
-                            </h3>
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.35rem;">
-                                <span class="badge-id"><i class="fas fa-user"></i> {{ customer.username }}</span>
-                            </div>
+            <!-- Main Data Table Card -->
+            <div class="card">
+                <!-- Toolbar -->
+                <div class="card-toolbar">
+                    <div class="toolbar-left">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="customerSearchInput" class="search-input"
+                                placeholder="Search by name, company, email, phone, username, country..."
+                                autocomplete="off">
                         </div>
-                        <span class="badge-peers" title="Registered Peers">
-                            <i class="fas fa-desktop"></i>
-                            <span>{{ customer.peers_count or 0 }} Peers</span>
-                        </span>
+
+                        <select id="statusFilterSelect" class="filter-select" aria-label="Filter by subscription status">
+                            <option value="">All statuses</option>
+                            <option value="active">Active</option>
+                            <option value="grace_period">Grace period</option>
+                            <option value="limit_control">Limit control</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+
+                        <select id="planFilterSelect" class="filter-select" aria-label="Filter by plan">
+                            <option value="">All plans</option>
+                            <option value="starter">Starter / Basic</option>
+                            <option value="pro">Pro</option>
+                            <option value="enterprise">Enterprise</option>
+                        </select>
                     </div>
-                    <div class="card-footer">
-                        <div class="card-status-info">
-                            {% if customer.online_count and customer.online_count > 0 %}
-                            <span class="status-online"><i class="fas fa-circle"></i> {{ customer.online_count }} online</span>
-                            {% else %}
-                            <span class="status-offline"><i class="fas fa-circle"></i> 0 online</span>
-                            {% endif %}
-                        </div>
-                        <span class="btn-sm"
-                            onclick="event.stopPropagation(); location.href='/customers/{{ customer.id }}'">
-                            View Details <i class="fas fa-arrow-right ms-2"></i>
-                        </span>
+
+                    <div class="toolbar-right">
+                        <button class="btn btn-primary" onclick="showCreateModal()">
+                            <i class="fas fa-plus"></i> <span>New Customer</span>
+                        </button>
                     </div>
                 </div>
-                {% else %}
-                <div style="grid-column: 1/-1; text-align: center; padding: 4rem 1rem; color: var(--gray-600);">
-                    <i class="fas fa-building fa-4x mb-3" style="opacity: 0.4;"></i>
-                    <h3 style="margin-top: 1rem; font-size: 1.25rem;">No customers found</h3>
-                    <p style="margin-top: 0.5rem;">Create your first customer to get started</p>
+
+                <!-- Table Container -->
+                <div class="table-container">
+                    <table class="customers-table" id="customersTable">
+                        <thead>
+                            <tr>
+                                <th>Customer & Company</th>
+                                <th>Contact Information</th>
+                                <th>Subscription & Renewal</th>
+                                <th>Status</th>
+                                <th>Devices / Peers</th>
+                                <th>Created Date</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                            {% for c in customers %}
+                            <tr class="customer-row" data-id="{{ c.id }}" data-search="{{ (c.name or '') ~ ' ' ~ (c.company_name or '') ~ ' ' ~ (c.username or '') ~ ' ' ~ (c.email or '') ~ ' ' ~ (c.phone or '') ~ ' ' ~ (c.country or '') ~ ' ' ~ (c.subscription or '') }}"
+                                data-status="{{ c.subscription_status or 'active' }}"
+                                data-plan="{{ (c.subscription or 'basic') | lower }}"
+                                onclick="navigateToCustomer('{{ c.id }}')">
+                                <!-- Customer Info -->
+                                <td>
+                                    <div class="customer-info-cell">
+                                        <div class="customer-avatar">
+                                            {{ (c.name[0] if c.name else (c.username[0] if c.username else 'C')) | upper }}
+                                        </div>
+                                        <div class="customer-name-group">
+                                            <div class="customer-title-row">
+                                                <a href="/customers/{{ c.id }}" class="customer-name-link"
+                                                    onclick="event.stopPropagation();">
+                                                    {{ c.name }}
+                                                </a>
+                                            </div>
+                                            {% if c.company_name %}
+                                            <div class="customer-company">
+                                                <i class="fas fa-building" style="font-size: 0.7rem;"></i>
+                                                <span>{{ c.company_name }}</span>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <span class="customer-username-tag" title="Username">
+                                                    <i class="fas fa-user"></i> {{ c.username }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Contact Information -->
+                                <td>
+                                    <div class="contact-group">
+                                        {% if c.email %}
+                                        <div class="contact-item" title="{{ c.email }}">
+                                            <i class="fas fa-envelope"></i>
+                                            <span>{{ c.email }}</span>
+                                            <button type="button" class="copy-btn"
+                                                onclick="event.stopPropagation(); copyText('{{ c.email }}', 'Email copied');"
+                                                title="Copy email">
+                                                <i class="far fa-copy"></i>
+                                            </button>
+                                        </div>
+                                        {% else %}
+                                        <span style="color: var(--gray-500); font-size: 0.8rem;">-</span>
+                                        {% endif %}
+
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            {% if c.phone %}
+                                            <div class="contact-item" title="{{ c.phone }}">
+                                                <i class="fas fa-phone-alt"></i>
+                                                <span>{{ c.phone }}</span>
+                                                <button type="button" class="copy-btn"
+                                                    onclick="event.stopPropagation(); copyText('{{ c.phone }}', 'Phone copied');"
+                                                    title="Copy phone">
+                                                    <i class="far fa-copy"></i>
+                                                </button>
+                                            </div>
+                                            {% endif %}
+
+                                            {% if c.country %}
+                                            <span style="font-size: 0.75rem; color: var(--gray-600); background: var(--gray-100); padding: 0.1rem 0.4rem; border-radius: 4px;">
+                                                <i class="fas fa-map-marker-alt" style="color: var(--azure-blue); font-size: 0.7rem;"></i> {{ c.country }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Subscription & Renewal -->
+                                <td>
+                                    <div class="sub-details">
+                                        <div>
+                                            {% set sub_clean = (c.subscription or 'Basic') | lower %}
+                                            <span class="badge-plan {% if 'pro' in sub_clean %}pro{% elif 'enterprise' in sub_clean %}enterprise{% endif %}">
+                                                {{ (c.subscription or 'Basic') | title }}
+                                            </span>
+                                            <span class="sub-cycle-text" style="margin-left: 0.25rem;">
+                                                {{ (c.billing_cycle or 'monthly') | title }}
+                                            </span>
+                                        </div>
+                                        {% if c.renewal_date %}
+                                        <div class="sub-cycle-text" title="Renewal date">
+                                            <i class="far fa-calendar-alt" style="font-size: 0.7rem;"></i> Renews: {{ c.renewal_date }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <!-- Status Badge -->
+                                <td>
+                                    {% set stat = c.subscription_status or 'active' %}
+                                    {% if stat == 'active' %}
+                                    <span class="badge badge-status-active">
+                                        <span class="badge-dot"></span> Active
+                                    </span>
+                                    {% elif stat == 'grace_period' %}
+                                    <span class="badge badge-status-grace">
+                                        <span class="badge-dot"></span> Grace period
+                                    </span>
+                                    {% elif stat == 'limit_control' %}
+                                    <span class="badge badge-status-limit">
+                                        <span class="badge-dot"></span> Limit control
+                                    </span>
+                                    {% else %}
+                                    <span class="badge badge-status-inactive">
+                                        <span class="badge-dot"></span> Inactive
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <!-- Devices / Peers -->
+                                <td>
+                                    <div class="peers-status-box" title="{{ c.online_count or 0 }} online out of {{ c.peers_count or 0 }} devices (limit: {{ c.allowed_peers_count or 5 }})">
+                                        <span class="peers-online-indicator {% if not c.online_count or c.online_count == 0 %}zero{% endif %}">
+                                            <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                                            {{ c.online_count or 0 }} online
+                                        </span>
+                                        <span style="color: var(--gray-500); font-size: 0.8rem;">/</span>
+                                        <span style="color: var(--gray-700); font-weight: 500;">
+                                            {{ c.peers_count or 0 }} <span style="color: var(--gray-500); font-size: 0.75rem;">(max {{ c.allowed_peers_count or 5 }})</span>
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <!-- Created Date -->
+                                <td>
+                                    <div class="date-cell">
+                                        <span>{{ c.created_date or (c.created_at[:10] if c.created_at else '-') }}</span>
+                                        {% if c.created_at and c.created_at|length > 10 %}
+                                        <small>{{ c.created_at[11:16] }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="action-cell">
+                                    <a href="/customers/{{ c.id }}" class="btn-table-action"
+                                        onclick="event.stopPropagation();" title="View customer details">
+                                        <span>View</span> <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- Empty State (hidden by default) -->
+                    <div class="empty-state" id="emptyState" style="display: none;">
+                        <i class="fas fa-users-slash fa-3x"></i>
+                        <h3>No matching customers</h3>
+                        <p>Try adjusting your search query or filter options.</p>
+                    </div>
                 </div>
-                {% endfor %}
+
+                <!-- Pagination Footer -->
+                <div class="pagination-container" id="paginationContainer">
+                    <div class="pagination-info" id="paginationInfo">
+                        Showing 0 to 0 of 0 customers
+                    </div>
+                    <div class="pagination-controls" id="paginationControls">
+                        <!-- Rendered by JavaScript -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -831,72 +1502,138 @@
                 <button type="button" class="close-btn" onclick="hideCreateModal()" aria-label="Close modal">&times;</button>
             </div>
             <div class="modal-body">
-                <!-- القسم الأول: حساب الدخول -->
-                <h4 style="margin-bottom: 0.75rem; color: var(--gray-700); font-size: 1rem;">Account Credentials</h4>
+                <!-- Credentials Section -->
+                <div class="form-section-title">
+                    <i class="fas fa-key" style="color: var(--azure-blue);"></i> Account Credentials
+                </div>
                 <div class="modal-form-grid-2">
                     <div class="form-group">
-                        <label>Username *</label>
-                        <input type="text" id="portalUsername" placeholder="e.g., john_doe" pattern="^[a-zA-Z0-9_-]{3,32}$" required>
-                        <small style="display: block; margin-top: 4px; font-size: 11px; color: var(--gray-500);">Letters, numbers, _ and - only.</small>
+                        <label for="portalUsername">Username *</label>
+                        <input type="text" id="portalUsername" placeholder="e.g. john_doe" pattern="^[a-zA-Z0-9_-]{3,32}$" required autocomplete="off">
+                        <small style="display: block; margin-top: 4px; font-size: 11px; color: var(--gray-500);">Letters, numbers, _ and - only (3-32 chars).</small>
                     </div>
                     <div class="form-group">
-                        <label>Password *</label>
-                        <input type="password" id="portalPassword" placeholder="•••••••• (min 6 chars)" required>
+                        <label for="portalPassword">Password *</label>
+                        <input type="password" id="portalPassword" placeholder="Min. 6 characters" required autocomplete="new-password">
                     </div>
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid var(--gray-200); margin: 0.5rem 0 1.25rem 0;">
 
-                <!-- القسم الثاني: معلومات العملاء والتواصل -->
-                <h4 style="margin-bottom: 0.75rem; color: var(--gray-700); font-size: 1rem;">Client Info</h4>
+                <!-- Client Details Section -->
+                <div class="form-section-title">
+                    <i class="fas fa-user" style="color: var(--azure-blue);"></i> Client Details
+                </div>
                 <div class="modal-form-grid-2">
                     <div class="form-group">
-                        <label>Client Name *</label>
-                        <input type="text" id="clientName" placeholder="e.g., John Doe" required>
+                        <label for="clientName">Client Name *</label>
+                        <input type="text" id="clientName" placeholder="e.g. John Doe" required>
                     </div>
                     <div class="form-group">
-                        <label>Company Name</label>
-                        <input type="text" id="clientCompanyName" placeholder="e.g., Tech Solutions Inc.">
+                        <label for="clientCompanyName">Company Name</label>
+                        <input type="text" id="clientCompanyName" placeholder="e.g. Tech Solutions Inc.">
                     </div>
                 </div>
 
                 <div class="modal-form-grid-2">
                     <div class="form-group">
-                        <label>Email *</label>
+                        <label for="clientEmail">Email *</label>
                         <input type="email" id="clientEmail" placeholder="client@example.com" required>
                     </div>
                     <div class="form-group">
-                        <label>Phone Number</label>
+                        <label for="clientPhone">Phone Number</label>
                         <input type="tel" id="clientPhone" placeholder="+1234567890">
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label>Country</label>
-                    <input type="text" id="clientCountry" placeholder="e.g., Egypt, KSA, USA">
+                    <label for="clientCountry">Country</label>
+                    <input type="text" id="clientCountry" placeholder="e.g. Egypt, KSA, UAE, USA">
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid var(--gray-200); margin: 0.5rem 0 1.25rem 0;">
 
-                <!-- القسم الثالث: إعدادات الاشتراك -->
-                <h4 style="margin-bottom: 0.75rem; color: var(--gray-700); font-size: 1rem;">Subscription</h4>
+                <!-- Subscription Section -->
+                <div class="form-section-title">
+                    <i class="fas fa-credit-card" style="color: var(--azure-blue);"></i> Subscription Plan
+                </div>
                 <div class="form-group">
+                    <label for="clientSubscription">Plan</label>
                     <select id="clientSubscription">
-                        <option value="basic">Basic</option>
-                        <option value="pro">Pro</option>
-                        <option value="enterprise">Enterprise</option>
+                        <option value="basic">Basic / Starter (5 peers)</option>
+                        <option value="pro">Pro (15 peers)</option>
+                        <option value="enterprise">Enterprise (50 peers)</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="hideCreateModal()">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="createCustomer()">Create</button>
+                <button type="button" class="btn btn-success" id="btnSubmitCreate" onclick="createCustomer()">Create Customer</button>
             </div>
         </div>
     </div>
 
+    <!-- Floating Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <script>
-        // Sidebar Mobile Drawer Controller
+        // Custom Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast-msg ${type}`;
+            
+            const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            toast.innerHTML = `<i class="fas ${iconClass}" style="color: ${type === 'success' ? '#10b981' : '#ef4444'};"></i> <span>${escapeHtml(message)}</span>`;
+            
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyText(text, successMsg = 'Copied') {
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(successMsg, 'success');
+                }).catch(() => {
+                    fallbackCopy(text, successMsg);
+                });
+            } else {
+                fallbackCopy(text, successMsg);
+            }
+        }
+
+        function fallbackCopy(text, successMsg) {
+            const input = document.createElement('input');
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            showToast(successMsg, 'success');
+        }
+
+        function navigateToCustomer(customerId) {
+            if (customerId) {
+                window.location.href = `/customers/${customerId}`;
+            }
+        }
+
+        // Sidebar Controller
         (function () {
             const sidebar = document.getElementById('admin-sidebar');
             const overlay = document.getElementById('sidebar-overlay');
@@ -926,13 +1663,8 @@
                 });
             }
 
-            if (closeBtn) {
-                closeBtn.addEventListener('click', closeSidebar);
-            }
-
-            if (overlay) {
-                overlay.addEventListener('click', closeSidebar);
-            }
+            if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+            if (overlay) overlay.addEventListener('click', closeSidebar);
 
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape') {
@@ -957,7 +1689,186 @@
             }
         })();
 
-        // Create Customer Modal Controller
+        // Pagination and Filtering Engine
+        const PAGE_SIZE = 20;
+        let currentPage = 1;
+        let allRows = [];
+        let filteredRows = [];
+
+        function initCustomerTable() {
+            const tbody = document.getElementById('customersTableBody');
+            if (!tbody) return;
+
+            allRows = Array.from(tbody.querySelectorAll('.customer-row'));
+            applyFilterAndPaginate();
+
+            const searchInput = document.getElementById('customerSearchInput');
+            const statusFilter = document.getElementById('statusFilterSelect');
+            const planFilter = document.getElementById('planFilterSelect');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    currentPage = 1;
+                    applyFilterAndPaginate();
+                });
+            }
+
+            if (statusFilter) {
+                statusFilter.addEventListener('change', () => {
+                    currentPage = 1;
+                    applyFilterAndPaginate();
+                });
+            }
+
+            if (planFilter) {
+                planFilter.addEventListener('change', () => {
+                    currentPage = 1;
+                    applyFilterAndPaginate();
+                });
+            }
+        }
+
+        function applyFilterAndPaginate() {
+            const searchInput = document.getElementById('customerSearchInput');
+            const statusFilter = document.getElementById('statusFilterSelect');
+            const planFilter = document.getElementById('planFilterSelect');
+
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+            const statusVal = statusFilter ? statusFilter.value.trim() : '';
+            const planVal = planFilter ? planFilter.value.trim().toLowerCase() : '';
+
+            filteredRows = allRows.filter(row => {
+                const searchData = (row.getAttribute('data-search') || '').toLowerCase();
+                const rowStatus = row.getAttribute('data-status') || '';
+                const rowPlan = (row.getAttribute('data-plan') || '').toLowerCase();
+
+                const matchesQuery = !query || searchData.includes(query);
+                const matchesStatus = !statusVal || rowStatus === statusVal;
+                const matchesPlan = !planVal || rowPlan.includes(planVal);
+
+                return matchesQuery && matchesStatus && matchesPlan;
+            });
+
+            const totalFiltered = filteredRows.length;
+            const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+
+            const startIndex = (currentPage - 1) * PAGE_SIZE;
+            const endIndex = startIndex + PAGE_SIZE;
+
+            // Hide all rows, display slice
+            allRows.forEach(row => row.style.display = 'none');
+            filteredRows.slice(startIndex, endIndex).forEach(row => {
+                row.style.display = '';
+            });
+
+            // Empty State
+            const emptyState = document.getElementById('emptyState');
+            const table = document.getElementById('customersTable');
+            if (emptyState && table) {
+                if (totalFiltered === 0) {
+                    emptyState.style.display = 'block';
+                    table.style.display = 'none';
+                } else {
+                    emptyState.style.display = 'none';
+                    table.style.display = 'table';
+                }
+            }
+
+            // Update Pagination Info
+            const paginationInfo = document.getElementById('paginationInfo');
+            if (paginationInfo) {
+                if (totalFiltered === 0) {
+                    paginationInfo.textContent = 'Showing 0 customers';
+                } else {
+                    const startDisp = startIndex + 1;
+                    const endDisp = Math.min(endIndex, totalFiltered);
+                    paginationInfo.textContent = `Showing ${startDisp} to ${endDisp} of ${totalFiltered} customers`;
+                }
+            }
+
+            renderPaginationControls(totalPages);
+        }
+
+        function renderPaginationControls(totalPages) {
+            const container = document.getElementById('paginationControls');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            // Prev Button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'page-btn';
+            prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.title = 'Previous page';
+            prevBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    applyFilterAndPaginate();
+                }
+            });
+            container.appendChild(prevBtn);
+
+            // Page Number Buttons with smart ellipsis
+            const pageNumbers = getPageNumbers(currentPage, totalPages);
+            pageNumbers.forEach(p => {
+                if (p === '...') {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'page-btn';
+                    ellipsis.style.border = 'none';
+                    ellipsis.style.background = 'transparent';
+                    ellipsis.style.cursor = 'default';
+                    ellipsis.textContent = '...';
+                    container.appendChild(ellipsis);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = `page-btn ${p === currentPage ? 'active' : ''}`;
+                    btn.textContent = p;
+                    btn.addEventListener('click', () => {
+                        currentPage = p;
+                        applyFilterAndPaginate();
+                    });
+                    container.appendChild(btn);
+                }
+            });
+
+            // Next Button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'page-btn';
+            nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.title = 'Next page';
+            nextBtn.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    applyFilterAndPaginate();
+                }
+            });
+            container.appendChild(nextBtn);
+        }
+
+        function getPageNumbers(current, total) {
+            if (total <= 7) {
+                return Array.from({ length: total }, (_, i) => i + 1);
+            }
+            if (current <= 4) {
+                return [1, 2, 3, 4, 5, '...', total];
+            }
+            if (current >= total - 3) {
+                return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+            }
+            return [1, '...', current - 1, current, current + 1, '...', total];
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', initCustomerTable);
+
+        // Modal Controllers
         function showCreateModal() {
             const fieldsToClear = [
                 'portalUsername', 'portalPassword', 'clientName',
@@ -969,6 +1880,9 @@
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
+
+            const sub = document.getElementById('clientSubscription');
+            if (sub) sub.value = 'basic';
 
             const modal = document.getElementById('createModal');
             if (modal) {
@@ -1006,21 +1920,21 @@
             const mode = 'sdwan_full';
 
             if (!username || !password || !client_name || !client_email) {
-                alert('Please fill all required fields: Username, Password, Client Name, and Email.');
+                showToast('Please fill all required fields.', 'error');
                 return;
             }
 
             if (!/^[a-zA-Z0-9_-]{3,32}$/.test(username)) {
-                alert('Username must be 3-32 characters (letters, numbers, _ and - only).');
+                showToast('Username must be 3-32 characters (letters, numbers, _ and - only).', 'error');
                 return;
             }
 
             if (password.length < 6) {
-                alert('Password must be at least 6 characters.');
+                showToast('Password must be at least 6 characters.', 'error');
                 return;
             }
 
-            const createBtn = event ? event.target : null;
+            const createBtn = document.getElementById('btnSubmitCreate');
             if (createBtn) {
                 createBtn.disabled = true;
                 createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
@@ -1047,17 +1961,18 @@
 
                 if (response.ok && data.success) {
                     hideCreateModal();
-                    location.reload();
+                    showToast('Customer created successfully', 'success');
+                    setTimeout(() => location.reload(), 600);
                 } else {
-                    alert('Error: ' + (data.error || data.detail || 'Failed to create customer'));
+                    showToast(data.error || data.detail || 'Failed to create customer', 'error');
                 }
             } catch (error) {
                 console.error("Fetch Exception:", error);
-                alert('Error connecting to server: ' + error.message);
+                showToast('Connection error. Please try again.', 'error');
             } finally {
                 if (createBtn) {
                     createBtn.disabled = false;
-                    createBtn.innerHTML = 'Create';
+                    createBtn.innerHTML = 'Create Customer';
                 }
             }
         }

@@ -47,6 +47,11 @@
         }
 
         if (isPeerOnline) {
+            const uptimeEl = document.getElementById("peer-uptime-display");
+            const initialUptime = uptimeEl ? uptimeEl.getAttribute("data-uptime-seconds") : "";
+            if (initialUptime !== "" && initialUptime !== null) {
+                startUptimeStopwatch(Number(initialUptime));
+            }
             fetchPeerVersionSilent();
         }
     }
@@ -679,6 +684,35 @@
         return `${prefix}${pad(hours)}:${pad(minutes)}:${pad(secs)}`;
     }
 
+    let uptimeBaseSeconds = 0;
+    let uptimeBaseTs = 0;
+    let uptimeIntervalId = null;
+
+    function renderUptimeTick() {
+        const uptimeEl = document.getElementById("peer-uptime-display");
+        if (!uptimeEl) return;
+        const elapsed = (Date.now() - uptimeBaseTs) / 1000;
+        uptimeEl.textContent = formatUptime(uptimeBaseSeconds + elapsed);
+    }
+
+    function startUptimeStopwatch(seconds) {
+        if (uptimeIntervalId) {
+            clearInterval(uptimeIntervalId);
+            uptimeIntervalId = null;
+        }
+        uptimeBaseSeconds = seconds;
+        uptimeBaseTs = Date.now();
+        renderUptimeTick();
+        uptimeIntervalId = setInterval(renderUptimeTick, 1000);
+    }
+
+    function stopUptimeStopwatch() {
+        if (uptimeIntervalId) {
+            clearInterval(uptimeIntervalId);
+            uptimeIntervalId = null;
+        }
+    }
+
     async function fetchPeerVersionSilent() {
         if (!peerId) return;
         // 1. Fetch version directly from agent /health
@@ -694,12 +728,16 @@
                     if (updatesInstalledVal) updatesInstalledVal.textContent = healthVersion;
                 }
                 if (typeof hData.uptime === "number") {
-                    const uptimeEl = document.getElementById("peer-uptime-display");
-                    if (uptimeEl) uptimeEl.textContent = formatUptime(hData.uptime);
+                    startUptimeStopwatch(hData.uptime);
+                } else {
+                    stopUptimeStopwatch();
                 }
+            } else {
+                stopUptimeStopwatch();
             }
         } catch (e) {
             // Health check silent fail
+            stopUptimeStopwatch();
         }
 
         // 2. Fetch update discovery status

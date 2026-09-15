@@ -100,7 +100,7 @@
 
                 <div class="info-item">
                     <span class="info-label">Uptime</span>
-                    <span class="info-value" id="peer-uptime-display">{{ peer_uptime or '—' }}</span>
+                    <span class="info-value" id="peer-uptime-display" data-uptime-seconds="{{ peer_uptime_seconds if peer_uptime_seconds is not none else '' }}">{{ peer_uptime or '—' }}</span>
                 </div>
 
                 <div class="info-item">

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css?v=13">
+<link rel="stylesheet" href="assets/styles.css?v=14">
 </head>
 <body dir="rtl">
 
@@ -43,7 +43,7 @@
       <div class="hero__cta">
         <a href="#contact" class="btn btn--primary" data-ar="اطلب عرضا تقديميا" data-en="Request a demo">اطلب عرضا تقديميا
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg></a>
-        <a href="#watch" class="btn btn--ghost" data-ar="شاهد كيف يعمل" data-en="See how it works">شاهد كيف يعمل</a>
+        <a href="#install" class="btn btn--ghost" data-ar="شاهد كيف يعمل" data-en="See how it works">شاهد كيف يعمل</a>
       </div>
     </div>
     <div class="hero__visual">
@@ -110,22 +110,6 @@
   </div>
 </section>
 
-<!-- ===== DEMO VIDEO (before core idea) ===== -->
-<section class="section section--grey" id="watch">
-  <div class="wrap">
-    <div class="section-head section-head--center reveal">
-      <span class="eyebrow" data-ar="شاهد كيف يعمل" data-en="See how it works">شاهد كيف يعمل</span>
-      <h2 class="h-lg" data-ar="Networkat Guard أثناء العمل" data-en="Networkat Guard in action">Networkat Guard أثناء العمل</h2>
-    </div>
-    <div class="video-frame reveal">
-      <video controls preload="metadata" playsinline poster="assets/img/guard-demo-poster.jpg">
-        <source src="assets/video/netguard.mp4" type="video/mp4">
-        <span data-ar="متصفحك لا يدعم تشغيل الفيديو." data-en="Your browser does not support video playback.">متصفحك لا يدعم تشغيل الفيديو.</span>
-      </video>
-    </div>
-    <p class="video-cap reveal" data-ar="فيديو توضيحي: التنصيب، ربط فرع، الداشبورد، وحجب المواقع." data-en="Walkthrough: install, link a branch, the dashboard, and web blocking.">فيديو توضيحي: التنصيب، ربط فرع، الداشبورد، وحجب المواقع.</p>
-  </div>
-</section>
 
 <!-- ===== COMPARISON ===== -->
 <section class="section" id="compare">
@@ -322,12 +306,67 @@
   </div>
 </section>
 
-<!-- ===== INSTALL ===== -->
+<!-- ===== INSTALL & DEMO VIDEOS ===== -->
 <section class="section section--grey" id="install">
   <div class="wrap">
     <div class="section-head section-head--center reveal">
+      <span class="eyebrow" data-ar="شاهد كيف يعمل" data-en="See how it works">شاهد كيف يعمل</span>
+      <h2 class="h-lg" data-ar="Networkat Guard أثناء العمل" data-en="Networkat Guard in action">Networkat Guard أثناء العمل</h2>
+    </div>
+    <div class="video-frame reveal" id="watch">
+      <video controls preload="metadata" playsinline poster="assets/img/guard-demo-poster.jpg">
+        <source src="assets/video/netguard.mp4" type="video/mp4">
+        <span data-ar="متصفحك لا يدعم تشغيل الفيديو." data-en="Your browser does not support video playback.">متصفحك لا يدعم تشغيل الفيديو.</span>
+      </video>
+    </div>
+    <p class="video-cap reveal" data-ar="فيديو توضيحي: التنصيب، ربط فرع، الداشبورد، وحجب المواقع." data-en="Walkthrough: install, link a branch, the dashboard, and web blocking.">فيديو توضيحي: التنصيب، ربط فرع، الداشبورد، وحجب المواقع.</p>
+
+    <!-- 3 sub-videos row -->
+    <div class="video-subgrid reveal">
+      <div class="video-card">
+        <div class="video-card__frame">
+          <video controls preload="metadata" playsinline>
+            <source src="assets/video/VPN%20and%20MPLS%20alternate.mp4" type="video/mp4">
+            <span data-ar="متصفحك لا يدعم تشغيل الفيديو." data-en="Your browser does not support video playback.">متصفحك لا يدعم تشغيل الفيديو.</span>
+          </video>
+        </div>
+        <div class="video-card__body">
+          <h4 class="video-card__title" data-ar="VPN and MPLS alternate" data-en="VPN and MPLS alternate">VPN and MPLS alternate</h4>
+          <!-- <p class="video-card__desc" data-ar="ربط مشفر وسريع بين المقرات والفروع عبر WireGuard." data-en="Fast, encrypted branch-to-HQ connectivity over WireGuard.">ربط مشفر وسريع بين المقرات والفروع عبر WireGuard.</p> -->
+        </div>
+      </div>
+
+      <div class="video-card">
+        <div class="video-card__frame">
+          <video controls preload="metadata" playsinline>
+            <source src="assets/video/hostname%20filtering.mp4" type="video/mp4">
+            <span data-ar="متصفحك لا يدعم تشغيل الفيديو." data-en="Your browser does not support video playback.">متصفحك لا يدعم تشغيل الفيديو.</span>
+          </video>
+        </div>
+        <div class="video-card__body">
+          <h4 class="video-card__title" data-ar="hostname filtering" data-en="hostname filtering">hostname filtering</h4>
+          <!-- <p class="video-card__desc" data-ar="التحكم في وصول النطاقات وحجب العناوين المحددة فوريا." data-en="Control domain access and block specific hostnames instantly.">التحكم في وصول النطاقات وحجب العناوين المحددة فوريا.</p> -->
+        </div>
+      </div>
+
+      <div class="video-card">
+        <div class="video-card__frame">
+          <video controls preload="metadata" playsinline>
+            <source src="assets/video/web%20filter.mp4" type="video/mp4">
+            <span data-ar="متصفحك لا يدعم تشغيل الفيديو." data-en="Your browser does not support video playback.">متصفحك لا يدعم تشغيل الفيديو.</span>
+          </video>
+        </div>
+        <div class="video-card__body">
+          <h4 class="video-card__title" data-ar="web filter" data-en="web filter">web filter</h4>
+          <!-- <p class="video-card__desc" data-ar="سياسات حجب ذكية لتصنيفات المواقع وتأمين الشبكة." data-en="Smart category-based web filtering to secure your network.">سياسات حجب ذكية لتصنيفات المواقع وتأمين الشبكة.</p> -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Installation Steps Heading -->
+    <div class="section-head section-head--center reveal" style="margin-top:clamp(48px,7vw,80px)">
       <span class="eyebrow" data-ar="التنصيب" data-en="Installation">التنصيب</span>
-      <h2 class="h-lg" data-ar="لا تنصيب أسهل من هذا" data-en="No setup is easier than this">لا تنصيب أسهل من هذا</h2>
+      <h3 class="h-lg" data-ar="لا تنصيب أسهل من هذا" data-en="No setup is easier than this">لا تنصيب أسهل من هذا</h3>
       <p class="lead" style="margin-inline:auto" data-ar="من إنشاء الحساب حتى تشغيل الجدار في دقائق معدودة." data-en="From creating your account to a running firewall in minutes.">من إنشاء الحساب حتى تشغيل الجدار في دقائق معدودة.</p>
     </div>
 

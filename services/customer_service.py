@@ -71,17 +71,30 @@ class CustomerService:
             online_count = len(c_peer_ids.intersection(online_peer_ids))
             tokens_count = self.token_repo.count_by_client(c.user_id)
 
+            sub_name = (c.plan.name if c.plan else c.subscription) or 'Basic'
+            sub_status = c.subscription_status or ('active' if c.active else 'inactive')
+
             customers_data.append({
-                'id': c.user_id,
+                'id': str(c.user_id),
                 'name': c.client_name,
                 'username': c.username,
+                'company_name': c.client_company_name or '',
+                'email': c.client_email or '',
+                'phone': c.client_phone_number or '',
+                'country': c.client_country or '',
+                'subscription': sub_name,
+                'subscription_status': sub_status,
+                'billing_cycle': c.billing_cycle or 'monthly',
+                'renewal_date': c.renewal_date.strftime('%Y-%m-%d') if c.renewal_date else None,
                 'created_at': c.created_at.strftime('%Y-%m-%d %H:%M:%S') if c.created_at else None,
+                'created_date': c.created_at.strftime('%b %d, %Y') if c.created_at else None,
                 'tokens_count': tokens_count,
                 'peers_count': peers_count,
                 'edges_count': peers_count,
                 'online_count': online_count,
                 'allowed_peers_count': c.allowed_peers_count or 5,
-                'netbird_group_id': c.netbird_group_id
+                'netbird_group_id': c.netbird_group_id,
+                'active': bool(c.active)
             })
         return customers_data
     
