@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 from datetime import datetime
 from functools import wraps
@@ -41,6 +42,7 @@ def _get_api_headers(extra_headers=None):
         headers.update(extra_headers)
     return headers
     
+
 @admin_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -91,12 +93,15 @@ def customer_details(customer_id):
 @login_required
 def create_customer():
     data = request.get_json() or {}
-    username = data.get('username')
+    username = data.get('username', '').strip()
     password = data.get('password')
     client_name = data.get('client_name') or data.get('name')
 
     if not username or not password or not client_name:
         return jsonify({'success': False, 'error': 'Required fields (username, password, client_name) are missing'}), 400
+
+    if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', username):
+        return jsonify({'success': False, 'error': 'Username must be 3-32 characters and contain only letters, numbers, hyphens, and underscores.'}), 400
 
     try:
         existing_user = customer_service.client_repo.get_by_username(username)

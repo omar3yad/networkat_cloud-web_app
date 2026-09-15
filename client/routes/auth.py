@@ -1,5 +1,6 @@
 import time
 import random
+import re
 import requests
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
@@ -81,6 +82,10 @@ def register():
 
         if not username or not password or not client_name or not client_email:
             flash("All fields marked with * are required.", "error")
+            return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
+
+        if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', username):
+            flash("Username must be between 3 and 32 characters and can only contain letters, numbers, hyphens, and underscores.", "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
         if len(password) < 6:

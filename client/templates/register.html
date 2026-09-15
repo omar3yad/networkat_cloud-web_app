@@ -220,7 +220,8 @@
 
                 <div class="form-group">
                     <label>Username *</label>
-                    <input type="text" name="username" placeholder="Choose a username" value="{{ request.form.get('username', '') }}" required>
+                    <input type="text" id="username" name="username" placeholder="Choose a username" value="{{ request.form.get('username', '') }}" pattern="^[a-zA-Z0-9_-]{3,32}$" minlength="3" maxlength="32" required autocomplete="username">
+                    <small style="display: block; margin-top: 4px; font-size: 11px; color: #64748b;">Letters, numbers, underscores and hyphens only (no @, $, &, . or spaces).</small>
                 </div>
 
                 <div class="form-group">
@@ -315,14 +316,43 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script>
-        // التحقق من تطابق كلمتي المرور في المتصفح وتوليد توكن reCAPTCHA قبل إرسال الفورم
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) {
+            usernameInput.addEventListener('input', function() {
+                // Remove spaces, @, $, &, ., and any special symbols except alphanumeric, _ and -
+                this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, '');
+            });
+        }
+
+        function showFormError(msg) {
+            let errDiv = document.getElementById('clientErrorAlert');
+            if (!errDiv) {
+                errDiv = document.createElement('div');
+                errDiv.id = 'clientErrorAlert';
+                errDiv.className = 'alert alert-error';
+                const form = document.getElementById('registerForm');
+                form.parentNode.insertBefore(errDiv, form);
+            }
+            errDiv.textContent = msg;
+            errDiv.style.display = 'block';
+            errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
         document.getElementById('registerForm').addEventListener('submit', function (e) {
             e.preventDefault();
+            const usernameVal = usernameInput ? usernameInput.value.trim() : '';
+            const usernamePattern = /^[a-zA-Z0-9_-]{3,32}$/;
+            if (!usernamePattern.test(usernameVal)) {
+                showFormError('Username must be 3-32 characters (letters, numbers, _ and - only)');
+                if (usernameInput) usernameInput.focus();
+                return;
+            }
+
             const pwd = document.getElementById('password').value;
             const confirmPwd = document.getElementById('confirm_password').value;
- 
+
             if (pwd !== confirmPwd) {
-                alert('Passwords do not match!');
+                showFormError('Passwords do not match');
                 return;
             }
 
@@ -330,7 +360,6 @@
             if (siteKey) {
                 grecaptcha.ready(function() {
                     grecaptcha.execute(siteKey, {action: 'register'}).then(function(token) {
-                        // Add the token to the form
                         const tokenInput = document.createElement('input');
                         tokenInput.type = 'hidden';
                         tokenInput.name = 'g-recaptcha-response';
@@ -338,13 +367,10 @@
                         
                         const form = document.getElementById('registerForm');
                         form.appendChild(tokenInput);
-                        
-                        // Submit the form programmatically
                         form.submit();
                     });
                 });
             } else {
-                // Submit directly if reCAPTCHA is not configured
                 document.getElementById('registerForm').submit();
             }
         });
