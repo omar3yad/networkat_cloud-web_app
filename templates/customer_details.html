@@ -1469,7 +1469,7 @@
                     const peerName = row.getAttribute('data-peer-name');
                     const statusBadge = document.getElementById(`status-badge-${peerId}`);
 
-                    const peerData = peers.find(p => p.id === peerId || p.name === peerName);
+                    const peerData = peers.find(p => p.id === peerId);
                     const isConnected = peerData ? (peerData.connected === true) : false;
                     let lastSeenRaw = (peerData && peerData.last_seen)
                         ? peerData.last_seen
@@ -1593,6 +1593,7 @@
         }
 
         // --- Portal Users Management ---
+3
         async function loadUsers() {
             try {
                 const response = await fetch('/api/customers/{{ customer.user_id if customer.user_id else customer.id }}/users');

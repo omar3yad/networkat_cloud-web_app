@@ -1,6 +1,6 @@
 import time
 from repositories.user_repository import UserRepository
-from utils.password import verify_password, hash_password
+from utils.password import verify_password, hash_password, needs_rehash
 from utils.two_factor import (
     generate_totp_secret,
     get_totp_uri,
@@ -22,19 +22,22 @@ class AuthService:
     def authenticate(self, username, password):
         user = self.user_repo.get_by_username(username)
         if not user:
-            print(f"[DEBUG AUTH] User '{username}' was NOT found in DB.")
             return False, "Invalid credentials"
 
         if not user.is_active:
-            print(f"[DEBUG AUTH] User '{username}' is deactivated.")
             return False, "User account is deactivated"
 
         user_password = getattr(user, 'password_hashed', getattr(user, 'password_hash', None))
-        print(f"[DEBUG AUTH] Stored hash found: {bool(user_password)}")
 
         if not user_password or not verify_password(password, user_password):
-            print(f"[DEBUG AUTH] Password verification failed for '{username}'.")
             return False, "Invalid credentials"
+
+        # Lazy rehash: Upgrade legacy SHA-256 hashes to bcrypt on successful login
+        if needs_rehash(user_password):
+            try:
+                self.user_repo.update_password(user, password)
+            except Exception:
+                pass
 
         # Check if 2FA is enabled for this admin / staff user
         if getattr(user, 'is_2fa_enabled', False):
@@ -74,11 +77,10 @@ class AuthService:
 
     def seed_default_admin(self):
         if self.user_repo.count() == 0:
-            pwd_hash = hash_password("admin123")
             self.user_repo.create(
                 username="admin",
                 email="admin@networkat.com",
                 full_name="System Administrator",
-                password_hashed=pwd_hash,
+                raw_password="admin123",
                 role="admin"
             )
