@@ -40,7 +40,7 @@ from dotenv import load_dotenv
 # The compose env_file isn't propagated into the process environment on this
 # host - every app relies on python-dotenv reading /app/.env at import time
 # (see config/settings.py). Do the same here.
-load_dotenv()
+load_dotenv(override=True)
 
 # ---------------------------------------------------------------------------
 # Config

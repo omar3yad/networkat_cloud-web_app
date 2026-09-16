@@ -1,3 +1,4 @@
+import os
 from repositories.edge_repository import EdgeRepository
 from repositories.customer_repository import CustomerRepository
 import requests
@@ -92,7 +93,7 @@ class EdgeService:
 
             if not netbird_peers:
                 FASTAPI_BASE_URL = "https://api.networkat.cloud/api/v2/netbird"
-                token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
+                token = os.getenv("INTERNAL_API_KEY", "")
                 
                 headers = {
                     "accept": "application/json",
@@ -262,7 +263,7 @@ class EdgeService:
         FASTAPI_BASE_URL = "https://api.networkat.cloud/api/v2/netbird"
         
         # 1. إضافة الـ Bearer Token
-        token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
+        token = os.getenv("INTERNAL_API_KEY", "")
         headers = {
             "accept": "application/json",
             "Content-Type": "application/json",

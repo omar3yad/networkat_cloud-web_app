@@ -1,3 +1,4 @@
+import os
 import time
 import requests
 import logging
@@ -33,7 +34,7 @@ class NetBirdService:
 
     @staticmethod
     def get_api_headers(extra_headers: dict = None) -> dict:
-        token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
+        token = os.getenv("INTERNAL_API_KEY", "")
         headers = {
             'Accept': 'application/json',
             'Authorization': f'Bearer {token}',

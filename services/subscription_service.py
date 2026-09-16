@@ -24,7 +24,7 @@ class SubscriptionService:
     def __init__(self):
         self.client_repo = ClientRepository()
         self.plan_repo = SubscriptionPlanRepository()
-        self.api_key = os.getenv("INTERNAL_API_KEY", "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874")
+        self.api_key = os.getenv("INTERNAL_API_KEY", "")
         self.base_url = self.NETBIRD_API_URL.rstrip("/")
 
     def _get_headers(self) -> dict:

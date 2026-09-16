@@ -1,10 +1,13 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
+
 from fastapi import Security, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi_app.database import SessionLocal
 
-# API_SECRET_KEY = os.getenv("INTERNAL_API_KEY")
-API_SECRET_KEY = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
+API_SECRET_KEY = os.getenv("INTERNAL_API_KEY")
 
 security_scheme = HTTPBearer()
 

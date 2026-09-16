@@ -16,7 +16,7 @@ import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Add application root to python path if not present
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

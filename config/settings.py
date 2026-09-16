@@ -1,7 +1,7 @@
 # /opt/networkat_sdwan/core/web_app/config/settings.py
 import os
 from dotenv import load_dotenv
-load_dotenv()
+load_dotenv(override=True)
 class Config:
     """
     Base Application Configuration

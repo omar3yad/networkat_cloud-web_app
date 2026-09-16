@@ -61,7 +61,7 @@ def _get_api_base_url():
     return current_app.config.get('NETBIRD_API_BASE_URL', 'https://api.networkat.cloud')
 
 def _get_api_headers(extra_headers=None):
-    token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
+    token = os.getenv("INTERNAL_API_KEY", "")
     headers = {
         'Accept': 'application/json',
         'Authorization': f'Bearer {token}',

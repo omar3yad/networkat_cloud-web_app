@@ -1,4 +1,5 @@
 # /opt/networkat_sdwan/core/web_app/services/customer_service.py
+import os
 import logging
 import secrets
 import requests
@@ -110,8 +111,7 @@ class CustomerService:
         if hasattr(client, 'netbird_group_id') and client.netbird_group_id:
             FASTAPI_BASE_URL = "https://api.networkat.cloud/api/v2/netbird"
             
-            # 🔥 التعديل هنا: إضافة التوكن في الـ Headers
-            token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
+            token = os.getenv("INTERNAL_API_KEY", "")
             headers = {
                 "accept": "application/json",
                 "Authorization": f"Bearer {token}"
@@ -177,7 +177,7 @@ class CustomerService:
         PKGS_SERVERS_GROUP_ID = "dafif2pttloc73fghbi0"  # networkat_pkgs_servers
 
         # 1. إضافة Bearer Token في الـ Headers
-        token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
+        token = os.getenv("INTERNAL_API_KEY", "")
         headers = {
             "Content-Type": "application/json",
             "accept": "application/json",
@@ -443,7 +443,7 @@ class CustomerService:
         """
         FASTAPI_BASE_URL = "https://api.networkat.cloud/api/v2/netbird"
         
-        token = "57e443f0625abfa313425a020626b078899d4db7ff8d09d59c5f7ae4d0c6d874"
+        token = os.getenv("INTERNAL_API_KEY", "")
         headers = {
             "accept": "application/json",
             "Content-Type": "application/json",
