@@ -6,7 +6,11 @@ from flask import render_template, request, redirect, url_for, session, flash, j
 
 from client.blueprint import client_bp
 from services.customer_service import CustomerService
-from utils.email import send_verification_email, send_password_reset_email
+from utils.email import send_verification_email, send_password_reset_email, send_2fa_email_otp
+from utils.two_factor import (
+    verify_totp_code,
+    verify_and_consume_recovery_code,
+)
 
 customer_service = CustomerService()
 
@@ -21,6 +25,21 @@ def login():
         password = request.form.get('password')
         success, res = customer_service.authenticate_client_user(username, password)
         if success:
+            if res.get('is_2fa_enabled'):
+                session.clear()
+                session['pending_2fa'] = {
+                    'type': 'client',
+                    'client_id': str(res['id']),
+                    'customer_id': str(res['customer_id']),
+                    'customer_name': res['customer_name'],
+                    'username': res['username'],
+                    'email': res.get('client_email', ''),
+                    'method': res.get('two_fa_method', 'totp') or 'totp',
+                    'created_at': time.time(),
+                    'attempts': 0
+                }
+                return redirect(url_for('client.verify_2fa'))
+
             session['client_logged_in'] = True
             session['client_user_id'] = res['id']
             session['client_customer_id'] = res['customer_id']
@@ -29,6 +48,107 @@ def login():
             return redirect(url_for('client.dashboard'))
         flash(res, 'error')
     return render_template('login.html')
+
+
+@client_bp.route('/verify-2fa', methods=['GET', 'POST'])
+def verify_2fa():
+    pending = session.get('pending_2fa')
+    if not pending or pending.get('type') != 'client':
+        flash("Sign in session expired. Please sign in again.", "error")
+        return redirect(url_for('client.login'))
+
+    # 5-minute expiration
+    if time.time() - pending.get('created_at', 0) > 300:
+        session.pop('pending_2fa', None)
+        session.pop('pending_2fa_email_otp', None)
+        flash("Verification session expired. Please sign in again.", "error")
+        return redirect(url_for('client.login'))
+
+    client = customer_service.client_repo.get_by_id(pending.get('client_id'))
+    if not client:
+        session.pop('pending_2fa', None)
+        flash("User not found.", "error")
+        return redirect(url_for('client.login'))
+
+    if request.method == 'POST':
+        if pending.get('attempts', 0) >= 5:
+            session.pop('pending_2fa', None)
+            session.pop('pending_2fa_email_otp', None)
+            flash("Too many failed attempts. Please sign in again.", "error")
+            return redirect(url_for('client.login'))
+
+        auth_type = request.form.get('auth_type', 'totp')
+        code = request.form.get('code', '').strip()
+
+        verified = False
+
+        if auth_type == 'totp':
+            verified = verify_totp_code(client.totp_secret, code)
+        elif auth_type == 'email':
+            email_otp_data = session.get('pending_2fa_email_otp')
+            if email_otp_data and time.time() <= email_otp_data.get('expires_at', 0):
+                if code == email_otp_data.get('code'):
+                    verified = True
+        elif auth_type == 'recovery':
+            ok, updated_codes = verify_and_consume_recovery_code(code, client.recovery_codes)
+            if ok:
+                client.recovery_codes = updated_codes
+                customer_service.client_repo.commit()
+                verified = True
+
+        if verified:
+            customer_service.client_repo.update_last_login(client.user_id)
+            session.pop('pending_2fa', None)
+            session.pop('pending_2fa_email_otp', None)
+            session['client_logged_in'] = True
+            session['client_user_id'] = client.user_id
+            session['client_customer_id'] = client.user_id
+            session['client_customer_name'] = client.client_name
+            session['client_username'] = client.username
+            return redirect(url_for('client.dashboard'))
+        else:
+            pending['attempts'] = pending.get('attempts', 0) + 1
+            session['pending_2fa'] = pending
+            flash("Invalid verification code.", "error")
+
+    masked_email = ""
+    if client.client_email and "@" in client.client_email:
+        parts = client.client_email.split("@")
+        name = parts[0]
+        domain = parts[1]
+        masked_name = name[:2] + "***" if len(name) > 2 else name + "***"
+        masked_email = f"{masked_name}@{domain}"
+
+    return render_template(
+        'verify_2fa.html',
+        username=client.username,
+        masked_email=masked_email,
+        method=pending.get('method', 'totp')
+    )
+
+
+@client_bp.route('/send-2fa-email-otp', methods=['POST'])
+def send_2fa_email_otp_route():
+    pending = session.get('pending_2fa')
+    if not pending or pending.get('type') != 'client':
+        return jsonify({'success': False, 'message': 'Session expired'}), 401
+
+    client = customer_service.client_repo.get_by_id(pending.get('client_id'))
+    if not client or not client.client_email:
+        return jsonify({'success': False, 'message': 'Email address not found'}), 400
+
+    code = str(random.randint(100000, 999999))
+    session['pending_2fa_email_otp'] = {
+        'code': code,
+        'expires_at': time.time() + 300
+    }
+
+    ok, err = send_2fa_email_otp(client.client_email, code, client.client_name)
+    if not ok:
+        current_app.logger.error(f"Failed to send 2FA email OTP: {err}")
+        return jsonify({'success': False, 'message': 'Failed to send email'}), 500
+
+    return jsonify({'success': True, 'message': 'Verification code sent'})
 
 
 @client_bp.route('/logout')

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networkat · Two-Factor Verification</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 440px;
+            padding: 38px;
+            position: relative;
+        }
+
+        .logo-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .shield-icon-badge {
+            width: 56px;
+            height: 56px;
+            background: #e6f2fa;
+            color: #0078d4;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 12px;
+        }
+
+        .logo-header h1 {
+            color: #1e2a41;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .logo-header p {
+            color: #5e6c84;
+            font-size: 13.5px;
+            margin-top: 6px;
+            line-height: 1.45;
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: #f4f6f8;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 22px;
+            gap: 4px;
+        }
+
+        .auth-tab-btn {
+            flex: 1;
+            padding: 8px 10px;
+            border: none;
+            background: transparent;
+            color: #5e6c84;
+            font-size: 12.5px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .auth-tab-btn.active {
+            background: white;
+            color: #0078d4;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .alert-box {
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 18px;
+            font-size: 13.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .otp-inputs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 20px;
+            direction: ltr;
+        }
+
+        .otp-digit {
+            width: 46px;
+            height: 52px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e2a41;
+            border: 1.5px solid #d0d7de;
+            border-radius: 8px;
+            background: #f8fafc;
+            transition: all 0.15s ease;
+        }
+
+        .otp-digit:focus {
+            outline: none;
+            border-color: #0078d4;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.15);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            color: #1e2a41;
+            font-size: 13.5px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .input-text {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            font-size: 14.5px;
+            background: #f8fafc;
+            color: #1e2a41;
+            transition: all 0.2s;
+        }
+
+        .input-text:focus {
+            outline: none;
+            border-color: #0078d4;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.12);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover {
+            background: #106ebe;
+        }
+
+        .btn-send-email {
+            background: #e6f2fa;
+            color: #0078d4;
+            border: 1px solid #cce4f7;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-send-email:hover {
+            background: #d4e8f7;
+        }
+
+        .btn-send-email:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 22px;
+            color: #5e6c84;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: #0078d4;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #8c959f;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo-header">
+            <div class="shield-icon-badge">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h1>Two-Factor Verification</h1>
+            <p>Enter the verification code to sign in as <strong>{{ username }}</strong></p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert-box alert-{% if category == 'success' %}success{% else %}error{% endif %}">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div id="dynamic-alert" class="alert-box" style="display: none;"></div>
+
+        <div class="auth-tabs">
+            <button type="button" class="auth-tab-btn active" onclick="switchTab('totp')">
+                <i class="fas fa-mobile-alt"></i> Authenticator
+            </button>
+            <button type="button" class="auth-tab-btn" onclick="switchTab('email')">
+                <i class="fas fa-envelope"></i> Email code
+            </button>
+            <button type="button" class="auth-tab-btn" onclick="switchTab('recovery')">
+                <i class="fas fa-key"></i> Recovery code
+            </button>
+        </div>
+
+        <!-- Panel 1: TOTP App -->
+        <div id="panel-totp" class="tab-panel active">
+            <form method="POST" action="{{ url_for('client.verify_2fa') }}" onsubmit="return handleOtpSubmit(this, 'totp-digits', 'totp-hidden')">
+                <input type="hidden" name="auth_type" value="totp">
+                <input type="hidden" name="code" id="totp-hidden">
+
+                <div class="otp-inputs" id="totp-digits">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" autocomplete="one-time-code" autofocus>
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-check-circle"></i> Verify and sign in
+                </button>
+            </form>
+        </div>
+
+        <!-- Panel 2: Email OTP -->
+        <div id="panel-email" class="tab-panel">
+            <div style="text-align: center; margin-bottom: 14px; font-size: 13.5px; color: #5e6c84;">
+                Send a 6-digit code to <strong>{{ masked_email or 'your registered email' }}</strong>
+            </div>
+
+            <button type="button" id="btn-send-email-otp" class="btn-send-email" onclick="sendEmailOtp()">
+                <i class="fas fa-paper-plane"></i> <span id="send-otp-text">Send verification code</span>
+            </button>
+
+            <form method="POST" action="{{ url_for('client.verify_2fa') }}" onsubmit="return handleOtpSubmit(this, 'email-digits', 'email-hidden')">
+                <input type="hidden" name="auth_type" value="email">
+                <input type="hidden" name="code" id="email-hidden">
+
+                <div class="otp-inputs" id="email-digits">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                    <input type="text" class="otp-digit" maxlength="1" inputmode="numeric">
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-check-circle"></i> Verify and sign in
+                </button>
+            </form>
+        </div>
+
+        <!-- Panel 3: Recovery Code -->
+        <div id="panel-recovery" class="tab-panel">
+            <form method="POST" action="{{ url_for('client.verify_2fa') }}">
+                <input type="hidden" name="auth_type" value="recovery">
+                <div class="form-group">
+                    <label>Emergency recovery code</label>
+                    <input type="text" name="code" class="input-text" placeholder="e.g. A1B2-C3D4" style="text-align: center; font-family: monospace; letter-spacing: 2px;" required>
+                </div>
+
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-key"></i> Use recovery code
+                </button>
+            </form>
+        </div>
+
+        <a href="{{ url_for('client.logout') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Cancel and return to sign in
+        </a>
+
+        <div class="footer">
+            © 2026 Networkat · All rights reserved
+        </div>
+    </div>
+
+    <script>
+        function switchTab(type) {
+            document.querySelectorAll('.auth-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+            const idx = type === 'totp' ? 0 : type === 'email' ? 1 : 2;
+            document.querySelectorAll('.auth-tab-btn')[idx].classList.add('active');
+            document.getElementById(`panel-${type}`).classList.add('active');
+
+            const firstInput = document.querySelector(`#panel-${type} input`);
+            if (firstInput) firstInput.focus();
+        }
+
+        function setupOtpGroup(containerId, formId, hiddenId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const inputs = container.querySelectorAll('.otp-digit');
+
+            inputs.forEach((input, index) => {
+                input.addEventListener('input', (e) => {
+                    const val = e.target.value;
+                    if (val.length > 1) {
+                        const digits = val.replace(/\D/g, '').split('');
+                        digits.forEach((d, i) => {
+                            if (inputs[i]) inputs[i].value = d;
+                        });
+                        if (inputs[Math.min(digits.length, inputs.length - 1)]) {
+                            inputs[Math.min(digits.length, inputs.length - 1)].focus();
+                        }
+                        return;
+                    }
+                    if (val.length === 1 && index < inputs.length - 1) {
+                        inputs[index + 1].focus();
+                    }
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && !input.value && index > 0) {
+                        inputs[index - 1].focus();
+                    }
+                });
+
+                input.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    const text = (e.clipboardData || window.clipboardData).getData('text');
+                    const digits = text.replace(/\D/g, '').slice(0, 6).split('');
+                    digits.forEach((d, i) => {
+                        if (inputs[i]) inputs[i].value = d;
+                    });
+                    if (inputs[Math.min(digits.length, inputs.length - 1)]) {
+                        inputs[Math.min(digits.length, inputs.length - 1)].focus();
+                    }
+                });
+            });
+        }
+
+        function handleOtpSubmit(form, containerId, hiddenId) {
+            const container = document.getElementById(containerId);
+            const inputs = container.querySelectorAll('.otp-digit');
+            let code = '';
+            inputs.forEach(i => code += i.value.trim());
+            if (code.length !== 6) {
+                showDynamicAlert("Please enter all 6 digits.", "error");
+                return false;
+            }
+            document.getElementById(hiddenId).value = code;
+            return true;
+        }
+
+        function showDynamicAlert(msg, type) {
+            const alert = document.getElementById('dynamic-alert');
+            alert.className = `alert-box alert-${type}`;
+            alert.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> <span>${msg}</span>`;
+            alert.style.display = 'flex';
+        }
+
+        let emailCountdown = 0;
+        function sendEmailOtp() {
+            const btn = document.getElementById('btn-send-email-otp');
+            const txt = document.getElementById('send-otp-text');
+            btn.disabled = true;
+            txt.textContent = "Sending code...";
+
+            fetch("{{ url_for('client.send_2fa_email_otp_route') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showDynamicAlert("Verification code sent to your email.", "success");
+                    startCountdown(60);
+                } else {
+                    showDynamicAlert(data.message || "Failed to send code.", "error");
+                    btn.disabled = false;
+                    txt.textContent = "Send verification code";
+                }
+            })
+            .catch(err => {
+                showDynamicAlert("Network error. Please try again.", "error");
+                btn.disabled = false;
+                txt.textContent = "Send verification code";
+            });
+        }
+
+        function startCountdown(seconds) {
+            emailCountdown = seconds;
+            const btn = document.getElementById('btn-send-email-otp');
+            const txt = document.getElementById('send-otp-text');
+            btn.disabled = true;
+
+            const timer = setInterval(() => {
+                emailCountdown--;
+                if (emailCountdown <= 0) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    txt.textContent = "Resend verification code";
+                } else {
+                    txt.textContent = `Resend code in ${emailCountdown}s`;
+                }
+            }, 1000);
+        }
+
+        setupOtpGroup('totp-digits', 'panel-totp', 'totp-hidden');
+        setupOtpGroup('email-digits', 'panel-email', 'email-hidden');
+    </script>
+</body>
+</html>

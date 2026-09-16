@@ -1,5 +1,7 @@
 import os
 import re
+import time
+import random
 import requests
 from datetime import datetime
 from functools import wraps
@@ -7,11 +9,24 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 
 from extensions import db
 from models import Client
+from models.system_user import SystemUser
 from models.subscription_plan import SubscriptionPlan
 from services.auth_service import AuthService
 from services.customer_service import CustomerService
 from services.subscription_service import SubscriptionService
 from services.netbird_service import get_cached_customer_peer_ids as _get_customer_group_peer_ids
+from repositories.user_repository import UserRepository
+from utils.two_factor import (
+    generate_totp_secret,
+    get_totp_uri,
+    generate_qr_base64,
+    verify_totp_code,
+    generate_recovery_codes,
+    hash_recovery_codes,
+    verify_and_consume_recovery_code
+)
+from utils.email import send_2fa_email_otp
+from utils.password import verify_password
 
 admin_bp = Blueprint('admin', __name__, template_folder='../templates')
 auth_service = AuthService()
@@ -64,9 +79,107 @@ def login():
         password = request.form.get('password')
         success, message = auth_service.authenticate(username, password)
         if success:
+            if message == "2fa_required":
+                return redirect(url_for('admin.verify_2fa'))
             return redirect(url_for('admin.dashboard'))
         flash(message, 'error')
     return render_template('login.html')
+
+
+@admin_bp.route('/verify-2fa', methods=['GET', 'POST'])
+def verify_2fa():
+    pending = session.get('pending_2fa')
+    if not pending or pending.get('type') != 'admin':
+        flash("Sign in session expired. Please sign in again.", "error")
+        return redirect(url_for('admin.login'))
+
+    # 5-minute expiration
+    if time.time() - pending.get('created_at', 0) > 300:
+        session.pop('pending_2fa', None)
+        session.pop('pending_2fa_email_otp', None)
+        flash("Verification session expired. Please sign in again.", "error")
+        return redirect(url_for('admin.login'))
+
+    user = UserRepository.get_by_id(pending.get('user_id'))
+    if not user:
+        session.pop('pending_2fa', None)
+        flash("User not found.", "error")
+        return redirect(url_for('admin.login'))
+
+    if request.method == 'POST':
+        if pending.get('attempts', 0) >= 5:
+            session.pop('pending_2fa', None)
+            session.pop('pending_2fa_email_otp', None)
+            flash("Too many failed attempts. Please sign in again.", "error")
+            return redirect(url_for('admin.login'))
+
+        auth_type = request.form.get('auth_type', 'totp')
+        code = request.form.get('code', '').strip()
+
+        verified = False
+
+        if auth_type == 'totp':
+            verified = verify_totp_code(user.totp_secret, code)
+        elif auth_type == 'email':
+            email_otp_data = session.get('pending_2fa_email_otp')
+            if email_otp_data and time.time() <= email_otp_data.get('expires_at', 0):
+                if code == email_otp_data.get('code'):
+                    verified = True
+        elif auth_type == 'recovery':
+            ok, updated_codes = verify_and_consume_recovery_code(code, user.recovery_codes)
+            if ok:
+                user.recovery_codes = updated_codes
+                db.session.commit()
+                verified = True
+
+        if verified:
+            auth_service.complete_2fa_login(user)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            return redirect(url_for('admin.dashboard'))
+        else:
+            pending['attempts'] = pending.get('attempts', 0) + 1
+            session['pending_2fa'] = pending
+            flash("Invalid verification code.", "error")
+
+    masked_email = ""
+    if user.email and "@" in user.email:
+        parts = user.email.split("@")
+        name = parts[0]
+        domain = parts[1]
+        masked_name = name[:2] + "***" if len(name) > 2 else name + "***"
+        masked_email = f"{masked_name}@{domain}"
+
+    return render_template(
+        'verify_2fa.html',
+        username=user.username,
+        masked_email=masked_email,
+        method=pending.get('method', 'totp')
+    )
+
+
+@admin_bp.route('/send-2fa-email-otp', methods=['POST'])
+def send_2fa_email_otp_route():
+    pending = session.get('pending_2fa')
+    if not pending or pending.get('type') != 'admin':
+        return jsonify({'success': False, 'message': 'Session expired'}), 401
+
+    user = UserRepository.get_by_id(pending.get('user_id'))
+    if not user or not user.email:
+        return jsonify({'success': False, 'message': 'Email address not found'}), 400
+
+    code = str(random.randint(100000, 999999))
+    session['pending_2fa_email_otp'] = {
+        'code': code,
+        'expires_at': time.time() + 300
+    }
+
+    ok, err = send_2fa_email_otp(user.email, code, user.full_name)
+    if not ok:
+        current_app.logger.error(f"Failed to send 2FA email OTP: {err}")
+        return jsonify({'success': False, 'message': 'Failed to send email'}), 500
+
+    return jsonify({'success': True, 'message': 'Verification code sent'})
 
 
 @admin_bp.route('/logout')
@@ -530,6 +643,7 @@ def staff():
             'email': u.email,
             'role': getattr(u, 'role', 'admin') or 'admin',
             'is_active': bool(u.is_active),
+            'is_2fa_enabled': bool(getattr(u, 'is_2fa_enabled', False)),
             'last_login': u.last_login.strftime('%Y-%m-%d %H:%M') if getattr(u, 'last_login', None) else None,
             'created_at': u.created_at.strftime('%Y-%m-%d') if getattr(u, 'created_at', None) else None
         })
@@ -675,4 +789,115 @@ def delete_staff(user_id):
         UserRepository.delete(user)
         return jsonify({'success': True, 'message': 'Staff member deleted successfully'})
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/staff/<int:user_id>/2fa/setup', methods=['POST'])
+@login_required
+def staff_2fa_setup(user_id):
+    current_admin_id = session.get('admin_user_id')
+    current_role = session.get('admin_role')
+    if str(user_id) != str(current_admin_id) and current_role != 'admin':
+        return jsonify({'success': False, 'error': 'Permission denied.'}), 403
+
+    user = UserRepository.get_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found.'}), 404
+
+    secret = generate_totp_secret()
+    session['setup_staff_2fa_secret'] = {
+        'user_id': user.id,
+        'secret': secret
+    }
+
+    uri = get_totp_uri(secret, user.username, issuer="Networkat Management")
+    qr_b64 = generate_qr_base64(uri)
+
+    return jsonify({
+        'success': True,
+        'secret': secret,
+        'qr_code': qr_b64
+    })
+
+
+@admin_bp.route('/api/staff/<int:user_id>/2fa/confirm', methods=['POST'])
+@login_required
+def staff_2fa_confirm(user_id):
+    current_admin_id = session.get('admin_user_id')
+    current_role = session.get('admin_role')
+    if str(user_id) != str(current_admin_id) and current_role != 'admin':
+        return jsonify({'success': False, 'error': 'Permission denied.'}), 403
+
+    user = UserRepository.get_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found.'}), 404
+
+    setup_data = session.get('setup_staff_2fa_secret')
+    if not setup_data or setup_data.get('user_id') != user.id:
+        return jsonify({'success': False, 'error': 'Setup session expired. Please try again.'}), 400
+
+    secret = setup_data.get('secret')
+    data = request.get_json(silent=True) or {}
+    code = (data.get('code') or request.form.get('code') or '').strip()
+
+    if not verify_totp_code(secret, code):
+        return jsonify({'success': False, 'error': 'Invalid verification code.'}), 400
+
+    recovery_codes = generate_recovery_codes(8)
+    hashed_codes = hash_recovery_codes(recovery_codes)
+
+    try:
+        user.totp_secret = secret
+        user.is_2fa_enabled = True
+        user.recovery_codes = hashed_codes
+        user.two_fa_method = 'totp'
+        db.session.commit()
+        session.pop('setup_staff_2fa_secret', None)
+        return jsonify({
+            'success': True,
+            'recovery_codes': recovery_codes,
+            'message': 'Two-factor authentication enabled successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@admin_bp.route('/api/staff/<int:user_id>/2fa/disable', methods=['POST'])
+@login_required
+def staff_2fa_disable(user_id):
+    current_admin_id = session.get('admin_user_id')
+    current_role = session.get('admin_role')
+
+    is_self = str(user_id) == str(current_admin_id)
+    is_admin = current_role == 'admin'
+
+    if not (is_self or is_admin):
+        return jsonify({'success': False, 'error': 'Permission denied.'}), 403
+
+    user = UserRepository.get_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found.'}), 404
+
+    data = request.get_json(silent=True) or {}
+    password = data.get('password') or ''
+    if is_self and not is_admin:
+        if not password:
+            return jsonify({'success': False, 'error': 'Password is required to disable 2FA.'}), 400
+        user_password = getattr(user, 'password_hashed', getattr(user, 'password_hash', None))
+        if not user_password or not verify_password(password, user_password):
+            return jsonify({'success': False, 'error': 'Incorrect password.'}), 400
+
+    try:
+        user.is_2fa_enabled = False
+        user.totp_secret = None
+        user.recovery_codes = None
+        user.two_fa_method = 'totp'
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Two-factor authentication disabled'
+        })
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500

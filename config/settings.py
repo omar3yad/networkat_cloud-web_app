@@ -6,7 +6,7 @@ class Config:
     """
     Base Application Configuration
     """
-    SECRET_KEY = os.getenv("SECRET_KEY")
+    SECRET_KEY = os.getenv("SECRET_KEY", "networkat_sdwan_secret_key_prod_2026")
     RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY")
     RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY")
     MAIL_SERVER = os.getenv("MAIL_SERVER", "premium155.web-hosting.com")

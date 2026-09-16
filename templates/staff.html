@@ -1116,6 +1116,7 @@
                                 <th>Email</th>
                                 <th>Role</th>
                                 <th>Status</th>
+                                <th>Two-Factor</th>
                                 <th>Last Login</th>
                                 <th>Created Date</th>
                                 <th style="text-align: right;">Actions</th>
@@ -1166,6 +1167,19 @@
                                     </span>
                                 </td>
 
+                                <!-- Two-Factor Status -->
+                                <td>
+                                    {% if u.is_2fa_enabled %}
+                                    <span class="badge-status active" style="font-size: 0.775rem;">
+                                        <i class="fas fa-shield-alt"></i> Enabled
+                                    </span>
+                                    {% else %}
+                                    <span class="badge-status inactive" style="background: #f1f5f9; color: #64748b; font-size: 0.775rem;">
+                                        <i class="fas fa-shield-slash"></i> Disabled
+                                    </span>
+                                    {% endif %}
+                                </td>
+
                                 <!-- Last Login -->
                                 <td>
                                     <span style="font-size: 0.825rem; color: var(--gray-600);">
@@ -1183,6 +1197,21 @@
                                 <!-- Actions -->
                                 <td>
                                     <div class="table-actions">
+                                        <!-- Two-Factor Action -->
+                                        {% if u.is_2fa_enabled %}
+                                        <button type="button" class="btn-action-icon" style="color: #b45309;"
+                                            onclick="showDisableStaff2faModal({{ u.id }}, '{{ u.username }}')"
+                                            title="Disable 2FA">
+                                            <i class="fas fa-shield-virus"></i>
+                                        </button>
+                                        {% else %}
+                                        <button type="button" class="btn-action-icon" style="color: var(--azure-blue);"
+                                            onclick="showSetupStaff2faModal({{ u.id }}, '{{ u.username }}')"
+                                            title="Set up 2FA">
+                                            <i class="fas fa-shield-alt"></i>
+                                        </button>
+                                        {% endif %}
+
                                         <!-- Reset Password -->
                                         <button type="button" class="btn-action-icon"
                                             onclick="showResetPasswordModal({{ u.id }}, '{{ u.username }}')"
@@ -1208,7 +1237,7 @@
 
                                         <!-- Delete -->
                                         <button type="button" class="btn-action-icon danger"
-                                            onclick="deleteStaff({{ u.id }}, '{{ u.username }}')"
+                                            onclick="showDeleteStaffModal({{ u.id }}, '{{ u.username }}')"
                                             title="Delete staff member"
                                             {% if is_self %}disabled style="opacity: 0.35;"{% endif %}>
                                             <i class="fas fa-trash"></i>
@@ -1332,6 +1361,120 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="hideModal('resetPasswordModal')">Cancel</button>
                 <button type="button" class="btn btn-primary" id="btnSubmitReset" onclick="submitResetPassword()">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff 2FA Setup Modal -->
+    <div class="modal" id="setupStaff2faModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-shield-alt" style="color: var(--azure-blue);"></i> Set Up Two-Factor Authentication</h2>
+                <button type="button" class="close-btn" onclick="hideModal('setupStaff2faModal')">&times;</button>
+            </div>
+
+            <!-- Step 1: Scan & Verify -->
+            <div id="staff-setup-step-verify">
+                <div class="modal-body">
+                    <input type="hidden" id="staff2faUserId">
+                    <p style="font-size: 0.9rem; color: var(--gray-600); margin-bottom: 1rem;">
+                        Configuring 2FA for: <strong id="staff2faUsernameLabel"></strong>
+                    </p>
+
+                    <p style="font-size: 0.85rem; color: var(--gray-700); margin-bottom: 0.75rem;">
+                        1. Scan this QR code using an Authenticator app (Google Authenticator, Microsoft Authenticator):
+                    </p>
+
+                    <div style="text-align: center; margin: 1rem 0;">
+                        <div id="staff-qr-loading" style="padding: 1.5rem; color: var(--gray-500);">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p style="margin-top: 0.5rem; font-size: 0.85rem;">Generating QR code...</p>
+                        </div>
+                        <img id="staff-qr-image" src="" alt="2FA QR Code" style="display: none; width: 170px; height: 170px; border-radius: 8px; border: 1px solid var(--gray-200); margin: 0 auto;">
+                    </div>
+
+                    <div style="background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.85rem;">
+                        <div style="color: var(--gray-600); margin-bottom: 0.25rem;">Or enter secret key manually:</div>
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <code id="staff-secret-key" style="font-weight: 700; font-size: 0.95rem; color: var(--gray-800); letter-spacing: 1px;">--------</code>
+                            <button type="button" class="btn-action-icon" onclick="copyStaffSecret()" title="Copy secret"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="staff-verify-code">2. Enter 6-digit confirmation code</label>
+                        <input type="text" id="staff-verify-code" placeholder="123456" maxlength="6" inputmode="numeric" style="letter-spacing: 3px; font-weight: 700; text-align: center;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('setupStaff2faModal')">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSubmitStaff2fa" onclick="submitStaff2faConfirm()">Confirm and Enable</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Recovery Codes Display -->
+            <div id="staff-setup-step-recovery" style="display: none;">
+                <div class="modal-body">
+                    <div style="background: var(--success-bg); color: var(--success-text); padding: 0.85rem; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> Two-factor authentication is now active!
+                    </div>
+
+                    <p style="font-size: 0.85rem; color: var(--gray-700); margin-bottom: 0.75rem;">
+                        Emergency recovery codes for this user:
+                    </p>
+
+                    <div id="staff-recovery-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 8px; padding: 0.85rem; margin-bottom: 1rem; font-family: monospace; font-size: 0.9rem; font-weight: 700; text-align: center;"></div>
+
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button type="button" class="btn btn-secondary" onclick="copyStaffRecoveryCodes()"><i class="fas fa-copy"></i> Copy all codes</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="hideModal('setupStaff2faModal'); location.reload();">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff 2FA Disable Modal -->
+    <div class="modal" id="disableStaff2faModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-shield-virus" style="color: var(--danger);"></i> Disable Two-Factor Authentication</h2>
+                <button type="button" class="close-btn" onclick="hideModal('disableStaff2faModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="disableStaff2faUserId">
+                <p style="font-size: 0.9rem; color: var(--gray-700); line-height: 1.5; margin-bottom: 1rem;">
+                    Are you sure you want to disable two-factor authentication for <strong id="disableStaff2faUsernameLabel"></strong>?
+                </p>
+                <p style="font-size: 0.825rem; color: var(--gray-500);">
+                    The user will only need their username and password to sign in.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('disableStaff2faModal')">Cancel</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDisableStaff2fa" onclick="submitDisableStaff2fa()">Disable 2FA</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Delete Confirmation Modal -->
+    <div class="modal" id="deleteStaffModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Delete Staff Member</h2>
+                <button type="button" class="close-btn" onclick="hideModal('deleteStaffModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="deleteStaffUserId">
+                <p style="font-size: 0.9rem; color: var(--gray-700); line-height: 1.5;">
+                    Are you sure you want to permanently delete staff member <strong id="deleteStaffUsernameLabel"></strong>?
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal('deleteStaffModal')">Cancel</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDeleteStaff" onclick="submitDeleteStaff()">Delete Member</button>
             </div>
         </div>
     </div>
@@ -1654,9 +1797,18 @@
             }
         }
 
-        async function deleteStaff(userId, username) {
-            const confirmDelete = window.confirm(`Are you sure you want to remove staff member "${username}"?`);
-            if (!confirmDelete) return;
+        // Delete Staff Modal Flow
+        function showDeleteStaffModal(userId, username) {
+            document.getElementById('deleteStaffUserId').value = userId;
+            document.getElementById('deleteStaffUsernameLabel').textContent = username;
+            showModal('deleteStaffModal');
+        }
+
+        async function submitDeleteStaff() {
+            const userId = document.getElementById('deleteStaffUserId').value;
+            const btn = document.getElementById('btnConfirmDeleteStaff');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
 
             try {
                 const res = await fetch(`/api/staff/${userId}/delete`, {
@@ -1665,13 +1817,147 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    showToast(`Staff member "${username}" removed`, 'success');
+                    hideModal('deleteStaffModal');
+                    showToast('Staff member deleted successfully', 'success');
                     setTimeout(() => location.reload(), 500);
                 } else {
                     showToast(data.error || 'Failed to delete staff member', 'error');
                 }
             } catch (err) {
                 showToast('Server connection error', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Delete Member';
+            }
+        }
+
+        // Staff 2FA Setup Flow
+        let staffRecoveryCodes = [];
+
+        function showSetupStaff2faModal(userId, username) {
+            document.getElementById('staff2faUserId').value = userId;
+            document.getElementById('staff2faUsernameLabel').textContent = username;
+            document.getElementById('staff-verify-code').value = '';
+            document.getElementById('staff-setup-step-verify').style.display = 'block';
+            document.getElementById('staff-setup-step-recovery').style.display = 'none';
+            document.getElementById('staff-qr-loading').style.display = 'block';
+            document.getElementById('staff-qr-image').style.display = 'none';
+
+            showModal('setupStaff2faModal');
+
+            fetch(`/api/staff/${userId}/2fa/setup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('staff-qr-loading').style.display = 'none';
+                    const img = document.getElementById('staff-qr-image');
+                    img.src = data.qr_code;
+                    img.style.display = 'block';
+                    document.getElementById('staff-secret-key').textContent = data.secret;
+                    document.getElementById('staff-verify-code').focus();
+                } else {
+                    showToast(data.error || 'Failed to start 2FA setup', 'error');
+                    hideModal('setupStaff2faModal');
+                }
+            })
+            .catch(err => {
+                showToast('Network error', 'error');
+                hideModal('setupStaff2faModal');
+            });
+        }
+
+        function copyStaffSecret() {
+            const secret = document.getElementById('staff-secret-key').textContent;
+            copyText(secret, 'Secret key copied');
+        }
+
+        async function submitStaff2faConfirm() {
+            const userId = document.getElementById('staff2faUserId').value;
+            const code = document.getElementById('staff-verify-code').value.trim();
+
+            if (!code || code.length !== 6) {
+                showToast('Please enter a 6-digit verification code', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmitStaff2fa');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+            try {
+                const res = await fetch(`/api/staff/${userId}/2fa/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    staffRecoveryCodes = data.recovery_codes || [];
+                    const grid = document.getElementById('staff-recovery-grid');
+                    grid.innerHTML = '';
+                    staffRecoveryCodes.forEach(c => {
+                        const div = document.createElement('div');
+                        div.style.padding = '4px 6px';
+                        div.style.background = '#ffffff';
+                        div.style.borderRadius = '4px';
+                        div.style.border = '1px solid var(--gray-200)';
+                        div.textContent = c;
+                        grid.appendChild(div);
+                    });
+
+                    document.getElementById('staff-setup-step-verify').style.display = 'none';
+                    document.getElementById('staff-setup-step-recovery').style.display = 'block';
+                    showToast('Two-factor authentication enabled successfully', 'success');
+                } else {
+                    showToast(data.error || 'Invalid verification code', 'error');
+                }
+            } catch (err) {
+                showToast('Server connection error', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Confirm and Enable';
+            }
+        }
+
+        function copyStaffRecoveryCodes() {
+            if (!staffRecoveryCodes.length) return;
+            copyText(staffRecoveryCodes.join('\n'), 'Recovery codes copied');
+        }
+
+        // Staff 2FA Disable Flow
+        function showDisableStaff2faModal(userId, username) {
+            document.getElementById('disableStaff2faUserId').value = userId;
+            document.getElementById('disableStaff2faUsernameLabel').textContent = username;
+            showModal('disableStaff2faModal');
+        }
+
+        async function submitDisableStaff2fa() {
+            const userId = document.getElementById('disableStaff2faUserId').value;
+            const btn = document.getElementById('btnConfirmDisableStaff2fa');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Disabling...';
+
+            try {
+                const res = await fetch(`/api/staff/${userId}/2fa/disable`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    hideModal('disableStaff2faModal');
+                    showToast('Two-factor authentication disabled', 'success');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showToast(data.error || 'Failed to disable 2FA', 'error');
+                }
+            } catch (err) {
+                showToast('Server connection error', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Disable 2FA';
             }
         }
     </script>

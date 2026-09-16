@@ -182,3 +182,53 @@ def send_renewal_reminder_email(to_email, client_name, renewal_date, plan_name="
     except Exception as e:
         return False, str(e)
 
+
+def send_2fa_email_otp(to_email, code, user_name="User"):
+    """
+    Sends a 2FA one-time verification passcode (OTP) email.
+    """
+    smtp_server, smtp_port, smtp_username, smtp_password = _get_smtp_config()
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Your Verification Code - Networkat"
+    msg["From"] = f"Networkat <{smtp_username}>"
+    msg["To"] = to_email
+
+    html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #e1e4e8;">
+          <div style="background-color: #0078d4; padding: 25px; text-align: center; color: #ffffff;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: bold;">Networkat</h1>
+          </div>
+          <div style="padding: 30px; color: #1e2a41;">
+            <h2 style="margin-top: 0; color: #1e2a41;">Two-Factor Authentication Code</h2>
+            <p style="font-size: 16px; line-height: 1.5; color: #5e6c84;">
+              Hello <strong>{user_name}</strong>,<br>
+              Please use the verification code below to complete your sign in. This code is valid for <strong>5 minutes</strong>.
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+              <span style="display: inline-block; font-size: 32px; font-weight: bold; color: #0078d4; background-color: #f0f7ff; padding: 15px 30px; border-radius: 6px; border: 1px dashed #0078d4; letter-spacing: 5px;">{code}</span>
+            </div>
+            <p style="font-size: 14px; color: #7a8b9e; line-height: 1.5;">If you did not attempt to sign in to your Networkat account, please secure your password immediately.</p>
+          </div>
+          <div style="background-color: #fafbfc; padding: 20px; text-align: center; font-size: 12px; color: #7a8b9e; border-top: 1px solid #f0f2f4;">
+            © 2026 Networkat. All rights reserved.
+          </div>
+        </div>
+      </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail(smtp_username, to_email, msg.as_string())
+        server.quit()
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+

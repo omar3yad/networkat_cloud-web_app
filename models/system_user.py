@@ -47,6 +47,28 @@ class SystemUser(db.Model):
         default=True
     )
 
+    totp_secret = db.Column(
+        db.String(64),
+        nullable=True
+    )
+
+    is_2fa_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    recovery_codes = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    two_fa_method = db.Column(
+        db.String(20),
+        nullable=False,
+        default="totp"
+    )
+
     last_login = db.Column(
         db.DateTime,
         nullable=True

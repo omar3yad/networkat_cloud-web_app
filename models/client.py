@@ -108,6 +108,29 @@ class Client(BaseModel):
         nullable=True
     )
 
+    # --- Two-Factor Authentication (2FA) Fields ---
+    totp_secret = db.Column(
+        db.String(64),
+        nullable=True
+    )
+
+    is_2fa_enabled = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    recovery_codes = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    two_fa_method = db.Column(
+        db.String(20),
+        nullable=False,
+        default="totp"
+    )
+
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,

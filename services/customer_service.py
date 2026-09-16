@@ -397,13 +397,18 @@ class CustomerService:
         if not check_password_hash(client.password_hashed, password):
             return False, "Invalid username or password"
 
-        self.client_repo.update_last_login(client.user_id)
+        is_2fa_enabled = bool(getattr(client, 'is_2fa_enabled', False))
+        if not is_2fa_enabled:
+            self.client_repo.update_last_login(client.user_id)
 
         return True, {
             'id': client.user_id,
             'username': client.username,
             'customer_id': client.user_id,
-            'customer_name': client.client_name
+            'customer_name': client.client_name,
+            'client_email': client.client_email,
+            'is_2fa_enabled': is_2fa_enabled,
+            'two_fa_method': getattr(client, 'two_fa_method', 'totp') or 'totp'
         }
 
 # أضف هذه الدالة داخل كلاس CustomerService

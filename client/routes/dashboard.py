@@ -23,6 +23,14 @@ from utils.cache_manager import (
     get_active_route_overrides
 )
 from utils.network_validators import validate_dns_name
+from utils.two_factor import (
+    generate_totp_secret,
+    get_totp_uri,
+    generate_qr_base64,
+    verify_totp_code,
+    generate_recovery_codes,
+    hash_recovery_codes,
+)
 
 edge_service = EdgeService()
 
@@ -385,4 +393,98 @@ def change_password():
         flash("Failed to update password. Please try again.", "error")
 
     return redirect(url_for('client.profile'))
+
+
+@client_bp.route('/profile/2fa/setup', methods=['POST'])
+@login_required
+def profile_2fa_setup():
+    customer_id = session.get('client_customer_id')
+    client_record = Client.query.get(customer_id)
+    if not client_record:
+        return jsonify({'success': False, 'message': 'Account not found'}), 404
+
+    secret = generate_totp_secret()
+    session['setup_2fa_secret'] = secret
+
+    uri = get_totp_uri(secret, client_record.username, issuer="Networkat SD-WAN")
+    qr_b64 = generate_qr_base64(uri)
+
+    return jsonify({
+        'success': True,
+        'secret': secret,
+        'qr_code': qr_b64
+    })
+
+
+@client_bp.route('/profile/2fa/confirm', methods=['POST'])
+@login_required
+def profile_2fa_confirm():
+    customer_id = session.get('client_customer_id')
+    client_record = Client.query.get(customer_id)
+    if not client_record:
+        return jsonify({'success': False, 'message': 'Account not found'}), 404
+
+    setup_secret = session.get('setup_2fa_secret')
+    if not setup_secret:
+        return jsonify({'success': False, 'message': 'Setup session expired. Please try again.'}), 400
+
+    data = request.get_json(silent=True) or {}
+    code = (data.get('code') or request.form.get('code') or '').strip()
+
+    if not verify_totp_code(setup_secret, code):
+        return jsonify({'success': False, 'message': 'Invalid verification code'}), 400
+
+    recovery_codes = generate_recovery_codes(8)
+    hashed_codes = hash_recovery_codes(recovery_codes)
+
+    try:
+        client_record.totp_secret = setup_secret
+        client_record.is_2fa_enabled = True
+        client_record.recovery_codes = hashed_codes
+        client_record.two_fa_method = 'totp'
+        db.session.commit()
+        session.pop('setup_2fa_secret', None)
+        return jsonify({
+            'success': True,
+            'recovery_codes': recovery_codes,
+            'message': 'Two-factor authentication enabled successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error enabling 2FA for client {customer_id}: {e}")
+        return jsonify({'success': False, 'message': 'Failed to enable 2FA'}), 500
+
+
+@client_bp.route('/profile/2fa/disable', methods=['POST'])
+@login_required
+def profile_2fa_disable():
+    customer_id = session.get('client_customer_id')
+    client_record = Client.query.get(customer_id)
+    if not client_record:
+        return jsonify({'success': False, 'message': 'Account not found'}), 404
+
+    data = request.get_json(silent=True) or {}
+    password = data.get('password') or request.form.get('password') or ''
+
+    if not password:
+        return jsonify({'success': False, 'message': 'Password is required'}), 400
+
+    if not check_password_hash(client_record.password_hashed, password):
+        return jsonify({'success': False, 'message': 'Incorrect password'}), 400
+
+    try:
+        client_record.is_2fa_enabled = False
+        client_record.totp_secret = None
+        client_record.recovery_codes = None
+        client_record.two_fa_method = 'totp'
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'message': 'Two-factor authentication disabled'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error disabling 2FA for client {customer_id}: {e}")
+        return jsonify({'success': False, 'message': 'Failed to disable 2FA'}), 500
+
 
