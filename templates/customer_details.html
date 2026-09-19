@@ -897,7 +897,7 @@
                 </div>
             </div>
             <div class="user-menu">
-                <span class="user-email-text">admin@networkat</span>
+                <span class="user-email-text">{{ session.get('admin_username', 'admin') }}</span>
                 <a href="/logout" class="logout-btn">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
@@ -1048,16 +1048,38 @@
                                         </div>
                                     </td>
                                     <td>
-                                        {% if session.get('admin_role') == 'admin' %}
-                                        <button class="action-btn text-danger"
-                                            onclick="deletePeer('{{ peer.id }}', '{{ peer.name }}')"
-                                            title="Delete Peer">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        {% else %}
-                                        <span style="color: var(--gray-400); font-size: 0.8rem;">-</span>
-                                        {% endif %}
-                                    </td>
+                                         {% set current_cid = (customer.user_id if (customer and customer.user_id) else (customer.id if customer else (customer_id if customer_id is defined else '')))|string %}
+                                         {% set current_pid = (peer.id if (peer.id is defined and peer.id) else (peer.get('id') if (peer is mapping and peer.get('id')) else '')) %}
+                                         {% if session.get('admin_role') == 'admin' %}
+                                         <div style="display:flex;gap:6px;align-items:center;">
+                                             {% if current_cid and current_pid %}
+                                             <a href="{{ url_for('admin.admin_view_peer_details', customer_id=current_cid, peer_id=current_pid) }}"
+                                                class="action-btn"
+                                                title="View peer as client"
+                                                style="text-decoration:none;">
+                                                 <i class="fas fa-eye"></i>
+                                             </a>
+                                             {% endif %}
+                                             {% if current_pid %}
+                                             <button class="action-btn text-danger"
+                                                 onclick="deletePeer('{{ current_pid }}', '{{ peer.name or '' }}')"
+                                                 title="Delete Peer">
+                                                 <i class="fas fa-trash"></i>
+                                             </button>
+                                             {% endif %}
+                                         </div>
+                                         {% else %}
+                                         {% if current_cid and current_pid %}
+                                         <a href="{{ url_for('admin.admin_view_peer_details', customer_id=current_cid, peer_id=current_pid) }}"
+                                            class="action-btn"
+                                            title="View peer"
+                                            style="text-decoration:none;">
+                                             <i class="fas fa-eye"></i>
+                                         </a>
+                                         {% endif %}
+                                         {% endif %}
+                                     </td>
+
                                 </tr>
                                 {% endfor %}
                                 {% else %}

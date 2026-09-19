@@ -1,3 +1,5 @@
+const _apiBase = (window.API_BASE || '');
+const _adminView = !!(window.ADMIN_VIEW);
 const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
 const peerName = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerName : "";
 let isPeerOnline = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.isOnline : false;
@@ -218,7 +220,7 @@ async function fetchRules(forceRefresh = false, silent = false) {
     }
 
     try {
-        const url = `/api/peers/${peerId}/firewall/rules` + (forceRefresh ? '?refresh=true' : '');
+        const url = `${_apiBase}/api/peers/${peerId}/firewall/rules` + (forceRefresh ? '?refresh=true' : '');
         const response = await fetch(url);
         const data = await response.json();
 
@@ -229,8 +231,10 @@ async function fetchRules(forceRefresh = false, silent = false) {
         // Update online status UI dynamically from rules check
         isPeerOnline = data.agent_online;
         if (data.agent_online === false) {
-            window.location.href = `/peers/${peerId}`;
-            return;
+            if (!_adminView) {
+                window.location.href = `/peers/${peerId}`;
+                return;
+            }
         }
 
         currentRules = data.rules || [];
@@ -344,14 +348,14 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         const tdCheck = document.createElement('td');
         tdCheck.className = 'cell-check';
         tdCheck.style.textAlign = 'center';
-        tdCheck.innerHTML = `<input type="checkbox" class="rule-row-checkbox" data-rule-idx="${rule.id}" onchange="onRuleCheckboxChange()">`;
+        tdCheck.innerHTML = _adminView ? '' : `<input type="checkbox" class="rule-row-checkbox" data-rule-idx="${rule.id}" onchange="onRuleCheckboxChange()">`;
         tr.appendChild(tdCheck);
 
         // Drag handle column
         const tdDrag = document.createElement('td');
         tdDrag.className = 'cell-drag';
         tdDrag.style.textAlign = 'center';
-        tdDrag.innerHTML = (isPeerOnline && isAgentOnline) ? `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>` : '';
+        tdDrag.innerHTML = (isPeerOnline && isAgentOnline && !_adminView) ? `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>` : '';
         tr.appendChild(tdDrag);
 
         // Order column
@@ -362,7 +366,7 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         tdOrder.style.color = 'var(--nk-blue-primary)';
         tdOrder.style.padding = '2px';
 
-        const isOrderEditable = isPeerOnline && isAgentOnline;
+        const isOrderEditable = isPeerOnline && isAgentOnline && !_adminView;
         if (isOrderEditable) {
             const ruleIdx = rules.findIndex(r => r.id === rule.id);
             const isFirst = ruleIdx === 0;
@@ -466,7 +470,7 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         // Status Toggle Switch
         const tdStatus = document.createElement('td');
         tdStatus.className = 'cell-enabled';
-        const disabledAttr = (!isPeerOnline || !isAgentOnline) ? 'disabled' : '';
+        const disabledAttr = (!isPeerOnline || !isAgentOnline || _adminView) ? 'disabled' : '';
         const checkedAttr = rule.enabled ? 'checked' : '';
 
         // Show warning icon if DB states it's enabled but agent says it's not active
@@ -491,7 +495,10 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         tdActions.className = 'cell-actions';
         tdActions.style.textAlign = 'center';
 
-        tdActions.innerHTML = `
+        if (_adminView) {
+            tdActions.innerHTML = `<span style="opacity: 0.4;">—</span>`;
+        } else {
+            tdActions.innerHTML = `
                     <div style="display: inline-flex; align-items: center; justify-content: center;">
                        <button class="btn-delete" onclick="openEditModal(${rule.id})" ${disabledAttr} title="Edit rule" style="color: var(--nk-text-muted); margin-right: 4px;">
                             <i class="far fa-edit" style="font-size: 16px;"></i>
@@ -501,6 +508,7 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
                         </button>
                     </div>
                 `;
+        }
         tr.appendChild(tdActions);
 
         tbody_append_target.appendChild(tr);
@@ -591,7 +599,7 @@ async function submitReorder() {
     }));
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/firewall/rules/reorder`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/firewall/rules/reorder`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ items: items })
@@ -1351,7 +1359,7 @@ async function toggleVpnOnly(checkbox) {
     checkbox.disabled = true;
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/vpn-only`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/vpn-only`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ operation: action })
@@ -1388,7 +1396,7 @@ async function toggleRule(ruleId, checkbox) {
     spinner.style.display = 'block';
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/firewall/rules/${ruleId}/toggle`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/firewall/rules/${ruleId}/toggle`, {
             method: 'POST'
         });
         const data = await response.json();
@@ -1425,7 +1433,7 @@ async function deleteRule(ruleId) {
     if (btnDel) btnDel.disabled = true;
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/firewall/rules/${ruleId}`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/firewall/rules/${ruleId}`, {
             method: 'DELETE'
         });
         const data = await response.json();
@@ -1515,7 +1523,7 @@ async function applyBulkAction(action) {
     buttons.forEach(btn => btn.disabled = true);
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/firewall/rules/bulk`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/firewall/rules/bulk`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: action, rule_ids: selectedIds })
@@ -1543,7 +1551,7 @@ async function resetCounter(ruleId) {
     }
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/firewall/rules/${ruleId}/reset-counter`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/firewall/rules/${ruleId}/reset-counter`, {
             method: 'POST'
         });
         const data = await response.json();
@@ -1625,7 +1633,7 @@ async function fetchAddressLists(silent = false) {
     }
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/aliases`);
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/aliases`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -2070,7 +2078,7 @@ async function submitAddressList(e) {
         if (isNewAgent) {
             try {
                 // 1. Update name/comment via PATCH
-                const patchResp = await fetch(`/api/peers/${peerId}/aliases/${originalSlug}`, {
+                const patchResp = await fetch(`${_apiBase}/api/peers/${peerId}/aliases/${originalSlug}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: slug, comment: comment })
@@ -2081,7 +2089,7 @@ async function submitAddressList(e) {
                 }
 
                 // 2. Update address list via PUT
-                const putResp = await fetch(`/api/peers/${peerId}/aliases/${originalSlug}`, {
+                const putResp = await fetch(`${_apiBase}/api/peers/${peerId}/aliases/${originalSlug}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ list: entries })
@@ -2118,7 +2126,7 @@ async function submitAddressList(e) {
                 list: entries
             };
             try {
-                const response = await fetch(`/api/peers/${peerId}/aliases/${originalSlug}`, {
+                const response = await fetch(`${_apiBase}/api/peers/${peerId}/aliases/${originalSlug}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -2160,7 +2168,7 @@ async function submitAddressList(e) {
     };
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/aliases`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/aliases`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -2202,7 +2210,7 @@ async function deleteAddressList(slug) {
     }
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/aliases/${slug}`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/aliases/${slug}`, {
             method: 'DELETE'
         });
 
@@ -2225,7 +2233,7 @@ async function syncAddressLists() {
     if (btnSync) btnSync.disabled = true;
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/aliases/sync`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/aliases/sync`, {
             method: 'POST'
         });
 
@@ -2566,7 +2574,7 @@ function saveMultiAddresses() {
 // Resolver Configuration Settings
 async function fetchResolverConfig() {
     try {
-        const response = await fetch(`/api/peers/${peerId}/resolver-config`);
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/resolver-config`);
         const data = await response.json();
         if (response.ok) {
             cachedResolverConfig = data;
@@ -2702,7 +2710,7 @@ async function submitResolverConfig(e) {
     };
 
     try {
-        const response = await fetch(`/api/peers/${peerId}/resolver-config`, {
+        const response = await fetch(`${_apiBase}/api/peers/${peerId}/resolver-config`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)

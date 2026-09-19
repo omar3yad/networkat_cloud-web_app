@@ -7,17 +7,51 @@
 {% endblock %}
 
 {% block content %}
+{% if admin_view %}
+<div
+    style="display:flex;align-items:center;gap:0.75rem;background: #f1f5f9;padding:0.6rem 1.1rem;margin-bottom:1.25rem;font-size:0.82rem;border-bottom: 1px solid var(--sb-border);">
+    <span
+        style="background: #0284c7;color:#fff;border-radius:6px;padding:0.2rem 0.6rem;font-weight:600;letter-spacing:.04em;">Admin
+        View</span>
+    <span style="color:#000000;">Viewing <strong style="color:#0284c7;">{{ customer_name }}</strong> — read-only</span>
+    <a href="{{ url_for('admin.customer_details', customer_id=admin_customer_id) }}"
+        style="margin-left:auto;color:#818cf8;text-decoration:none;font-weight:500;"><i class="fas fa-arrow-left"
+            style="margin-right:0.35rem;"></i>Back to customer</a>
+</div>
+{% endif %}
 <!-- Main Container -->
 <div class="main-container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        {% if admin_view %}
+        <a href="{{ url_for('admin.admin_view_peer_details', customer_id=admin_customer_id, peer_id=peer_id) }}"
+            class="back-link" style="margin-bottom: 0;">
+            <i class="fas fa-arrow-left"></i> Back to Peer Details
+        </a>
+        {% else %}
         <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link" style="margin-bottom: 0;">
             <i class="fas fa-arrow-left"></i> Back to Peer Details
         </a>
+        {% endif %}
     </div>
     <div class="unified-page-header">
         <h1><i class="fas fa-shield-alt"></i>Firewall</h1>
         <!-- Peer Feature Nav Tabs -->
         <div class="peer-nav-tabs">
+            {% if admin_view %}
+            <a href="{{ url_for('admin.admin_view_peer_web_filter', customer_id=admin_customer_id, peer_id=peer_id) }}"
+                class="peer-nav-tab">
+                <i class="fas fa-filter"></i> Web Filter
+            </a>
+            <a href="{{ url_for('admin.admin_view_peer_firewall', customer_id=admin_customer_id, peer_id=peer_id) }}"
+                class="peer-nav-tab active">
+                <i class="fas fa-shield-alt"></i> Firewall
+            </a>
+            <a href="{{ url_for('admin.admin_view_peer_aliases', customer_id=admin_customer_id, peer_id=peer_id) }}?filter=normal"
+                class="peer-nav-tab">
+                <i class="fas fa-list"></i> Aliases
+            </a>
+            {% else %}
             <a href="{{ url_for('client.peer_web_filter', peer_id=peer_id) }}" class="peer-nav-tab">
                 <i class="fas fa-filter"></i> Web Filter
             </a>
@@ -27,6 +61,7 @@
             <a href="{{ url_for('client.peer_aliases', peer_id=peer_id) }}?filter=normal" class="peer-nav-tab">
                 <i class="fas fa-list"></i> Aliases
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -41,33 +76,41 @@
             </span>
             <div style="width: 1px; height: 20px; background: var(--nk-border);"></div>
             <button class="btn-cancel" onclick="fetchRules()">Discard</button>
-            <button class="btn-apply" onclick="submitReorder()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>
+            <button class="btn-apply" onclick="submitReorder()" {% if is_readonly_subscription %}disabled
+                title="Modifications locked in Read-Only mode" {% endif %}>
                 Apply order
             </button>
         </div>
 
         <div class="control-bar">
             <div class="control-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddModal()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>
+                {% if not admin_view %}
+                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddModal()" {% if
+                    is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode" {% endif %}>
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
-                <button class="btn-action btn-icon-only" id="refresh-rules-btn" title="Refresh" onclick="handleManualRefresh(event)">
+                {% endif %}
+                <button class="btn-action btn-icon-only" id="refresh-rules-btn" title="Refresh"
+                    onclick="handleManualRefresh(event)">
                     <i class="fas fa-sync-alt" id="refresh-icon"></i>
                 </button>
-                        <!-- VPN-Only Toggle widget -->
-        <div class="vpn-toggle-header">
-            <div class="vpn-toggle-info">
-                <span class="vpn-toggle-title">VPN Only Mode</span>
-                <!-- <span class="vpn-toggle-desc">Block the Internet</span> -->
-            </div>
-            <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
-                <label class="switch" style="margin: 0;">
-                    <input type="checkbox" id="vpn-only-toggle" onchange="toggleVpnOnly(this)" {% if vpn_only %}checked{% endif %} {% if not is_online %}disabled{% endif %}>
-                    <span class="slider"></span>
-                </label>
-                <span class="toggle-status-text" id="vpn-only-text" style="font-size: 0.75rem; font-weight: 800; min-width: 25px; color: {% if vpn_only %}#107c10{% else %}var(--nk-text-muted){% endif %};">{% if vpn_only %}ON{% else %}OFF{% endif %}</span>
-            </div>
-        </div>
+                <!-- VPN-Only Toggle widget -->
+                <div class="vpn-toggle-header">
+                    <div class="vpn-toggle-info">
+                        <span class="vpn-toggle-title">VPN Only Mode</span>
+                        <!-- <span class="vpn-toggle-desc">Block the Internet</span> -->
+                    </div>
+                    <div class="toggle-container" style="display: flex; align-items: center; gap: 8px;">
+                        <label class="switch" style="margin: 0;">
+                            <input type="checkbox" id="vpn-only-toggle" onchange="toggleVpnOnly(this)" {% if vpn_only
+                                %}checked{% endif %} {% if not is_online or admin_view %}disabled{% endif %}>
+                            <span class="slider"></span>
+                        </label>
+                        <span class="toggle-status-text" id="vpn-only-text"
+                            style="font-size: 0.75rem; font-weight: 800; min-width: 25px; color: {% if vpn_only %}#107c10{% else %}var(--nk-text-muted){% endif %};">{%
+                            if vpn_only %}ON{% else %}OFF{% endif %}</span>
+                    </div>
+                </div>
             </div>
 
             <div class="search-box">
@@ -82,8 +125,8 @@
             <table class="rules-table" id="rules-table">
                 <thead>
                     <tr>
-                        <th style="width: 40px; text-align: center;"><input type="checkbox" id="select-all-rules"
-                                onclick="toggleSelectAllRules(this)"></th>
+                        <th style="width: 40px; text-align: center;">{% if not admin_view %}<input type="checkbox"
+                                id="select-all-rules" onclick="toggleSelectAllRules(this)">{% endif %}</th>
                         <th style="width: 30px; text-align: center;"></th>
                         <th style="width: 55px; text-align: center;">Order</th>
                         <th style="width: 95px;">In Interface</th>
@@ -117,7 +160,8 @@
             <form id="addRuleForm" onsubmit="submitAddRule(event)">
                 <div class="form-row">
                     <div class="form-group form-group-full">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <label style="margin-bottom: 0;">Comment</label>
                             <span class="char-counter" id="ruleName-counter">0 / 200</span>
                         </div>
@@ -282,7 +326,8 @@
                 <input type="hidden" id="listActionType" value="add">
                 <div class="form-row">
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <label style="margin-bottom: 0;">Name *</label>
                             <span class="char-counter" id="listSlug-counter">0 / 200</span>
                         </div>
@@ -291,7 +336,8 @@
                         <div class="field-error-msg" id="listSlug-error" style="display: none;"></div>
                     </div>
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <label style="margin-bottom: 0;">Comment</label>
                             <span class="char-counter" id="listComment-counter">0 / 200</span>
                         </div>
@@ -303,7 +349,8 @@
                 <div class="form-row">
                     <div class="form-group" style="max-width: 320px;">
                         <label>Type *</label>
-                        <select id="listType" onchange="onListTypeChange()" style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;">
+                        <select id="listType" onchange="onListTypeChange()"
+                            style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--nk-border); border-radius: var(--nk-radius-sm); font-size: 0.88rem;">
                             <option value="normal">Normal (IP / Hostname)</option>
                             <option value="web_domain">Web Domain (for filtering)</option>
                         </select>
@@ -392,8 +439,12 @@
     window.FIREWALL_CONFIG = {
         peerId: {{ peer_id|tojson }},
         peerName: {{ peer_name|tojson }},
-        isOnline: {{ 'true' if is_online else 'false' }}
+        isOnline: {{ 'true' if is_online else 'false' }},
+        apiBase: {{ (api_base or '')|tojson }},
+        adminView: {{ 'true' if admin_view else 'false' }}
     };
+    window.API_BASE = {{ (api_base or '')|tojson }};
+    window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};
 </script>
 <script src="{{ url_for('static', filename='js/firewall.js') }}"></script>
 {% endblock %}

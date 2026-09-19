@@ -9,8 +9,28 @@ from extensions import db, migrate, login_manager
 from admin.routes import admin_bp
 
 def create_app():
-    app = Flask(__name__)
+    from flask import send_from_directory
+    app = Flask(__name__, static_folder=None)
     app.config.from_object(Config)
+
+    # Add client templates directory so admin blueprint can render client pages
+    import os
+    from jinja2 import FileSystemLoader, ChoiceLoader
+    client_templates = os.path.join(os.path.dirname(__file__), 'client', 'templates')
+    app.jinja_loader = ChoiceLoader([
+        app.jinja_loader,
+        FileSystemLoader(client_templates),
+    ])
+
+    root_static_dir = os.path.join(os.path.dirname(__file__), 'static')
+    client_static_dir = os.path.join(os.path.dirname(__file__), 'client', 'static')
+
+    @app.route('/static/<path:filename>', endpoint='static')
+    def serve_static(filename):
+        root_file = os.path.join(root_static_dir, filename)
+        if os.path.exists(root_file) and os.path.isfile(root_file):
+            return send_from_directory(root_static_dir, filename)
+        return send_from_directory(client_static_dir, filename)
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -32,6 +52,7 @@ def create_app():
 
     app.register_blueprint(admin_bp)
     return app
+
 
 
 app = create_app()

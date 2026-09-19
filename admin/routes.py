@@ -5,6 +5,7 @@ import random
 import requests
 from datetime import datetime
 from functools import wraps
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
 from extensions import db
@@ -14,7 +15,15 @@ from models.subscription_plan import SubscriptionPlan
 from services.auth_service import AuthService
 from services.customer_service import CustomerService
 from services.subscription_service import SubscriptionService
-from services.netbird_service import get_cached_customer_peer_ids as _get_customer_group_peer_ids
+from services.netbird_service import (
+    get_cached_customer_peer_ids as _get_customer_group_peer_ids,
+    get_cached_all_netbird_peers,
+    get_cached_all_netbird_routes,
+    get_cached_peer_vpn_only,
+    check_single_peer_handshake,
+    get_api_base_url,
+    get_api_headers,
+)
 from repositories.user_repository import UserRepository
 from utils.two_factor import (
     generate_totp_secret,
@@ -27,6 +36,14 @@ from utils.two_factor import (
 )
 from utils.email import send_2fa_email_otp
 from utils.password import verify_password
+from utils.cache_manager import (
+    get_name_override,
+    get_active_route_overrides,
+    firewall_rules_cache,
+    firewall_cache_lock,
+)
+
+_admin_view_executor = ThreadPoolExecutor(max_workers=20)
 
 admin_bp = Blueprint('admin', __name__, template_folder='../templates')
 auth_service = AuthService()
@@ -213,7 +230,7 @@ def customer_details(customer_id):
     customer = data.get('customer')
     sub_info = subscription_service.get_subscription_info(customer) if customer else {}
 
-    return render_template('customer_details.html', **data, plans=plans, subscription_info=sub_info)
+    return render_template('customer_details.html', **data, plans=plans, subscription_info=sub_info, customer_id=customer_id)
 
 
 @admin_bp.route('/customers/create', methods=['POST'])
@@ -901,3 +918,678 @@ def staff_2fa_disable(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# ======================================================================
+# Admin "View As Client" Routes
+# ======================================================================
+# Prefix: /admin/view/<customer_id>/...
+# All routes are READ-ONLY (GET only for API proxies).
+# Admin must be logged in; peer must belong to the given customer.
+# ======================================================================
+
+def _admin_verify_peer(customer_id, peer_id):
+    """Returns (customer, peer_data) if peer belongs to customer, else (None, None)."""
+    customer = db.session.get(Client, customer_id)
+    if not customer:
+        return None, None
+    allowed = _get_customer_group_peer_ids(customer)
+    if peer_id not in allowed:
+        return None, None
+    peers_data = get_cached_all_netbird_peers(get_api_base_url(), get_api_headers(), cache_ttl=10)
+    peer_data = next((p for p in peers_data if p.get("id") == peer_id), None)
+    return customer, peer_data
+
+
+def _admin_get_customer_with_peers(customer_id):
+    """Returns (customer, peers_list) for aliases and sidebar."""
+    customer = db.session.get(Client, customer_id)
+    if not customer:
+        return None, []
+    allowed = _get_customer_group_peer_ids(customer)
+    base_url = get_api_base_url()
+    headers = get_api_headers()
+    peers_data = get_cached_all_netbird_peers(base_url, headers, cache_ttl=10)
+    customer_peers = [p for p in peers_data if p.get("id") in allowed]
+
+    processed = []
+    if customer_peers:
+        futures = {
+            _admin_view_executor.submit(check_single_peer_handshake, p, base_url, headers): p
+            for p in customer_peers
+        }
+        for future in as_completed(futures, timeout=5):
+            try:
+                processed.append(future.result())
+            except Exception as err:
+                current_app.logger.error(f"Admin view: peer handshake error: {err}")
+
+    peers_list = [
+        {
+            "id": p.get("id"),
+            "name": get_name_override(p.get("id")) or p.get("name"),
+            "connected": p.get("is_online", False),
+            "ip": p.get("ip"),
+            "last_seen": p.get("last_seen"),
+            "status_title": "Connected" if p.get("is_online", False) else "Offline"
+        }
+        for p in processed
+    ]
+    peers_list.sort(key=lambda p: (p.get("name") or "").lower())
+    return customer, peers_list
+
+
+def _admin_get_sidebar_context(customer_id):
+    customer, peers_list = _admin_get_customer_with_peers(customer_id)
+    online_count = sum(1 for p in peers_list if p.get("connected"))
+    offline_count = len(peers_list) - online_count
+    return {
+        "sidebar_peers": peers_list,
+        "sidebar_online_count": online_count,
+        "sidebar_offline_count": offline_count,
+    }
+
+
+def _admin_api_base(customer_id):
+    return f"/admin/view/{customer_id}"
+
+
+# ----------------------------------------------------------------------
+# Page Routes
+# ----------------------------------------------------------------------
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/peers/<peer_id>')
+@login_required
+def admin_view_peer_details(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        flash("Peer not found or does not belong to this customer.", "error")
+        return redirect(url_for('admin.customer_details', customer_id=customer_id))
+
+    override_name = get_name_override(peer_id)
+    peer_name = override_name or (peer_data.get("name") if peer_data else "Peer Device")
+    is_online = False
+    peer_ip = "Unknown"
+    peer_public_ip = "Unknown"
+    peer_os = "Unknown"
+    peer_version = "Unknown"
+    peer_uptime = "Unknown"
+    peer_uptime_seconds = None
+    peer_last_seen = "Never"
+
+    if peer_data:
+        try:
+            base_url = get_api_base_url()
+            headers = get_api_headers()
+            checked = check_single_peer_handshake(peer_data, base_url, headers)
+            is_online = checked.get("is_online", False)
+            peer_ip = checked.get("ip", peer_ip)
+            peer_public_ip = checked.get("connection_ip", peer_public_ip) or "Unknown"
+            peer_os = checked.get("os", peer_os)
+            peer_version = checked.get("version", peer_version)
+            if is_online and peer_ip and peer_ip != "Unknown":
+                try:
+                    h_resp = requests.get(f"http://{peer_ip}:8765/health", timeout=(1, 2))
+                    if h_resp.ok:
+                        h_data = h_resp.json()
+                        if h_data.get("version"):
+                            peer_version = h_data["version"]
+                        if h_data.get("uptime") is not None:
+                            secs = int(h_data["uptime"])
+                            peer_uptime_seconds = secs
+                            days, rem = divmod(secs, 86400)
+                            hrs, rem2 = divmod(rem, 3600)
+                            mins, secs2 = divmod(rem2, 60)
+                            prefix = f"{days}d " if days else ""
+                            peer_uptime = f"{prefix}{hrs:02d}:{mins:02d}:{secs2:02d}"
+                except Exception:
+                    pass
+            peer_last_seen = checked.get("last_seen", peer_last_seen)
+            if peer_last_seen and peer_last_seen != "Never":
+                try:
+                    clean_str = peer_last_seen.replace('Z', '+00:00')
+                    dt = datetime.fromisoformat(clean_str)
+                    peer_last_seen = dt.strftime("%d/%m/%Y %H:%M:%S")
+                except Exception:
+                    pass
+        except Exception as e:
+            current_app.logger.error(f"Admin view: error checking peer status: {e}")
+
+    peer_route_network = ""
+    peer_route_id = ""
+    peer_route_network_id = ""
+    try:
+        all_routes = get_cached_all_netbird_routes(get_api_base_url(), get_api_headers(), cache_ttl=10)
+        overrides = get_active_route_overrides()
+        if peer_id in overrides:
+            peer_route_network = overrides[peer_id]
+        else:
+            pr = next((r for r in all_routes if r.get("peer") == peer_id), None)
+            if pr:
+                peer_route_network = pr.get("network", "")
+                peer_route_id = pr.get("id", "")
+                peer_route_network_id = pr.get("network_id", "")
+    except Exception as e:
+        current_app.logger.error(f"Admin view: error fetching route: {e}")
+
+    return render_template(
+        'peer_details.html',
+        peer_id=peer_id,
+        peer_name=peer_name,
+        customer_name=customer.client_name,
+        is_online=is_online,
+        peer_ip=peer_ip,
+        peer_public_ip=peer_public_ip,
+        peer_os=peer_os,
+        peer_version=peer_version,
+        peer_uptime=peer_uptime,
+        peer_uptime_seconds=peer_uptime_seconds,
+        peer_last_seen=peer_last_seen,
+        peer_network=peer_route_network,
+        peer_route_id=peer_route_id,
+        peer_route_network_id=peer_route_network_id,
+        can_manage_services=False,
+        admin_view=True,
+        admin_customer_id=customer_id,
+        api_base=_admin_api_base(customer_id),
+        **_admin_get_sidebar_context(customer_id),
+    )
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/peers/<peer_id>/firewall')
+@login_required
+def admin_view_peer_firewall(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        flash("Peer not found or does not belong to this customer.", "error")
+        return redirect(url_for('admin.customer_details', customer_id=customer_id))
+
+    override_name = get_name_override(peer_id)
+    peer_name = override_name or (peer_data.get("name") if peer_data else "Edge Device")
+    is_online = False
+    vpn_only = False
+
+    if peer_data:
+        try:
+            base_url = get_api_base_url()
+            headers = get_api_headers()
+            checked = check_single_peer_handshake(peer_data, base_url, headers)
+            is_online = checked.get("is_online", False)
+            if not override_name and checked.get("name"):
+                peer_name = checked.get("name")
+            if peer_data.get("ip"):
+                vpn_only = get_cached_peer_vpn_only(peer_id, peer_data.get("ip"))
+        except Exception as e:
+            current_app.logger.error(f"Admin view: error checking peer for firewall: {e}")
+
+    return render_template(
+        'firewall.html',
+        peer_id=peer_id,
+        peer_name=peer_name,
+        customer_name=customer.client_name,
+        is_online=is_online,
+        vpn_only=vpn_only,
+        admin_view=True,
+        admin_customer_id=customer_id,
+        api_base=_admin_api_base(customer_id),
+        **_admin_get_sidebar_context(customer_id),
+    )
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/peers/<peer_id>/web-filter')
+@login_required
+def admin_view_peer_web_filter(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        flash("Peer not found or does not belong to this customer.", "error")
+        return redirect(url_for('admin.customer_details', customer_id=customer_id))
+
+    override_name = get_name_override(peer_id)
+    peer_name = override_name or (peer_data.get("name") if peer_data else "Edge Device")
+    is_online = False
+    vpn_only = False
+
+    if peer_data:
+        try:
+            base_url = get_api_base_url()
+            headers = get_api_headers()
+            checked = check_single_peer_handshake(peer_data, base_url, headers)
+            is_online = checked.get("is_online", False)
+            if not override_name and checked.get("name"):
+                peer_name = checked.get("name")
+            if peer_data.get("ip"):
+                vpn_only = get_cached_peer_vpn_only(peer_id, peer_data.get("ip"))
+        except Exception as e:
+            current_app.logger.error(f"Admin view: error checking peer for web-filter: {e}")
+
+    return render_template(
+        'web_filter.html',
+        peer_id=peer_id,
+        peer_name=peer_name,
+        customer_name=customer.client_name,
+        is_online=is_online,
+        vpn_only=vpn_only,
+        admin_view=True,
+        admin_customer_id=customer_id,
+        api_base=_admin_api_base(customer_id),
+        **_admin_get_sidebar_context(customer_id),
+    )
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/peers/<peer_id>/aliases')
+@admin_bp.route('/admin/view/<uuid:customer_id>/peers/aliases')
+@login_required
+def admin_view_peer_aliases(customer_id, peer_id=None):
+    customer_id = str(customer_id)
+    customer, peers_list = _admin_get_customer_with_peers(customer_id)
+    if not customer:
+        flash("Customer not found.", "error")
+        return redirect(url_for('admin.customers'))
+
+    if peer_id is None:
+        peer_id = request.args.get('peer_id')
+
+    if peer_id:
+        allowed = _get_customer_group_peer_ids(customer)
+        if peer_id not in allowed:
+            flash("Peer not found or does not belong to this customer.", "error")
+            return redirect(url_for('admin.customer_details', customer_id=customer_id))
+
+    selected_peer = next((p for p in peers_list if p["id"] == peer_id), None) if peer_id else None
+    peer_name = selected_peer["name"] if selected_peer else "No Peers Available"
+    is_online = selected_peer["connected"] if selected_peer else False
+
+    if not peer_id and peers_list:
+        first_online = next((p for p in peers_list if p["connected"]), None)
+        if first_online:
+            peer_id = first_online["id"]
+            peer_name = first_online["name"]
+            is_online = True
+            selected_peer = first_online
+
+    online_count = sum(1 for p in peers_list if p.get("connected"))
+    offline_count = len(peers_list) - online_count
+
+    return render_template(
+        'aliases.html',
+        customer_name=customer.client_name,
+        peers=peers_list,
+        sidebar_peers=peers_list,
+        sidebar_online_count=online_count,
+        sidebar_offline_count=offline_count,
+        selected_peer_id=peer_id,
+        peer_id=peer_id,
+        peer_name=peer_name,
+        is_online=is_online,
+        admin_view=True,
+        admin_customer_id=customer_id,
+        api_base=_admin_api_base(customer_id),
+    )
+
+
+# ----------------------------------------------------------------------
+# Read-Only API Proxy Routes
+# ----------------------------------------------------------------------
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers', methods=['GET'])
+@login_required
+def admin_view_api_peers(customer_id):
+    customer_id = str(customer_id)
+    customer = db.session.get(Client, customer_id)
+    if not customer:
+        return jsonify({"error": "Customer not found"}), 404
+    allowed = _get_customer_group_peer_ids(customer)
+    peer_name_filter = request.args.get('name', '').lower()
+    try:
+        peers_data = get_cached_all_netbird_peers(get_api_base_url(), get_api_headers())
+        result = []
+        for p in peers_data:
+            pid = p.get("id")
+            if pid not in allowed:
+                continue
+            pname = get_name_override(pid) or p.get("name")
+            if peer_name_filter and peer_name_filter not in (pname or "").lower():
+                continue
+            result.append({"id": pid, "name": pname, "connected": p.get("connected", False),
+                           "last_seen": p.get("last_seen"), "ip": p.get("ip")})
+        result.sort(key=lambda p: (p.get("name") or "").lower())
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/status', methods=['GET'])
+@login_required
+def admin_view_api_peers_status(customer_id):
+    customer_id = str(customer_id)
+    customer = db.session.get(Client, customer_id)
+    if not customer:
+        return jsonify({"error": "Customer not found"}), 404
+    allowed = _get_customer_group_peer_ids(customer)
+    if not allowed:
+        return jsonify({"peers": [], "summary": {"total": 0, "online": 0, "offline": 0}})
+    base_url = get_api_base_url()
+    headers = get_api_headers()
+    peers_data = get_cached_all_netbird_peers(base_url, headers, cache_ttl=10)
+    customer_peers = [p for p in peers_data if p.get("id") in allowed]
+    processed = []
+    online_count = 0
+    if customer_peers:
+        futures = {
+            _admin_view_executor.submit(check_single_peer_handshake, p, base_url, headers): p
+            for p in customer_peers
+        }
+        for future in as_completed(futures, timeout=15):
+            try:
+                res = future.result()
+                processed.append(res)
+                if res.get("is_online"):
+                    online_count += 1
+            except Exception as err:
+                current_app.logger.error(f"Admin view status: {err}")
+    processed.sort(key=lambda p: (p.get("name") or "").lower())
+    return jsonify({
+        "peers": processed,
+        "summary": {"total": len(processed), "online": online_count, "offline": len(processed) - online_count}
+    }), 200
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/handshake', methods=['GET'])
+@login_required
+def admin_view_api_peer_handshake(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, _ = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        url = f"{get_api_base_url()}/api/v1/peers/{peer_id}/handshake"
+        resp = requests.get(url, headers=get_api_headers(), timeout=5)
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        return jsonify({"peer_id": peer_id, "is_reachable": False, "error": str(e)}), 500
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/v2/netbird/routes', methods=['GET'])
+@login_required
+def admin_view_api_routes(customer_id):
+    customer_id = str(customer_id)
+    customer = db.session.get(Client, customer_id)
+    if not customer:
+        return jsonify({"error": "Customer not found"}), 404
+    allowed = _get_customer_group_peer_ids(customer)
+    try:
+        all_routes = get_cached_all_netbird_routes(get_api_base_url(), get_api_headers())
+        overrides = get_active_route_overrides()
+        result = [
+            {"id": r.get("id"), "peer": r.get("peer"), "network": r.get("network"),
+             "network_id": r.get("network_id"), "enabled": r.get("enabled", True),
+             "description": r.get("description", "")}
+            for r in all_routes if r.get("peer") in allowed
+        ]
+        filtered = []
+        for r in result:
+            pid = r.get("peer")
+            if pid in overrides:
+                net_val = overrides[pid]
+                if net_val:
+                    r["network"] = net_val
+                    filtered.append(r)
+            else:
+                filtered.append(r)
+        for pid, net_val in overrides.items():
+            if net_val and not any(r.get("peer") == pid for r in filtered):
+                filtered.append({"id": f"temp-route-{pid}", "peer": pid, "network": net_val,
+                                  "network_id": f"temp-net-{pid}", "enabled": True, "description": ""})
+        return jsonify(filtered), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/firewall/rules', methods=['GET'])
+@login_required
+def admin_view_api_firewall_rules(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"rules": [], "agent_online": False}), 200
+
+    peer_ip = peer_data.get("ip")
+    now = time.time()
+    cached_rules, agent_online, cache_time = [], False, 0
+    cache_found = False
+    with firewall_cache_lock:
+        if peer_id in firewall_rules_cache:
+            cached_rules, agent_online, cache_time = firewall_rules_cache[peer_id]
+            cache_found = True
+
+    force_refresh = request.args.get('refresh', 'false').lower() == 'true'
+    if force_refresh and (now - cache_time < 5):
+        force_refresh = False
+    if force_refresh or not cache_found or (now - cache_time > 15):
+        try:
+            resp = requests.get(f"http://{peer_ip}:8765/firewall/rules", timeout=(1, 5))
+            if resp.ok:
+                agent_online = True
+                cached_rules = resp.json().get("rules", [])
+            with firewall_cache_lock:
+                firewall_rules_cache[peer_id] = (cached_rules, agent_online, time.time())
+        except Exception as e:
+            current_app.logger.error(f"Admin view firewall rules failed: {e}")
+
+    rules_data = []
+    for idx, lr in enumerate(cached_rules):
+        src_ips = [(('@' + s[7:]) if s.startswith('@alias_') else s) for s in (lr.get("src") or [])]
+        dst_ips = [(('@' + d[7:]) if d.startswith('@alias_') else d) for d in (lr.get("dst") or [])]
+        src_ports = lr.get("src_port")
+        dst_ports = lr.get("dst_port")
+        action = lr.get("action", "DROP")
+        action = "ALLOW" if action.lower() in ("accept", "allow") else "DROP"
+        comment = lr.get("comment", "")
+        is_auto = bool(re.match(r"^rule_\d{6}$", comment))
+        rules_data.append({
+            "id": idx + 1, "rule_name": "" if is_auto else comment,
+            "src_ip": ",".join(src_ips) if src_ips else "Any",
+            "dst_ip": ",".join(dst_ips) if dst_ips else "Any",
+            "src_port": ",".join(src_ports) if isinstance(src_ports, list) else (src_ports or ""),
+            "dst_port": ",".join(dst_ports) if isinstance(dst_ports, list) else (dst_ports or ""),
+            "protocol": lr.get("protocol") or "any", "action": action,
+            "interface": lr.get("interface") or "lan", "enabled": lr.get("enabled", True),
+            "active_on_agent": True, "direction": lr.get("id"),
+            "order": lr.get("order", idx + 1), "packets": lr.get("packets"), "bytes": lr.get("bytes"),
+        })
+    return jsonify({"rules": rules_data, "agent_online": agent_online}), 200
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/web-filter/rules', methods=['GET'])
+@login_required
+def admin_view_api_web_filter_rules(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"rules": [], "agent_online": False}), 200
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/web-filter/rules", timeout=(1, 10))
+        if resp.ok:
+            return jsonify(resp.json()), 200
+    except Exception as e:
+        current_app.logger.error(f"Admin view web-filter rules failed: {e}")
+    return jsonify({"rules": [], "agent_online": False}), 200
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/aliases', methods=['GET'])
+@login_required
+def admin_view_api_aliases(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"detail": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"detail": "Peer IP not found"}), 404
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/aliases", timeout=(1, 10))
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except Exception:
+        return jsonify({"detail": "Device agent is offline or unreachable"}), 503
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/adguard/blocked_services', methods=['GET'])
+@login_required
+def admin_view_api_adguard_blocked_services(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, _ = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        url = f"{get_api_base_url()}/api/v1/peers/{peer_id}/adguard/blocked_services"
+        resp = requests.get(url, headers=get_api_headers(), timeout=10)
+        if resp.ok:
+            return jsonify(resp.json())
+        return jsonify({"error": "Failed"}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route(
+    '/admin/view/<uuid:customer_id>/api/peers/<peer_id>/adguard/clients/<client_name>/blocked_services',
+    methods=['GET']
+)
+@login_required
+def admin_view_api_adguard_client_blocked_services(customer_id, peer_id, client_name):
+    customer_id = str(customer_id)
+    customer, _ = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    try:
+        url = f"{get_api_base_url()}/api/v1/peers/{peer_id}/adguard/clients/{client_name}/blocked_services"
+        resp = requests.get(url, headers=get_api_headers(), timeout=10)
+        if resp.ok:
+            return jsonify(resp.json())
+        return jsonify({"error": "Failed"}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/resolver-config', methods=['GET'])
+@login_required
+def admin_view_api_resolver_config(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, _ = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"detail": "Unauthorized"}), 403
+    try:
+        url = f"{get_api_base_url()}/api/v1/peers/{peer_id}/adguard/dns_info"
+        resp = requests.get(url, headers=get_api_headers(), timeout=10)
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except Exception:
+        return jsonify({"detail": "DNS service is unreachable"}), 503
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/vpn-only', methods=['GET'])
+@login_required
+def admin_view_api_vpn_only(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"detail": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"detail": "Peer IP not found"}), 404
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/vpn-only", timeout=(1, 10))
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except Exception:
+        return jsonify({"detail": "Device agent is offline or unreachable"}), 503
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/services', methods=['GET'])
+@login_required
+def admin_view_api_services(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"error": "Device unreachable"}), 404
+    peer_ip = peer_data.get("ip")
+    _SVC_MAP = {"adguard": "dns_filtering", "client_firewall": "firewall", "mesh_network": "mesh_network"}
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/services", timeout=(1, 5))
+        if not resp.ok:
+            return jsonify({"error": "Unable to fetch services"}), 502
+        agent_data = resp.json()
+        public_services = [
+            {"name": _SVC_MAP[s["name"]], "state": s["state"]}
+            for s in agent_data.get("services", [])
+            if s.get("name") in _SVC_MAP
+        ]
+        return jsonify({"services": public_services}), 200
+    except Exception:
+        return jsonify({"error": "Device unreachable"}), 503
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/health', methods=['GET'])
+@login_required
+def admin_view_api_peer_health(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"error": "Device unreachable"}), 404
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/health", timeout=(1, 2))
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except Exception:
+        return jsonify({"error": "Device unreachable"}), 504
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/update', methods=['GET'])
+@login_required
+def admin_view_api_peer_update(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"error": "Device unreachable"}), 404
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/update", timeout=(2, 15))
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except Exception:
+        return jsonify({"error": "Device unreachable"}), 503
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/update/config', methods=['GET'])
+@login_required
+def admin_view_api_peer_update_config(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"error": "Device unreachable"}), 404
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/update/config", timeout=(2, 10))
+        if resp.ok:
+            try:
+                resp_json = resp.json()
+                secs = resp_json.get("update_check_interval_seconds")
+                if secs is not None:
+                    resp_json["update_check_interval_hours"] = round(secs / 3600.0, 1)
+                return jsonify(resp_json), resp.status_code
+            except Exception:
+                pass
+        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+    except Exception:
+        return jsonify({"error": "Device unreachable"}), 503

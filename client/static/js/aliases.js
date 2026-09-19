@@ -1,3 +1,5 @@
+const _apiBase = (window.API_BASE || "");
+const _adminView = !!(window.ADMIN_VIEW);
 let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
     let isPeerOnline = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.isOnline : false;
     let currentPeerName = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerName : "";
@@ -11,7 +13,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
         if (currentPeerId) {
             if (!isPeerOnline) {
-                window.location.href = `/peers/${currentPeerId}`;
+                window.location.href = _adminView ? '#' : `/peers/${currentPeerId}`;
                 return;
             }
             updateNavTabLinks(currentPeerId);
@@ -35,14 +37,15 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         const firewallTab = document.getElementById('nav-tab-firewall');
         const aliasesTab = document.getElementById('nav-tab-aliases');
 
+        const base = _apiBase || '';
         if (webFilterTab && peerId) {
-            webFilterTab.href = `/peers/${peerId}/web-filter`;
+            webFilterTab.href = `${base}/peers/${peerId}/web-filter`;
         }
         if (firewallTab && peerId) {
-            firewallTab.href = `/peers/${peerId}/firewall`;
+            firewallTab.href = `${base}/peers/${peerId}/firewall`;
         }
         if (aliasesTab && peerId) {
-            aliasesTab.href = `/peers/${peerId}/aliases`;
+            aliasesTab.href = `${base}/peers/${peerId}/aliases`;
         }
     }
 
@@ -51,7 +54,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
     // Fetch Address Lists/Aliases from backend
     async function fetchAddressLists(silent = false) {
         try {
-            const response = await fetch(`/api/peers/${currentPeerId}/aliases`);
+            const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -122,10 +125,13 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             tdSlug.className = 'cell-name';
             tdSlug.style.fontWeight = '700';
             const items = list.list || [];
+            const countClickAttr = _adminView ? '' : `onclick="openEditListModal('${list.slug}')"`;
+            const countStyle = _adminView ? 'style="cursor: default;"' : '';
+            const countTitle = _adminView ? 'Items count' : 'Click to Edit Alias';
             tdSlug.innerHTML = `
                 <div class="alias-name-wrapper">
                     <span class="alias-name-text">${list.name || list.slug}</span>
-                    <span onclick="openEditListModal('${list.slug}')" class="alias-count-badge" title="Click to Edit Alias">${items.length}</span>
+                    <span ${countClickAttr} class="alias-count-badge" ${countStyle} title="${countTitle}">${items.length}</span>
                 </div>
             `;
             tr.appendChild(tdSlug);
@@ -186,23 +192,26 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             const tdActions = document.createElement('td');
             tdActions.className = 'cell-actions';
             tdActions.style.textAlign = 'center';
-            const disabledAttr = !isPeerOnline ? 'disabled' : '';
 
-            const peerName = currentPeerName;
-
-            tdActions.innerHTML = `
-                <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
-                    <a href="/peers/${currentPeerId}/filtering?name=${encodeURIComponent(peerName)}&scope=alias&alias=${list.slug}" class="btn-delete btn-edit-action" title="DNS Filter" style="display: flex;align-items: center;justify-content: center;text-decoration: none;display: none;">
-                        <i class="fas fa-filter"></i>
-                    </a>
-                    <button class="btn-delete btn-edit-action" onclick="openEditListModal('${list.slug}')" ${disabledAttr} title="Edit alias">
-                        <i class="far fa-edit"></i>
-                    </button>
-                    <button class="btn-delete" onclick="deleteAddressList('${list.slug}')" ${disabledAttr} title="Delete alias">
-                        <i class="far fa-trash-alt"></i>
-                    </button>
-                </div>
-            `;
+            if (_adminView) {
+                tdActions.innerHTML = `<span style="opacity: 0.4;">—</span>`;
+            } else {
+                const disabledAttr = !isPeerOnline ? 'disabled' : '';
+                const peerName = currentPeerName;
+                tdActions.innerHTML = `
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                        <a href="/peers/${currentPeerId}/filtering?name=${encodeURIComponent(peerName)}&scope=alias&alias=${list.slug}" class="btn-delete btn-edit-action" title="DNS Filter" style="display: flex;align-items: center;justify-content: center;text-decoration: none;display: none;">
+                            <i class="fas fa-filter"></i>
+                        </a>
+                        <button class="btn-delete btn-edit-action" onclick="openEditListModal('${list.slug}')" ${disabledAttr} title="Edit alias">
+                            <i class="far fa-edit"></i>
+                        </button>
+                        <button class="btn-delete" onclick="deleteAddressList('${list.slug}')" ${disabledAttr} title="Delete alias">
+                            <i class="far fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+            }
             tr.appendChild(tdActions);
 
             tbody.appendChild(tr);
@@ -729,7 +738,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             if (isNewAgent) {
                 try {
                     // 1. Update name/comment via PATCH
-                    const patchResp = await fetch(`/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
+                    const patchResp = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: slug, comment: comment })
@@ -740,7 +749,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                     }
 
                     // 2. Update address list via PUT
-                    const putResp = await fetch(`/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
+                    const putResp = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ list: entries })
@@ -768,7 +777,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                     list: entries
                 };
                 try {
-                    const response = await fetch(`/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
+                    const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
@@ -799,7 +808,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             };
 
             try {
-                const response = await fetch(`/api/peers/${currentPeerId}/aliases`, {
+                const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -831,7 +840,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         }
 
         try {
-            const response = await fetch(`/api/peers/${currentPeerId}/aliases/${slug}`, {
+            const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases/${slug}`, {
                 method: 'DELETE'
             });
 
@@ -853,7 +862,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         if (btnSync) btnSync.disabled = true;
 
         try {
-            const response = await fetch(`/api/peers/${currentPeerId}/aliases/sync`, {
+            const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases/sync`, {
                 method: 'POST'
             });
 
@@ -876,7 +885,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
     async function fetchResolverConfig() {
         try {
-            const response = await fetch(`/api/peers/${currentPeerId}/resolver-config`);
+            const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/resolver-config`);
             const data = await response.json();
             if (response.ok) {
                 cachedResolverConfig = data;
@@ -1143,7 +1152,7 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         };
 
         try {
-            const response = await fetch(`/api/peers/${currentPeerId}/resolver-config`, {
+            const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/resolver-config`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

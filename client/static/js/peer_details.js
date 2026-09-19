@@ -3,6 +3,8 @@
  */
 (function () {
     'use strict';
+    const _apiBase = (window.API_BASE || '');
+    const _adminView = !!(window.ADMIN_VIEW);
 
     let currentPeerName = "";
     let currentPeerNetwork = "";
@@ -59,8 +61,8 @@
     async function loadFleetContext() {
         try {
             const [peersRes, routesRes] = await Promise.all([
-                fetch('/api/peers').catch(() => null),
-                fetch('/api/v2/netbird/routes').catch(() => null)
+                fetch(`${_apiBase}/api/peers`).catch(() => null),
+                fetch(`${_apiBase}/api/v2/netbird/routes`).catch(() => null)
             ]);
             if (peersRes && peersRes.ok) otherPeers = await peersRes.json();
             if (routesRes && routesRes.ok) otherRoutes = await routesRes.json();
@@ -402,7 +404,7 @@
                     };
 
                     if (currentRouteId && currentRouteId !== 'null' && currentRouteId !== 'undefined') {
-                        const routeRes = await fetch(`/api/v2/netbird/routes/${currentRouteId}`, {
+                        const routeRes = await fetch(`${_apiBase}/api/v2/netbird/routes/${currentRouteId}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(routeBody)
@@ -412,7 +414,7 @@
                             throw new Error(errData.detail || errData.message || errData.error || 'Failed to save');
                         }
                     } else {
-                        const createRes = await fetch('/api/v2/netbird/routes', {
+                        const createRes = await fetch(`${_apiBase}/api/v2/netbird/routes`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(routeBody)
@@ -438,7 +440,7 @@
                         otherRoutes.push({ peer: peerId, network: newNetwork });
                     }
                 } else if (currentRouteId && currentRouteId !== 'null' && currentRouteId !== 'undefined') {
-                    await fetch(`/api/v2/netbird/routes/${currentRouteId}`, { method: 'DELETE' });
+                    await fetch(`${_apiBase}/api/v2/netbird/routes/${currentRouteId}`, { method: 'DELETE' });
                     currentPeerNetwork = "";
                     currentRouteId = "";
                     document.getElementById('peer-network-display').innerHTML = `<span style="color: var(--nk-text-muted); font-style: italic;">Not configured</span>`;
@@ -526,7 +528,7 @@
         }
 
         try {
-            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/delete`, {
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/delete`, {
                 method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',
@@ -595,7 +597,7 @@
         list.style.display = 'none';
 
         try {
-            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/services`);
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/services`);
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok) {
                 throw new Error(data.error || 'Failed to load service settings');
@@ -633,7 +635,7 @@
         checkbox.disabled = true;
 
         try {
-            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/services`, {
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/services`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ services: { [serviceName]: newState } })
@@ -717,7 +719,7 @@
         if (!peerId) return;
         // 1. Fetch version directly from agent /health
         try {
-            const hResp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/health`);
+            const hResp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/health`);
             if (hResp.ok) {
                 const hData = await hResp.json();
                 const healthVersion = hData.version || "";
@@ -742,7 +744,7 @@
 
         // 2. Fetch update discovery status
         try {
-            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update`);
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update`);
             if (!resp.ok) return;
             const data = await resp.json();
             const update = data.update || {};
@@ -853,7 +855,7 @@
         clearUpdatesFeedback();
 
         try {
-            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update`);
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update`);
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok) {
                 throw new Error(data.error || "Failed to check for updates");
@@ -953,7 +955,7 @@
         showUpdatesFeedback("Software update in progress. This may take up to 2 minutes, please do not close the window.", "info");
 
         try {
-            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update`, {
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({})
@@ -989,7 +991,7 @@
 
     async function loadAutoUpdateConfig() {
         try {
-            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update/config`);
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update/config`);
             const data = await resp.json().catch(() => ({}));
             if (!resp.ok) return;
 
@@ -1064,7 +1066,7 @@
 
         try {
             const intervalSeconds = hours * 3600;
-            const resp = await fetch(`/api/peers/${encodeURIComponent(peerId)}/update/config`, {
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update/config`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

@@ -7,10 +7,30 @@
 {% endblock %}
 
 {% block content %}
+{% if admin_view %}
+<div
+    style="display:flex;align-items:center;gap:0.75rem;background: #f1f5f9;padding:0.6rem 1.1rem;margin-bottom:1.25rem;font-size:0.82rem;border-bottom: 1px solid var(--sb-border);">
+    <span
+        style="background: #0284c7;color:#fff;border-radius:6px;padding:0.2rem 0.6rem;font-weight:600;letter-spacing:.04em;">Admin
+        View</span>
+    <span style="color:#000000;">Viewing <strong style="color:#0284c7;">{{ customer_name }}</strong> &mdash;
+        read-only</span>
+    <a href="{{ url_for('admin.customer_details', customer_id=admin_customer_id) }}"
+        style="margin-left:auto;color:#818cf8;text-decoration:none;font-weight:500;"><i class="fas fa-arrow-left"
+            style="margin-right:0.35rem;"></i>Back to customer</a>
+</div>
+{% endif %}
 <div class="aliases-container">
+    {% if admin_view %}
+    <a href="{{ url_for('admin.admin_view_peer_details', customer_id=admin_customer_id, peer_id=selected_peer_id) }}"
+        class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Peer Details
+    </a>
+    {% else %}
     <a href="{{ url_for('client.peer_details', peer_id=selected_peer_id) }}" class="back-link">
         <i class="fas fa-arrow-left"></i> Back to Peer Details
     </a>
+    {% endif %}
 
     <div class="unified-page-header">
         <h1><i class="fas fa-list"></i>Aliases</h1>
@@ -34,12 +54,16 @@
         <!-- Control Bar -->
         <div class="control-bar">
             <div class="control-actions">
-                <button class="btn-action btn-primary" id="add-list-btn" onclick="openAddListModal()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>
+                {% if not admin_view %}
+                <button class="btn-action btn-primary" id="add-list-btn" onclick="openAddListModal()" {% if
+                    is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode" {% endif %}>
                     <i class="fas fa-plus"></i> Add alias
                 </button>
-                <button class="btn-action" id="resolver-settings-btn" onclick="openResolverConfigModal()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>
+                <button class="btn-action" id="resolver-settings-btn" onclick="openResolverConfigModal()" {% if
+                    is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode" {% endif %}>
                     <i class="fas fa-cog"></i> Resolver Settings
                 </button>
+                {% endif %}
             </div>
             <div class="search-filter-container">
                 <div class="search-box">
@@ -91,7 +115,8 @@
                 <input type="hidden" id="listActionType" value="add">
                 <div class="form-row">
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <label style="margin-bottom: 0;">Name *</label>
                             <span class="char-counter" id="listSlug-counter">0 / 200</span>
                         </div>
@@ -100,7 +125,8 @@
                         <div class="field-error-msg" id="listSlug-error" style="display: none;"></div>
                     </div>
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <label style="margin-bottom: 0;">Comment</label>
                             <span class="char-counter" id="listComment-counter">0 / 200</span>
                         </div>
@@ -185,8 +211,12 @@
     window.ALIASES_CONFIG = {
         peerId: {{ (selected_peer_id or peer_id or '')|tojson }},
         isOnline: {{ 'true' if is_online else 'false' }},
-        peerName: {{ (peer_name or 'Peer Device')|tojson }}
+        peerName: {{ (peer_name or 'Peer Device')|tojson }},
+        apiBase: {{ (api_base or '')|tojson }},
+        adminView: {{ 'true' if admin_view else 'false' }}
     };
+    window.API_BASE = {{ (api_base or '')|tojson }};
+    window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};
 </script>
 <script src="{{ url_for('static', filename='js/aliases.js') }}"></script>
 {% endblock %}

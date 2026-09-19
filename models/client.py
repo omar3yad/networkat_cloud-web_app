@@ -149,6 +149,11 @@ class Client(BaseModel):
         cascade="all, delete-orphan"
     )
 
+    # --- Primary Key Alias ---
+    @hybrid_property
+    def id(self):
+        return self.user_id
+
     # --- Subscription Helper Properties ---
     @property
     def is_subscription_active(self):

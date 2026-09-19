@@ -1,3 +1,5 @@
+const _apiBase = (window.API_BASE || "");
+const _adminView = !!(window.ADMIN_VIEW);
 const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     const isPeerOnline = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.isOnline : false;
 
@@ -12,7 +14,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!isPeerOnline) {
-            window.location.href = `/peers/${peerId}`;
+            window.location.href = _adminView ? '#' : `/peers/${peerId}`;
             return;
         }
 
@@ -77,7 +79,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         if (refreshIcon) refreshIcon.classList.add('fa-spin');
 
         try {
-            const url = `/api/peers/${peerId}/web-filter/rules` + (forceRefresh ? '?refresh=true' : '');
+            const url = `${_apiBase}/api/peers/${peerId}/web-filter/rules` + (forceRefresh ? '?refresh=true' : '');
             const response = await fetch(url);
             const data = await response.json();
 
@@ -86,8 +88,10 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             }
 
             if (data.agent_online === false) {
-                window.location.href = `/peers/${peerId}`;
-                return;
+                if (!_adminView) {
+                    window.location.href = `/peers/${peerId}`;
+                    return;
+                }
             }
 
             currentRules = data.rules || [];
@@ -149,14 +153,14 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             const tdCheck = document.createElement('td');
             tdCheck.className = 'cell-check';
             tdCheck.style.textAlign = 'center';
-            tdCheck.innerHTML = `<input type="checkbox" class="rule-row-checkbox" data-rule-id="${rule.id}" onchange="onRuleCheckboxChange()">`;
+            tdCheck.innerHTML = _adminView ? '' : `<input type="checkbox" class="rule-row-checkbox" data-rule-id="${rule.id}" onchange="onRuleCheckboxChange()">`;
             tr.appendChild(tdCheck);
 
             // 2. Drag Handle
             const tdDrag = document.createElement('td');
             tdDrag.className = 'cell-drag';
             tdDrag.style.textAlign = 'center';
-            tdDrag.innerHTML = `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>`;
+            tdDrag.innerHTML = _adminView ? '' : `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>`;
             tr.appendChild(tdDrag);
 
             // 3. Source
@@ -194,7 +198,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             const isChecked = rule.enabled ? 'checked' : '';
             tdEnabled.innerHTML = `
                 <label class="toggle-switch">
-                    <input type="checkbox" ${isChecked} onchange="toggleRuleStatus('${rule.id}', this)">
+                    <input type="checkbox" ${isChecked} ${_adminView ? 'disabled' : ''} onchange="toggleRuleStatus('${rule.id}', this)">
                     <span class="slider"></span>
                 </label>
             `;
@@ -203,14 +207,18 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             // 6. Actions
             const tdActions = document.createElement('td');
             tdActions.className = 'cell-actions';
-            tdActions.innerHTML = `
-                <button class="btn-icon-action" onclick="openEditRuleModal('${rule.id}')" title="Edit rule">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-icon-action btn-delete" onclick="deleteSingleRule('${rule.id}')" title="Delete rule">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            `;
+            if (_adminView) {
+                tdActions.innerHTML = `<span style="opacity: 0.4;">—</span>`;
+            } else {
+                tdActions.innerHTML = `
+                    <button class="btn-icon-action" onclick="openEditRuleModal('${rule.id}')" title="Edit rule">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-icon-action btn-delete" onclick="deleteSingleRule('${rule.id}')" title="Delete rule">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                `;
+            }
             tr.appendChild(tdActions);
 
             tbody.appendChild(tr);
@@ -220,6 +228,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     }
 
     function initSortable() {
+        if (_adminView) return;
         const tbody = document.getElementById('rules-tbody');
         if (!tbody || typeof Sortable === 'undefined') return;
 
@@ -242,7 +251,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                 }));
 
                 try {
-                    const response = await fetch(`/api/peers/${peerId}/web-filter/rules/reorder`, {
+                    const response = await fetch(`${_apiBase}/api/peers/${peerId}/web-filter/rules/reorder`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ items: items })
@@ -266,7 +275,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         checkbox.disabled = true;
 
         try {
-            const resp = await fetch(`/api/peers/${peerId}/web-filter/rules/${action}`, {
+            const resp = await fetch(`${_apiBase}/api/peers/${peerId}/web-filter/rules/${action}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ids: [ruleId] })
@@ -291,7 +300,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         if (!ok) return;
 
         try {
-            const resp = await fetch(`/api/peers/${peerId}/web-filter/rules/${ruleId}`, {
+            const resp = await fetch(`${_apiBase}/api/peers/${peerId}/web-filter/rules/${ruleId}`, {
                 method: 'DELETE'
             });
             const data = await resp.json();
@@ -1100,7 +1109,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         }
 
         try {
-            const resp = await fetch(`/api/peers/${peerId}/aliases`);
+            const resp = await fetch(`${_apiBase}/api/peers/${peerId}/aliases`);
             const data = await resp.json();
 
             if (!resp.ok) {
@@ -1533,7 +1542,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                     comment: comment || null,
                     list: list
                 };
-                const resp = await fetch(`/api/peers/${peerId}/aliases`, {
+                const resp = await fetch(`${_apiBase}/api/peers/${peerId}/aliases`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -1547,7 +1556,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                 const patchPayload = { name: name, comment: comment || '' };
                 const putPayload = { list: list };
 
-                const patchResp = await fetch(`/api/peers/${peerId}/aliases/${aliasId}`, {
+                const patchResp = await fetch(`${_apiBase}/api/peers/${peerId}/aliases/${aliasId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(patchPayload)
@@ -1557,7 +1566,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                     throw new Error(d.message || d.detail || 'Failed to update alias properties');
                 }
 
-                const putResp = await fetch(`/api/peers/${peerId}/aliases/${aliasId}`, {
+                const putResp = await fetch(`${_apiBase}/api/peers/${peerId}/aliases/${aliasId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(putPayload)
@@ -1596,7 +1605,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         if (!ok) return;
 
         try {
-            const resp = await fetch(`/api/peers/${peerId}/aliases/${aliasId}`, {
+            const resp = await fetch(`${_apiBase}/api/peers/${peerId}/aliases/${aliasId}`, {
                 method: 'DELETE'
             });
             const data = await resp.json();

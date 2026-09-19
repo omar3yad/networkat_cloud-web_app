@@ -8,15 +8,49 @@
 {% endblock %}
 
 {% block content %}
+{% if admin_view %}
+<div
+    style="display:flex;align-items:center;gap:0.75rem;background: #f1f5f9;padding:0.6rem 1.1rem;margin-bottom:1.25rem;font-size:0.82rem;border-bottom: 1px solid var(--sb-border);">
+    <span
+        style="background: #0284c7;color:#fff;border-radius:6px;padding:0.2rem 0.6rem;font-weight:600;letter-spacing:.04em;">Admin
+        View</span>
+    <span style="color:#000000;">Viewing <strong style="color:#0284c7;">{{ customer_name }}</strong> &mdash;
+        read-only</span>
+    <a href="{{ url_for('admin.customer_details', customer_id=admin_customer_id) }}"
+        style="margin-left:auto;color:#818cf8;text-decoration:none;font-weight:500;"><i class="fas fa-arrow-left"
+            style="margin-right:0.35rem;"></i>Back to customer</a>
+</div>
+{% endif %}
 <div class="filter-container">
+    {% if admin_view %}
+    <a href="{{ url_for('admin.admin_view_peer_details', customer_id=admin_customer_id, peer_id=peer_id) }}"
+        class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Peer Details
+    </a>
+    {% else %}
     <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link">
         <i class="fas fa-arrow-left"></i> Back to Peer Details
     </a>
+    {% endif %}
 
     <div class="unified-page-header">
         <h1><i class="fas fa-filter"></i>Web Filter</h1>
         <!-- Peer Feature Nav Tabs -->
         <div class="peer-nav-tabs">
+            {% if admin_view %}
+            <a href="{{ url_for('admin.admin_view_peer_web_filter', customer_id=admin_customer_id, peer_id=peer_id) }}"
+                class="peer-nav-tab active">
+                <i class="fas fa-filter"></i> Web Filter
+            </a>
+            <a href="{{ url_for('admin.admin_view_peer_firewall', customer_id=admin_customer_id, peer_id=peer_id) }}"
+                class="peer-nav-tab">
+                <i class="fas fa-shield-alt"></i> Firewall
+            </a>
+            <a href="{{ url_for('admin.admin_view_peer_aliases', customer_id=admin_customer_id, peer_id=peer_id) }}?filter=web_domain"
+                class="peer-nav-tab">
+                <i class="fas fa-list"></i> Aliases
+            </a>
+            {% else %}
             <a href="{{ url_for('client.peer_web_filter', peer_id=peer_id) }}" class="peer-nav-tab active">
                 <i class="fas fa-filter"></i> Web Filter
             </a>
@@ -26,6 +60,7 @@
             <a href="{{ url_for('client.peer_aliases', peer_id=peer_id) }}?filter=web_domain" class="peer-nav-tab">
                 <i class="fas fa-list"></i> Aliases
             </a>
+            {% endif %}
         </div>
     </div>
 
@@ -34,9 +69,12 @@
     <div id="rules-tab-content">
         <div class="control-bar">
             <div class="control-actions">
-                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddRuleModal()" {% if is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode"{% endif %}>
+                {% if not admin_view %}
+                <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddRuleModal()" {% if
+                    is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode" {% endif %}>
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
+                {% endif %}
             </div>
 
             <div class="search-box">
@@ -52,7 +90,9 @@
                 <thead>
                     <tr>
                         <th style="width: 40px; text-align: center;">
+                            {% if not admin_view %}
                             <input type="checkbox" id="select-all-rules" onclick="toggleSelectAllRules(this)">
+                            {% endif %}
                         </th>
                         <th style="width: 30px; text-align: center;"></th>
                         <th>Source (Clients)</th>
@@ -80,12 +120,13 @@
             <form id="ruleForm" onsubmit="submitRuleForm(event)">
                 <div class="form-row">
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
                             <label style="margin-bottom: 0;">Comment</label>
                             <span class="char-counter" id="ruleComment-counter">0 / 200</span>
                         </div>
-                        <input type="text" id="ruleComment" placeholder="e.g. Block Social Media during work hours" maxlength="200"
-                            title="Free text comment up to 200 characters.">
+                        <input type="text" id="ruleComment" placeholder="e.g. Block Social Media during work hours"
+                            maxlength="200" title="Free text comment up to 200 characters.">
                         <div class="field-error-msg" id="ruleComment-error" style="display: none;"></div>
                     </div>
                 </div>
@@ -96,10 +137,12 @@
                         <div class="input-dropdown-wrapper" id="ruleSrc-wrapper">
                             <div class="alias-trigger-btn" onclick="toggleAliasList(event, 'ruleSrc')">@</div>
                             <input type="text" id="ruleSrc" placeholder="197.62.85.152/24, 192.168.1.1/24"
-                                autocomplete="off" style="padding-left: 2.25rem !important; padding-right: 2.5rem !important;">
+                                autocomplete="off"
+                                style="padding-left: 2.25rem !important; padding-right: 2.5rem !important;">
                             <div class="address-multi-btn disabled" onclick="openMultiAddressModal('ruleSrc')"
                                 title="Add multiple addresses"><i class="fas fa-plus"></i></div>
-                            <div class="custom-autocomplete-dropdown" id="ruleSrc-dropdown" style="display: none;"></div>
+                            <div class="custom-autocomplete-dropdown" id="ruleSrc-dropdown" style="display: none;">
+                            </div>
                         </div>
                         <div class="field-error-msg" id="ruleSrc-error" style="display: none;"></div>
                     </div>
@@ -110,9 +153,11 @@
                         <label>Blocked Domains (What to Block) *</label>
                         <div class="input-dropdown-wrapper" id="ruleDomains-wrapper">
                             <div class="alias-trigger-btn" onclick="toggleAliasList(event, 'ruleDomains')">@</div>
-                            <input type="text" id="ruleDomains" placeholder="e.g. @SocialMedia or @StreamingSites" required
-                                autocomplete="off" style="padding-left: 2.25rem !important; padding-right: 1rem !important;">
-                            <div class="custom-autocomplete-dropdown" id="ruleDomains-dropdown" style="display: none;"></div>
+                            <input type="text" id="ruleDomains" placeholder="e.g. @SocialMedia or @StreamingSites"
+                                required autocomplete="off"
+                                style="padding-left: 2.25rem !important; padding-right: 1rem !important;">
+                            <div class="custom-autocomplete-dropdown" id="ruleDomains-dropdown" style="display: none;">
+                            </div>
                         </div>
                         <span class="form-hint">Click <strong>@</strong> to choose from your Domain Aliases.</span>
                         <div class="field-error-msg" id="ruleDomains-error" style="display: none;"></div>
@@ -122,17 +167,24 @@
                 <div class="form-row" id="rule-order-row" style="align-items: center; display: none;">
                     <div class="form-group" style="display: none;flex: 1.5;">
                         <label>Order</label>
-                        <div style="display: flex; gap: 1.25rem; margin-top: 0.35rem; align-items: center; height: 38px;">
-                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
-                                <input type="radio" name="ruleOrderRadio" value="bottom" checked onchange="toggleCustomOrderField()">
+                        <div
+                            style="display: flex; gap: 1.25rem; margin-top: 0.35rem; align-items: center; height: 38px;">
+                            <label
+                                style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
+                                <input type="radio" name="ruleOrderRadio" value="bottom" checked
+                                    onchange="toggleCustomOrderField()">
                                 Bottom
                             </label>
-                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
-                                <input type="radio" name="ruleOrderRadio" value="first" onchange="toggleCustomOrderField()">
+                            <label
+                                style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
+                                <input type="radio" name="ruleOrderRadio" value="first"
+                                    onchange="toggleCustomOrderField()">
                                 First
                             </label>
-                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
-                                <input type="radio" name="ruleOrderRadio" value="custom" onchange="toggleCustomOrderField()">
+                            <label
+                                style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 500; cursor: pointer;">
+                                <input type="radio" name="ruleOrderRadio" value="custom"
+                                    onchange="toggleCustomOrderField()">
                                 Custom...
                             </label>
                         </div>
@@ -160,8 +212,10 @@
             <button class="modal-close" onclick="closeMultiAddressModal()">&times;</button>
         </div>
         <div class="modal-body" style="max-height: 50vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; position: sticky; top: -24px; background: white; padding: 13px 0 10px 0;">
-                <h3 style="font-size: 0.8rem; font-weight: 700; color: var(--nk-text-muted); text-transform: capitalize; letter-spacing: 0.5px;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; position: sticky; top: -24px; background: white; padding: 13px 0 10px 0;">
+                <h3
+                    style="font-size: 0.8rem; font-weight: 700; color: var(--nk-text-muted); text-transform: capitalize; letter-spacing: 0.5px;">
                     Addresses / Subnets
                 </h3>
                 <button type="button" class="btn-action" onclick="addMultiAddressRow()"
@@ -195,7 +249,8 @@
 
                 <div class="form-row">
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
                             <label style="margin-bottom: 0;">Name *</label>
                             <span class="char-counter" id="aliasName-counter">0 / 200</span>
                         </div>
@@ -204,7 +259,8 @@
                         <div class="field-error-msg" id="aliasName-error" style="display: none;"></div>
                     </div>
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
                             <label style="margin-bottom: 0;">Comment</label>
                             <span class="char-counter" id="aliasComment-counter">0 / 200</span>
                         </div>
@@ -213,10 +269,15 @@
                     </div>
                 </div>
 
-                <div style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <div
+                    style="margin-top: 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h3 id="alias-items-header" style="font-size: 0.85rem; font-weight: 700; color: var(--nk-text-main);">Domain Patterns *</h3>
-                        <p id="alias-items-hint" style="font-size: 0.75rem; color: var(--nk-text-muted);">Use <code>*.facebook.com</code> for all subdomains or <code>tiktok.com</code> for exact match.</p>
+                        <h3 id="alias-items-header"
+                            style="font-size: 0.85rem; font-weight: 700; color: var(--nk-text-main);">Domain Patterns *
+                        </h3>
+                        <p id="alias-items-hint" style="font-size: 0.75rem; color: var(--nk-text-muted);">Use
+                            <code>*.facebook.com</code> for all subdomains or <code>tiktok.com</code> for exact match.
+                        </p>
                     </div>
                     <button type="button" class="btn-action" id="btn-add-alias-item" onclick="addAliasItemRow()"
                         style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: #f1f5f9;">
@@ -232,7 +293,8 @@
         </div>
         <div class="modal-footer">
             <button class="btn-action" onclick="closeAliasModal()">Cancel</button>
-            <button class="btn-action btn-primary" type="submit" form="aliasForm" id="btn-submit-alias">Save Changes</button>
+            <button class="btn-action btn-primary" type="submit" form="aliasForm" id="btn-submit-alias">Save
+                Changes</button>
         </div>
     </div>
 </div>
@@ -257,8 +319,12 @@
 <script>
     window.WEB_FILTER_CONFIG = {
         peerId: {{ peer_id|tojson }},
-        isOnline: {{ 'true' if is_online else 'false' }}
+        isOnline: {{ 'true' if is_online else 'false' }},
+        apiBase: {{ (api_base or '')|tojson }},
+        adminView: {{ 'true' if admin_view else 'false' }}
     };
+    window.API_BASE = {{ (api_base or '')|tojson }};
+    window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};
 </script>
 <script src="{{ url_for('static', filename='js/web_filter.js') }}"></script>
 {% endblock %}

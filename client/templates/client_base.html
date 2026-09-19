@@ -31,14 +31,35 @@
             </div>
             
             <nav class="sidebar-nav">
+                {% if admin_view %}
+                <a href="{{ url_for('admin.customer_details', customer_id=admin_customer_id) }}" class="nav-item">
+                    <i class="fas fa-arrow-left nav-icon"></i>
+                    <span class="nav-label">Customer Details</span>
+                </a>
+                {% else %}
                 <a href="{{ url_for('client.dashboard') }}" class="nav-item {% if request.endpoint == 'client.dashboard' %}active{% endif %}">
                     <i class="fas fa-chart-line nav-icon"></i>
                     <span class="nav-label">Dashboard</span>
                 </a>
+                {% endif %}
 
                 <!-- Peers List Collapsible Group -->
                 <div class="nav-group open" id="nav-group-peers">
-                    <div class="nav-item-collapsible {% if request.endpoint == 'client.peers_page' or 'peer_' in request.endpoint or 'filtering' in request.endpoint or 'firewall' in request.endpoint or 'aliases' in request.endpoint %}active{% endif %}">
+                    <div class="nav-item-collapsible {% if not admin_view and (request.endpoint == 'client.peers_page' or 'peer_' in (request.endpoint or '') or 'filtering' in (request.endpoint or '') or 'firewall' in (request.endpoint or '') or 'aliases' in (request.endpoint or '')) %}active{% endif %}">
+                        {% if admin_view %}
+                        <a href="{{ url_for('admin.customer_details', customer_id=admin_customer_id) }}" class="nav-item-link">
+                            <i class="fas fa-desktop nav-icon"></i>
+                            <span class="nav-label">Peers List (<span id="sidebar-peers-count">{{ sidebar_peers|length if sidebar_peers is defined else 0 }}</span>)</span>
+                            <span class="sidebar-peer-badges">
+                                <span class="sidebar-count-badge online" id="sidebar-online-count"
+                                    title="Online Peers ({{ sidebar_online_count if sidebar_online_count is defined else 0 }}) - Click to filter"
+                                    onclick="handleSidebarStatusFilter(event, 'online')">{{ sidebar_online_count if sidebar_online_count is defined else 0 }}</span>
+                                <span class="sidebar-count-badge offline" id="sidebar-offline-count"
+                                    title="Offline Peers ({{ sidebar_offline_count if sidebar_offline_count is defined else 0 }}) - Click to filter"
+                                    onclick="handleSidebarStatusFilter(event, 'offline')">{{ sidebar_offline_count if sidebar_offline_count is defined else 0 }}</span>
+                            </span>
+                        </a>
+                        {% else %}
                         <a href="{{ url_for('client.peers_page') }}" class="nav-item-link">
                             <i class="fas fa-desktop nav-icon"></i>
                             <span class="nav-label">Peers List (<span id="sidebar-peers-count">{{ sidebar_peers|length if sidebar_peers is defined else 0 }}</span>)</span>
@@ -51,6 +72,7 @@
                                     onclick="handleSidebarStatusFilter(event, 'offline')">{{ sidebar_offline_count if sidebar_offline_count is defined else 0 }}</span>
                             </span>
                         </a>
+                        {% endif %}
                         <span class="submenu-arrow" onclick="togglePeerSubmenu(event)" title="Toggle Peers">
                             <i class="fas fa-chevron-down"></i>
                         </span>
@@ -62,28 +84,55 @@
                             {% for p in sidebar_peers %}
                                 {% if not p.offline_ge_7d %}
                                     {% set is_current_peer = (peer_id is defined and peer_id == p.id) or (selected_peer_id is defined and selected_peer_id == p.id) %}
-                                    {% if is_current_peer %}
-                                        {% if request.endpoint == 'client.peer_details' %}
-                                            {% set target_url = 'javascript:void(0);' %}
-                                            {% set click_handler = 'onclick="event.preventDefault();"' %}
+                                    {% if admin_view %}
+                                        {% if is_current_peer %}
+                                            {% if request.endpoint == 'admin.admin_view_peer_details' %}
+                                                {% set target_url = 'javascript:void(0);' %}
+                                                {% set click_handler = 'onclick="event.preventDefault();"' %}
+                                            {% else %}
+                                                {% set target_url = url_for('admin.admin_view_peer_details', customer_id=admin_customer_id, peer_id=p.id) %}
+                                                {% set click_handler = '' %}
+                                            {% endif %}
                                         {% else %}
-                                            {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
                                             {% set click_handler = '' %}
+                                            {% if p.connected %}
+                                                {% if request.endpoint == 'admin.admin_view_peer_web_filter' %}
+                                                    {% set target_url = url_for('admin.admin_view_peer_web_filter', customer_id=admin_customer_id, peer_id=p.id) %}
+                                                {% elif request.endpoint == 'admin.admin_view_peer_firewall' %}
+                                                    {% set target_url = url_for('admin.admin_view_peer_firewall', customer_id=admin_customer_id, peer_id=p.id) %}
+                                                {% elif request.endpoint == 'admin.admin_view_peer_aliases' %}
+                                                    {% set target_url = url_for('admin.admin_view_peer_aliases', customer_id=admin_customer_id, peer_id=p.id) %}
+                                                {% else %}
+                                                    {% set target_url = url_for('admin.admin_view_peer_details', customer_id=admin_customer_id, peer_id=p.id) %}
+                                                {% endif %}
+                                            {% else %}
+                                                {% set target_url = url_for('admin.admin_view_peer_details', customer_id=admin_customer_id, peer_id=p.id) %}
+                                            {% endif %}
                                         {% endif %}
                                     {% else %}
-                                        {% set click_handler = '' %}
-                                        {% if p.connected %}
-                                            {% if request.endpoint in ['client.peer_web_filter', 'client.peer_filtering'] %}
-                                                {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}
-                                            {% elif request.endpoint == 'client.peer_firewall' %}
-                                                {% set target_url = url_for('client.peer_firewall', peer_id=p.id) %}
-                                            {% elif request.endpoint in ['client.peer_aliases', 'client.aliases_page'] %}
-                                                {% set target_url = url_for('client.peer_aliases', peer_id=p.id) %}
+                                        {% if is_current_peer %}
+                                            {% if request.endpoint == 'client.peer_details' %}
+                                                {% set target_url = 'javascript:void(0);' %}
+                                                {% set click_handler = 'onclick="event.preventDefault();"' %}
+                                            {% else %}
+                                                {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
+                                                {% set click_handler = '' %}
+                                            {% endif %}
+                                        {% else %}
+                                            {% set click_handler = '' %}
+                                            {% if p.connected %}
+                                                {% if request.endpoint in ['client.peer_web_filter', 'client.peer_filtering'] %}
+                                                    {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}
+                                                {% elif request.endpoint == 'client.peer_firewall' %}
+                                                    {% set target_url = url_for('client.peer_firewall', peer_id=p.id) %}
+                                                {% elif request.endpoint in ['client.peer_aliases', 'client.aliases_page'] %}
+                                                    {% set target_url = url_for('client.peer_aliases', peer_id=p.id) %}
+                                                {% else %}
+                                                    {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
+                                                {% endif %}
                                             {% else %}
                                                 {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
                                             {% endif %}
-                                        {% else %}
-                                            {% set target_url = url_for('client.peer_details', peer_id=p.id) %}
                                         {% endif %}
                                     {% endif %}
                                     {% if p.connected %}
@@ -107,13 +156,30 @@
                     </div>
                 </div>
 
+                {% if not admin_view %}
                 <a href="{{ url_for('client.contact_page') }}" class="nav-item {% if request.endpoint == 'client.contact_page' %}active{% endif %}">
                     <i class="fas fa-headset nav-icon"></i>
                     <span class="nav-label">Contact Us</span>
                 </a>
+                {% endif %}
             </nav>
             
             <div class="sidebar-footer">
+                {% if admin_view %}
+                <div class="user-profile" title="Admin View">
+                    <div class="user-avatar" style="background: rgba(99, 102, 241, 0.2); color: #818cf8;">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">{{ session.get('admin_username', 'Admin') }}</span>
+                        <span class="user-role" style="color: #a5b4fc;">Admin View</span>
+                    </div>
+                </div>
+                <a href="/logout" class="signout-btn" title="Sign Out">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sign Out</span>
+                </a>
+                {% else %}
                 <a href="{{ url_for('client.profile') }}" class="user-profile {% if request.endpoint == 'client.profile' %}active{% endif %}" title="View Account Profile">
                     <div class="user-avatar">
                         <i class="fas fa-user-circle"></i>
@@ -127,6 +193,7 @@
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Sign Out</span>
                 </a>
+                {% endif %}
             </div>
         </aside>
 
@@ -185,6 +252,8 @@
     <script src="{{ url_for('static', filename='js/network_math.js') }}"></script>
     <script src="{{ url_for('static', filename='js/toast.js') }}"></script>
     <script>
+        window.API_BASE = {{ (api_base or '')|tojson }};
+        window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};
         window.IS_READONLY_SUBSCRIPTION = ("{{ 'true' if is_readonly_subscription else 'false' }}" === "true");
         window.SUBSCRIPTION_STATUS = "{{ subscription_info.status if subscription_info and subscription_info.status else '' }}";
 
@@ -294,6 +363,13 @@
 
         function getSidebarPeerUrl(pid, isOnline) {
             const path = window.location.pathname;
+            const base = window.API_BASE || '';
+            if (window.ADMIN_VIEW) {
+                if (path.includes('/firewall')) return `${base}/peers/${pid}/firewall`;
+                if (path.includes('/web-filter') || path.includes('/filtering')) return `${base}/peers/${pid}/web-filter`;
+                if (path.includes('/aliases')) return `${base}/peers/${pid}/aliases`;
+                return `${base}/peers/${pid}`;
+            }
             if (isOnline) {
                 if (path.includes('/firewall')) return `/peers/${pid}/firewall`;
                 if (path.includes('/web-filter') || path.includes('/filtering')) return `/peers/${pid}/web-filter`;
@@ -421,7 +497,8 @@
             async function fetchAndSyncSidebar() {
                 if (window.peersPollingActive) return;
                 try {
-                    const res = await fetch(`/api/peers/status?t=${Date.now()}`);
+                    const base = window.API_BASE || '';
+                    const res = await fetch(`${base}/api/peers/status?t=${Date.now()}`);
                     if (!res.ok) return;
                     const data = await res.json();
                     if (data && data.peers) {
