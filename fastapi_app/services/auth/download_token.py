@@ -21,6 +21,7 @@ import hmac
 import hashlib
 import time
 import base64
+from typing import Optional
 
 # Module-level constant, same pattern as API_SECRET_KEY in dependencies.py
 # (supervisord passes no environment to the uvicorn `api` program, so an env var
@@ -49,15 +50,23 @@ def make_token(username: str) -> str:
     return f"{_b64(payload)}.{_b64(sig)}"
 
 
-def verify_token(token: str) -> bool:
-    """True iff the token's signature is valid AND it has not expired."""
+def extract_token_username(token: str) -> Optional[str]:
+    """Extract username from token if signature is valid and not expired."""
     try:
         p_b64, s_b64 = token.split(".", 1)
         payload = _unb64(p_b64)
         expected = hmac.new(_SECRET, payload, hashlib.sha256).digest()
         if not hmac.compare_digest(expected, _unb64(s_b64)):
-            return False
-        _user, expiry = payload.decode().rsplit("|", 1)
-        return int(expiry) > int(time.time())
+            return None
+        user, expiry = payload.decode().rsplit("|", 1)
+        if int(expiry) <= int(time.time()):
+            return None
+        return user
     except Exception:
-        return False
+        return None
+
+
+def verify_token(token: str) -> bool:
+    """True iff the token's signature is valid AND it has not expired."""
+    return extract_token_username(token) is not None
+

@@ -85,3 +85,38 @@ class ErrorResponse(BaseModel):
         description="Account snapshot — set on quota / subscription 403s so the "
                     "installer can show the customer their plan alongside the notice.",
     )
+
+
+class PeerRouteRequest(BaseModel):
+    """Request body to assign a network route to a peer during installation."""
+    network:     str = Field(..., min_length=7, max_length=50, description="IPv4 CIDR network range (e.g. 192.168.1.0/24).")
+    peer_id:     Optional[str] = Field(None, description="NetBird peer ID (if known).")
+    peer_ip:     Optional[str] = Field(None, description="NetBird peer IP (used to locate peer if peer_id not provided).")
+    peer_name:   Optional[str] = Field(None, description="NetBird peer name/hostname (used to locate peer if peer_id not provided).")
+    masquerade:  bool = Field(True, description="Enable NAT masquerade for the network route.")
+    metric:      int = Field(9999, ge=1, le=9999, description="Route priority metric (1-9999).")
+    description: Optional[str] = Field(None, max_length=128, description="Optional description for the route.")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "peer_id": "ch8g92xxxxxx",
+                "network": "192.168.1.0/24",
+                "masquerade": True,
+                "metric": 9999
+            }
+        }
+    }
+
+
+class PeerRouteResponse(BaseModel):
+    """Successful response when network route is assigned."""
+    success:     bool = Field(True, description="Whether route was successfully created.")
+    route_id:    str = Field(..., description="The created NetBird route ID.")
+    peer_id:     str = Field(..., description="The NetBird peer ID associated with this route.")
+    network:     str = Field(..., description="The normalized IPv4 CIDR network.")
+    network_id:  str = Field(..., description="The network identifier.")
+    description: str = Field(..., description="Description of the route.")
+    masquerade:  bool = Field(..., description="Whether masquerade is enabled.")
+    metric:      int = Field(..., description="Route metric.")
+

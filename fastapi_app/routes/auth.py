@@ -18,9 +18,19 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from werkzeug.security import check_password_hash
 
+import ipaddress
+
 from fastapi_app.database import SessionLocal
-from fastapi_app.schemas.auth import InstallPeerRequest, InstallPeerResponse, AccountMeta, SubscriptionMeta, ErrorResponse
-from fastapi_app.services.auth.download_token import make_token, verify_token
+from fastapi_app.schemas.auth import (
+    InstallPeerRequest,
+    InstallPeerResponse,
+    AccountMeta,
+    SubscriptionMeta,
+    ErrorResponse,
+    PeerRouteRequest,
+    PeerRouteResponse
+)
+from fastapi_app.services.auth.download_token import make_token, verify_token, extract_token_username
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -384,3 +394,291 @@ async def verify_download(authorization: Optional[str] = Header(default=None)):
         status_code=401,
         content={"error": "Unauthorized", "message": "Invalid or expired download token."},
     )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/auth/peer-route
+# ---------------------------------------------------------------------------
+@router.post(
+    "/peer-route",
+    response_model=PeerRouteResponse,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="create_peer_route",
+    summary="Assign network route to peer",
+    description=(
+        "Assign an IPv4 CIDR network route to a peer during installation. "
+        "Requires Bearer authentication using the install_token obtained from /install-peer."
+    ),
+    responses={
+        201: {"model": PeerRouteResponse, "description": "Route created successfully."},
+        400: {"model": ErrorResponse,     "description": "Invalid network CIDR or duplicate subnet."},
+        401: {"model": ErrorResponse,     "description": "Invalid or expired installation token."},
+        403: {"model": ErrorResponse,     "description": "Subscription restricted or peer does not belong to account."},
+        404: {"model": ErrorResponse,     "description": "Peer not found."},
+        429: {"model": ErrorResponse,     "description": "Rate limit exceeded."},
+        500: {"model": ErrorResponse,     "description": "NetBird API error or server error."},
+    },
+)
+async def create_peer_route(
+    payload: PeerRouteRequest,
+    request: Request,
+    authorization: Optional[str] = Header(default=None)
+):
+    """
+    **Public endpoint** — assign a network route to a newly installed peer.
+
+    Requires `Authorization: Bearer <install_token>`.
+    """
+    ip = _client_ip(request)
+    if _is_rate_limited(ip):
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": "Too Many Requests",
+                "message": "Too many attempts. Please try again in a minute.",
+            },
+        )
+
+    # 1. Verify token
+    token = ""
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+
+    username = extract_token_username(token) if token else None
+    if not username:
+        logger.warning(f"[peer-route-api] Invalid or missing Bearer token ip={ip}")
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Unauthorized", "message": "Invalid or expired installation token."}
+        )
+
+    # 2. Validate CIDR format
+    raw_network = payload.network.strip()
+    try:
+        net_obj = ipaddress.IPv4Network(raw_network, strict=False)
+        normalized_network = str(net_obj)
+    except Exception:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Bad Request", "message": "Invalid IPv4 CIDR network format."}
+        )
+
+    # 3. Database lookup for client & subscription status
+    db: Session = SessionLocal()
+    try:
+        from sqlalchemy import text
+        row = db.execute(
+            text("""
+                SELECT
+                    c.user_id,
+                    c.active,
+                    c.netbird_group_id,
+                    c.subscription_status
+                FROM clients c
+                WHERE c.username = :u
+                LIMIT 1
+            """),
+            {"u": username},
+        ).fetchone()
+
+        if row is None or not row[1]:  # not active
+            return JSONResponse(
+                status_code=401,
+                content={"error": "Unauthorized", "message": "Client account is invalid or not active."}
+            )
+
+        user_id, active, netbird_group_id, subscription_status = row
+        subscription_status = subscription_status or "active"
+
+        if subscription_status != "active":
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Forbidden", "message": "Subscription is inactive. Modification not allowed."}
+            )
+
+        NETBIRD_BASE_URL = os.getenv("NETBIRD_API_URL", "http://netbird-server/api").rstrip("/")
+        NETBIRD_TOKEN = os.getenv("NETBIRD_TOKEN")
+        if not NETBIRD_TOKEN:
+            logger.error("[peer-route-api] Missing NETBIRD_TOKEN")
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Internal Server Error", "message": "NetBird configuration missing."}
+            )
+
+        nb_headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {NETBIRD_TOKEN}"
+        }
+
+        # Resolve netbird_group_id if not present
+        if not netbird_group_id:
+            try:
+                gres = requests.get(f"{NETBIRD_BASE_URL}/groups", headers=nb_headers, timeout=5)
+                if gres.status_code == 200:
+                    for g in gres.json():
+                        if g.get("name") == username:
+                            netbird_group_id = g.get("id")
+                            try:
+                                db.execute(
+                                    text("UPDATE clients SET netbird_group_id = :gid WHERE user_id = :uid"),
+                                    {"gid": netbird_group_id, "uid": str(user_id)}
+                                )
+                                db.commit()
+                            except Exception:
+                                pass
+                            break
+            except Exception as ge:
+                logger.warning(f"[peer-route-api] Error looking up group for {username}: {ge}")
+
+        if not netbird_group_id:
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Forbidden", "message": "Account group not configured."}
+            )
+
+        # 4. Fetch group peers to verify peer ownership
+        target_peer_id = payload.peer_id
+        target_peer_ip = payload.peer_ip
+        target_peer_name = payload.peer_name
+
+        if not target_peer_id and not target_peer_ip and not target_peer_name:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Bad Request", "message": "At least one of peer_id, peer_ip, or peer_name must be provided."}
+            )
+
+        # Fetch group details to get peer IDs
+        grp_peer_ids = set()
+        try:
+            grp_res = requests.get(f"{NETBIRD_BASE_URL}/groups/{netbird_group_id}", headers=nb_headers, timeout=5)
+            if grp_res.status_code == 200:
+                gdata = grp_res.json()
+                for p in (gdata.get("peers") or []):
+                    if isinstance(p, dict):
+                        if p.get("id"):
+                            grp_peer_ids.add(p["id"])
+                    elif isinstance(p, str):
+                        grp_peer_ids.add(p)
+        except Exception as e:
+            logger.warning(f"[peer-route-api] Error fetching group peers: {e}")
+
+        resolved_peer_id = None
+        if target_peer_id:
+            if target_peer_id in grp_peer_ids:
+                resolved_peer_id = target_peer_id
+            else:
+                try:
+                    peers_res = requests.get(f"{NETBIRD_BASE_URL}/peers", headers=nb_headers, timeout=5)
+                    if peers_res.status_code == 200:
+                        for p in peers_res.json():
+                            if p.get("id") == target_peer_id:
+                                peer_groups = p.get("groups") or []
+                                if netbird_group_id in peer_groups or target_peer_id in grp_peer_ids:
+                                    resolved_peer_id = target_peer_id
+                                break
+                except Exception as pe:
+                    logger.warning(f"[peer-route-api] Error fetching peers: {pe}")
+        else:
+            try:
+                peers_res = requests.get(f"{NETBIRD_BASE_URL}/peers", headers=nb_headers, timeout=5)
+                if peers_res.status_code == 200:
+                    for p in peers_res.json():
+                        p_id = p.get("id")
+                        p_ip = p.get("ip")
+                        p_name = p.get("name")
+                        p_groups = p.get("groups") or []
+                        if netbird_group_id in p_groups or p_id in grp_peer_ids:
+                            if target_peer_ip and p_ip == target_peer_ip:
+                                resolved_peer_id = p_id
+                                break
+                            if target_peer_name and p_name == target_peer_name:
+                                resolved_peer_id = p_id
+                                break
+            except Exception as pe:
+                logger.warning(f"[peer-route-api] Error searching peer by IP/name: {pe}")
+
+        if not resolved_peer_id:
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Not Found", "message": "Peer not found or does not belong to your account."}
+            )
+
+        # 5. Check duplicate subnet across customer's peers
+        try:
+            routes_res = requests.get(f"{NETBIRD_BASE_URL}/routes", headers=nb_headers, timeout=5)
+            if routes_res.status_code == 200:
+                for r in routes_res.json():
+                    r_peer = r.get("peer")
+                    r_net = r.get("network", "")
+                    if r_peer and r_peer in grp_peer_ids and r_peer != resolved_peer_id and r_net:
+                        try:
+                            r_obj = ipaddress.IPv4Network(r_net.strip(), strict=False)
+                            if str(r_obj).lower() == normalized_network.lower():
+                                return JSONResponse(
+                                    status_code=400,
+                                    content={"error": "Bad Request", "message": "Subnet already in use by another peer in your account."}
+                                )
+                        except Exception:
+                            pass
+        except Exception as re:
+            logger.warning(f"[peer-route-api] Error checking existing routes: {re}")
+
+        # 6. Create route in NetBird
+        network_id = f"{username.lower()}-{resolved_peer_id[:5]}"
+        description = payload.description or f"{username} peer route"
+
+        route_payload = {
+            "description": description,
+            "network_id": network_id,
+            "network": normalized_network,
+            "peer": resolved_peer_id,
+            "enabled": True,
+            "masquerade": payload.masquerade,
+            "metric": payload.metric,
+            "groups": [netbird_group_id],
+            "access_control_groups": [netbird_group_id],
+            "keep_route": True
+        }
+
+        nb_route_res = requests.post(f"{NETBIRD_BASE_URL}/routes", json=route_payload, headers=nb_headers, timeout=10)
+        if nb_route_res.status_code not in (200, 201):
+            logger.error(f"[peer-route-api] NetBird route creation failed: HTTP {nb_route_res.status_code} - {nb_route_res.text}")
+            return JSONResponse(
+                status_code=500,
+                content={"error": "Internal Server Error", "message": "Failed to create route in NetBird."}
+            )
+
+        created_route = nb_route_res.json()
+        route_id = created_route.get("id") or f"route-{resolved_peer_id[:5]}"
+
+        # Sync local cache / overrides if available
+        try:
+            from utils.cache_manager import set_route_override, clear_all_netbird_caches
+            set_route_override(resolved_peer_id, normalized_network)
+            clear_all_netbird_caches(str(user_id))
+        except Exception:
+            pass
+
+        logger.info(f"[peer-route-api] Route created successfully: user='{username}' peer='{resolved_peer_id}' net='{normalized_network}'")
+
+        return PeerRouteResponse(
+            success=True,
+            route_id=route_id,
+            peer_id=resolved_peer_id,
+            network=normalized_network,
+            network_id=network_id,
+            description=description,
+            masquerade=payload.masquerade,
+            metric=payload.metric
+        )
+
+    except Exception as exc:
+        logger.error(f"[peer-route-api] Internal error: {exc}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Internal Server Error", "message": "An unexpected error occurred."}
+        )
+    finally:
+        db.close()
+
