@@ -1556,17 +1556,9 @@
                         if (isConnected && isReachable) {
                             statusBadge.className = "badge badge-success";
                             statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Connected`;
-                        } else if (isConnected && !isReachable) {
-                            // NetBird شايفه متصل لكن الـ Agent لا يستجيب
-                            statusBadge.className = "badge badge-inactive";
-                            statusBadge.style.backgroundColor = "#fff3cd";
-                            statusBadge.style.color = "#856404";
-                            statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Unstable`;
-                            // statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Unstable (${timeAgoFormatted})`;
                         } else {
-                            // غير متصل أصلاً
                             statusBadge.className = "badge badge-inactive";
-                            statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Offline (${timeAgoFormatted})`;
+                            statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Offline`;
                         }
                     }
                 }

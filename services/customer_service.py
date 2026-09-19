@@ -3,6 +3,7 @@ import os
 import logging
 import secrets
 import requests
+from concurrent.futures import ThreadPoolExecutor
 from repositories.edge_repository import EdgeRepository
 from repositories.user_repository import UserRepository
 from repositories.token_repository import TokenRepository
@@ -22,6 +23,16 @@ class CustomerService:
         self.token_repo = TokenRepository()
         self.user_repo = UserRepository()
 
+    @staticmethod
+    def _check_peers_online_status(peer_ids, peers_by_id):
+        """فحص حالة الاتصال الحقيقية (is_online = connected AND is_reachable) عبر الـ Handshake بالتوازي"""
+        customer_peers = [peers_by_id[pid] for pid in peer_ids if pid in peers_by_id]
+        if not customer_peers:
+            return set()
+        with ThreadPoolExecutor(max_workers=min(20, len(customer_peers))) as pool:
+            checked_peers = list(pool.map(NetBirdService.check_single_peer_handshake, customer_peers))
+        return {p['id'] for p in checked_peers if p.get('is_online')}
+
     def get_dashboard_data(self, online_window=300):
         total_customers = self.client_repo.count()
         
@@ -32,12 +43,15 @@ class CustomerService:
         # 2. حصر مجموعات العملاء الفعلية
         client_group_ids = {c.netbird_group_id for c in self.client_repo.get_all_desc() if c.netbird_group_id}
         
-        # 3. حصر أجهزة العملاء فقط (12 جهاز) واستبعاد السيرفرات ومتحكمات النظام
+        # 3. حصر أجهزة العملاء فقط واستبعاد السيرفرات ومتحكمات النظام
         customer_group_peers = GroupPeer.query.filter(GroupPeer.group_id.in_(client_group_ids)).all() if client_group_ids else []
         customer_peer_ids = {gp.peer_id for gp in customer_group_peers if gp.peer_id}
         
+        # 4. فحص الاتصال الحقيقي عبر الـ Handshake (Active فقط واستبعاد Unstable)
+        online_peer_ids = self._check_peers_online_status(customer_peer_ids, peers_by_id)
+
         total_peers = len(customer_peer_ids)
-        online_peers = sum(1 for pid in customer_peer_ids if peers_by_id.get(pid, {}).get('connected') is True)
+        online_peers = len(online_peer_ids)
         offline_peers = max(0, total_peers - online_peers)
 
         return {
@@ -54,16 +68,22 @@ class CustomerService:
     def get_customers_list(self, online_window=300):
         clients = self.client_repo.get_all_desc()
         
-        # جلب الأجهزة المتصلة من NetBird
-        peers = NetBirdService.get_cached_all_netbird_peers()
-        online_peer_ids = {p.get('id') for p in peers if p.get('connected') is True}
+        # 1. جلب كافة الأجهزة من NetBird
+        all_nb_peers = NetBirdService.get_cached_all_netbird_peers()
+        peers_by_id = {p['id']: p for p in all_nb_peers}
         
-        # خريطة الأجهزة المرتبطة بمجموعات العملاء من قاعدة البيانات
-        all_gps = GroupPeer.query.all()
+        # 2. خريطة الأجهزة المرتبطة بمجموعات العملاء من قاعدة البيانات
+        client_group_ids = {c.netbird_group_id for c in clients if c.netbird_group_id}
+        all_gps = GroupPeer.query.filter(GroupPeer.group_id.in_(client_group_ids)).all() if client_group_ids else []
         group_to_peer_ids = {}
+        all_customer_peer_ids = set()
         for gp in all_gps:
             if gp.group_id and gp.peer_id:
                 group_to_peer_ids.setdefault(gp.group_id, set()).add(gp.peer_id)
+                all_customer_peer_ids.add(gp.peer_id)
+
+        # 3. فحص الاتصال الحقيقي عبر الـ Handshake (Active فقط واستبعاد Unstable)
+        online_peer_ids = self._check_peers_online_status(all_customer_peer_ids, peers_by_id)
 
         customers_data = []
         for c in clients:
@@ -125,6 +145,15 @@ class CustomerService:
                 logger.warning("netbird peers fetch failed: %s", e)
 
         if netbird_peers:
+            with ThreadPoolExecutor(max_workers=min(10, len(netbird_peers))) as pool:
+                checked_peers = list(pool.map(NetBirdService.check_single_peer_handshake, netbird_peers))
+            checked_map = {p['id']: p for p in checked_peers}
+            for p in netbird_peers:
+                chk = checked_map.get(p.get('id'), {})
+                p['is_reachable'] = chk.get('is_reachable', False)
+                p['is_online'] = chk.get('is_online', False)
+                p['connected'] = chk.get('is_online', False)
+
             peer_ids = [p.get("id") for p in netbird_peers if isinstance(p, dict) and p.get("id")]
             if peer_ids:
                 try:
