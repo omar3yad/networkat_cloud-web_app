@@ -12,6 +12,10 @@
             background: #d1fae5;
             color: #065f46;
         }
+        .badge-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
 
         .badge-active {
             background: #d1fae5;
@@ -1558,6 +1562,8 @@
                             statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Connected`;
                         } else {
                             statusBadge.className = "badge badge-inactive";
+                            statusBadge.style.backgroundColor = "#fee2e2";
+                            statusBadge.style.color = "#991b1b";
                             statusBadge.innerHTML = `<i class="fas fa-circle" style="font-size: 0.5rem;"></i> Offline`;
                         }
                     }
