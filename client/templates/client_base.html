@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Networkat · {% block title %}SD-WAN{% endblock %}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
 
@@ -516,6 +517,42 @@
         window.handleSidebarStatusFilter = handleSidebarStatusFilter;
         window.applySidebarSubmenuFilter = applySidebarSubmenuFilter;
         window.updateSidebarPeers = updateSidebarPeers;
+    </script>
+    <script>
+        // Global CSRF fetch interceptor for all client pages
+        (function() {
+            const origFetch = window.fetch;
+            window.fetch = function(resource, init) {
+                const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                const token = tokenMeta ? tokenMeta.getAttribute('content') : '';
+                if (token) {
+                    init = init || {};
+                    const method = (init.method || (resource instanceof Request ? resource.method : 'GET')).toUpperCase();
+                    if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+                        if (resource instanceof Request) {
+                            try { resource.headers.set('X-CSRFToken', token); } catch (e) {}
+                        } else {
+                            init.headers = init.headers || {};
+                            if (init.headers instanceof Headers) {
+                                if (!init.headers.has('X-CSRFToken')) {
+                                    init.headers.set('X-CSRFToken', token);
+                                }
+                            } else if (Array.isArray(init.headers)) {
+                                const hasHeader = init.headers.some(([k]) => k.toLowerCase() === 'x-csrftoken');
+                                if (!hasHeader) {
+                                    init.headers.push(['X-CSRFToken', token]);
+                                }
+                            } else {
+                                if (!('X-CSRFToken' in init.headers) && !('x-csrftoken' in init.headers)) {
+                                    init.headers['X-CSRFToken'] = token;
+                                }
+                            }
+                        }
+                    }
+                }
+                return origFetch.call(this, resource, init);
+            };
+        })();
     </script>
     {% block extra_scripts %}{% endblock %}
 </body>

@@ -15,6 +15,7 @@ class TestSubscriptionMiddlewarePhase4(unittest.TestCase):
     def setUp(self):
         self.app = create_client_app()
         self.app.config['TESTING'] = True
+        self.app.config['WTF_CSRF_ENABLED'] = False
         self.app.config['SECRET_KEY'] = 'test-secret'
         self.client = self.app.test_client()
         self.app_context = self.app.app_context()

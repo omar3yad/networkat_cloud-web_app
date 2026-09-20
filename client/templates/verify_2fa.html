@@ -4,6 +4,7 @@
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Networkat · Two-Factor Verification</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -293,6 +294,7 @@
         <!-- Panel 1: TOTP App -->
         <div id="panel-totp" class="tab-panel active">
             <form method="POST" action="{{ url_for('client.verify_2fa') }}" onsubmit="return handleOtpSubmit(this, 'totp-digits', 'totp-hidden')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="auth_type" value="totp">
                 <input type="hidden" name="code" id="totp-hidden">
 
@@ -322,6 +324,7 @@
             </button>
 
             <form method="POST" action="{{ url_for('client.verify_2fa') }}" onsubmit="return handleOtpSubmit(this, 'email-digits', 'email-hidden')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="auth_type" value="email">
                 <input type="hidden" name="code" id="email-hidden">
 
@@ -343,6 +346,7 @@
         <!-- Panel 3: Recovery Code -->
         <div id="panel-recovery" class="tab-panel">
             <form method="POST" action="{{ url_for('client.verify_2fa') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="auth_type" value="recovery">
                 <div class="form-group">
                     <label>Emergency recovery code</label>
@@ -365,6 +369,41 @@
     </div>
 
     <script>
+        // Global CSRF fetch interceptor
+        (function() {
+            const origFetch = window.fetch;
+            window.fetch = function(resource, init) {
+                const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                const token = tokenMeta ? tokenMeta.getAttribute('content') : '';
+                if (token) {
+                    init = init || {};
+                    const method = (init.method || (resource instanceof Request ? resource.method : 'GET')).toUpperCase();
+                    if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+                        if (resource instanceof Request) {
+                            try { resource.headers.set('X-CSRFToken', token); } catch (e) {}
+                        } else {
+                            init.headers = init.headers || {};
+                            if (init.headers instanceof Headers) {
+                                if (!init.headers.has('X-CSRFToken')) {
+                                    init.headers.set('X-CSRFToken', token);
+                                }
+                            } else if (Array.isArray(init.headers)) {
+                                const hasHeader = init.headers.some(([k]) => k.toLowerCase() === 'x-csrftoken');
+                                if (!hasHeader) {
+                                    init.headers.push(['X-CSRFToken', token]);
+                                }
+                            } else {
+                                if (!('X-CSRFToken' in init.headers) && !('x-csrftoken' in init.headers)) {
+                                    init.headers['X-CSRFToken'] = token;
+                                }
+                            }
+                        }
+                    }
+                }
+                return origFetch.call(this, resource, init);
+            };
+        })();
+
         function switchTab(type) {
             document.querySelectorAll('.auth-tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));

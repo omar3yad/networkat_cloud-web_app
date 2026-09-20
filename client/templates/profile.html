@@ -97,6 +97,7 @@
             </h3>
 
             <form method="POST" action="{{ url_for('client.profile') }}" id="form-profile-details">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label class="form-label" for="client_name">Full Name / Display Name</label>
                     <div class="form-control-wrap">

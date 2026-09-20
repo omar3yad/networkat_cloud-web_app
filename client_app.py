@@ -1,7 +1,7 @@
 from flask import Flask
 from config.settings import Config
 import models
-from extensions import db, migrate, login_manager
+from extensions import db, migrate, login_manager, csrf
 from client.routes import client_bp
 
 
@@ -11,6 +11,7 @@ def create_client_app():
     app.config.from_object(Config)
 
     db.init_app(app)
+    csrf.init_app(app)
 
     migrate.init_app(app, db)
 

@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 from config.settings import Config
 import models  # Import models to register them with SQLAlchemy
-from extensions import db, migrate, login_manager
+from extensions import db, migrate, login_manager, csrf
 from admin.routes import admin_bp
 
 def create_app():
@@ -33,6 +33,7 @@ def create_app():
         return send_from_directory(client_static_dir, filename)
 
     db.init_app(app)
+    csrf.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
