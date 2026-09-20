@@ -27,10 +27,11 @@ def create_client_app():
 
     @app.errorhandler(RateLimitExceeded)
     def handle_rate_limit(e):
-        if request.is_json or request.path.startswith('/api/'):
+        if request.is_json or request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'error': 'Too many requests'}), 429
         flash('Too many attempts. Please try again later.', 'error')
-        return redirect(request.referrer or url_for('client.login')), 429
+        return redirect(request.referrer or url_for('client.login'))
+
 
     app.register_blueprint(client_bp)
     return app

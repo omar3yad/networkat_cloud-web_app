@@ -47,10 +47,11 @@ def create_app():
 
     @app.errorhandler(RateLimitExceeded)
     def handle_rate_limit(e):
-        if request.is_json or request.path.startswith('/api/'):
+        if request.is_json or request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'error': 'Too many requests'}), 429
         flash('Too many attempts. Please try again later.', 'error')
-        return redirect(request.referrer or url_for('admin.login')), 429
+        return redirect(request.referrer or url_for('admin.login'))
+
 
     # Auto-seed default admin user if system_users table is empty
     with app.app_context():
