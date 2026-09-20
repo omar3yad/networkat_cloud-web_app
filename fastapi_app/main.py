@@ -42,6 +42,7 @@ app.include_router(client_auth.router)
 
 # ── Public static scripts — served at /scripts/<filename> ─────────────────────
 # uvicorn runs with directory=/app, so relative paths resolve from /app
+# DO NOT put any configuration files, tokens, or sensitive scripts in this directory.
 _SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts")
 app.mount("/scripts", StaticFiles(directory=_SCRIPTS_DIR), name="scripts")
 
