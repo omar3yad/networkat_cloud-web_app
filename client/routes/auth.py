@@ -5,6 +5,7 @@ import requests
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
 from client.blueprint import client_bp
+from extensions import limiter
 from services.customer_service import CustomerService
 from utils.email import send_verification_email, send_password_reset_email, send_2fa_email_otp
 from utils.two_factor import (
@@ -19,6 +20,7 @@ customer_service = CustomerService()
 # --------------------------------------------------------------------------
 
 @client_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
@@ -128,6 +130,7 @@ def verify_2fa():
 
 
 @client_bp.route('/send-2fa-email-otp', methods=['POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def send_2fa_email_otp_route():
     pending = session.get('pending_2fa')
     if not pending or pending.get('type') != 'client':
@@ -271,6 +274,7 @@ def register():
 
 
 @client_bp.route('/verify-email', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
 def verify_email():
     if session.get('client_logged_in'):
         return redirect(url_for('client.dashboard'))
@@ -319,6 +323,7 @@ def verify_email():
 
 
 @client_bp.route('/resend-code', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def resend_code():
     if session.get('client_logged_in'):
         return redirect(url_for('client.dashboard'))
@@ -346,6 +351,7 @@ def resend_code():
 
 
 @client_bp.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def forgot_password():
     if session.get('client_logged_in'):
         return redirect(url_for('client.dashboard'))
@@ -391,6 +397,7 @@ def forgot_password():
 
 
 @client_bp.route('/reset-password', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
 def reset_password():
     if session.get('client_logged_in'):
         return redirect(url_for('client.dashboard'))
@@ -439,6 +446,7 @@ def reset_password():
 
 
 @client_bp.route('/resend-reset-code', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def resend_reset_code():
     if session.get('client_logged_in'):
         return redirect(url_for('client.dashboard'))

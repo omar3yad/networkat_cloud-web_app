@@ -8,7 +8,7 @@ from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
-from extensions import db
+from extensions import db, limiter
 from models import Client
 from models.system_user import SystemUser
 from models.subscription_plan import SubscriptionPlan
@@ -90,7 +90,9 @@ def _get_api_headers(extra_headers=None):
     
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
 def login():
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')

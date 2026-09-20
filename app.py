@@ -1,11 +1,12 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, flash, redirect, url_for
 import requests
 import os
 from dotenv import load_dotenv
 load_dotenv(override=True)
 from config.settings import Config
 import models  # Import models to register them with SQLAlchemy
-from extensions import db, migrate, login_manager, csrf
+from extensions import db, migrate, login_manager, csrf, limiter
+from flask_limiter.errors import RateLimitExceeded
 from admin.routes import admin_bp
 
 def create_app():
@@ -34,6 +35,7 @@ def create_app():
 
     db.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
@@ -42,6 +44,13 @@ def create_app():
     @login_manager.user_loader
     def load_user(user_id):
         return None
+
+    @app.errorhandler(RateLimitExceeded)
+    def handle_rate_limit(e):
+        if request.is_json or request.path.startswith('/api/'):
+            return jsonify({'success': False, 'error': 'Too many requests'}), 429
+        flash('Too many attempts. Please try again later.', 'error')
+        return redirect(request.referrer or url_for('admin.login')), 429
 
     # Auto-seed default admin user if system_users table is empty
     with app.app_context():
@@ -53,6 +62,7 @@ def create_app():
 
     app.register_blueprint(admin_bp)
     return app
+
 
 
 

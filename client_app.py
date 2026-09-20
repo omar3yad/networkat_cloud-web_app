@@ -1,7 +1,8 @@
-from flask import Flask
+from flask import Flask, redirect, url_for, request, flash, jsonify
 from config.settings import Config
 import models
-from extensions import db, migrate, login_manager, csrf
+from extensions import db, migrate, login_manager, csrf, limiter
+from flask_limiter.errors import RateLimitExceeded
 from client.routes import client_bp
 
 
@@ -12,6 +13,7 @@ def create_client_app():
 
     db.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
 
     migrate.init_app(app, db)
 
@@ -23,8 +25,16 @@ def create_client_app():
     def load_user(user_id):
         return None
 
+    @app.errorhandler(RateLimitExceeded)
+    def handle_rate_limit(e):
+        if request.is_json or request.path.startswith('/api/'):
+            return jsonify({'success': False, 'error': 'Too many requests'}), 429
+        flash('Too many attempts. Please try again later.', 'error')
+        return redirect(request.referrer or url_for('client.login')), 429
+
     app.register_blueprint(client_bp)
     return app
+
 
 
 app = create_client_app()
