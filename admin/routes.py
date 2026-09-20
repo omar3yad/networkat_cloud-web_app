@@ -1,7 +1,7 @@
 import os
 import re
 import time
-import random
+import secrets
 import requests
 from datetime import datetime
 from functools import wraps
@@ -142,7 +142,7 @@ def verify_2fa():
         elif auth_type == 'email':
             email_otp_data = session.get('pending_2fa_email_otp')
             if email_otp_data and time.time() <= email_otp_data.get('expires_at', 0):
-                if code == email_otp_data.get('code'):
+                if secrets.compare_digest(code, str(email_otp_data.get('code', ''))):
                     verified = True
         elif auth_type == 'recovery':
             ok, updated_codes = verify_and_consume_recovery_code(code, user.recovery_codes)
@@ -187,7 +187,7 @@ def send_2fa_email_otp_route():
     if not user or not user.email:
         return jsonify({'success': False, 'message': 'Email address not found'}), 400
 
-    code = str(random.randint(100000, 999999))
+    code = str(secrets.randbelow(900000) + 100000)
     session['pending_2fa_email_otp'] = {
         'code': code,
         'expires_at': time.time() + 300

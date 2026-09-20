@@ -1,5 +1,5 @@
 import time
-import random
+import secrets
 import re
 import requests
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
@@ -140,7 +140,7 @@ def send_2fa_email_otp_route():
     if not client or not client.client_email:
         return jsonify({'success': False, 'message': 'Email address not found'}), 400
 
-    code = str(random.randint(100000, 999999))
+    code = str(secrets.randbelow(900000) + 100000)
     session['pending_2fa_email_otp'] = {
         'code': code,
         'expires_at': time.time() + 300
@@ -244,7 +244,7 @@ def register():
             flash(f'Phone number "{client_phone_number}" is already registered. Please use another.', "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
-        code = str(random.randint(100000, 999999))
+        code = str(secrets.randbelow(900000) + 100000)
         session['reg_data'] = {
             'username': username,
             'password': password,
@@ -258,7 +258,8 @@ def register():
         session['reg_verification'] = {
             'code': code,
             'email': client_email,
-            'expires_at': time.time() + 600
+            'expires_at': time.time() + 600,
+            'attempts': 0
         }
 
         ok, err = send_verification_email(client_email, code)
@@ -295,7 +296,15 @@ def verify_email():
             session.pop('reg_data', None)
             return redirect(url_for('client.register'))
 
-        if entered_code != verification.get('code'):
+        if not secrets.compare_digest(entered_code, str(verification.get('code', ''))):
+            attempts = verification.get('attempts', 0) + 1
+            verification['attempts'] = attempts
+            session['reg_verification'] = verification
+            if attempts >= 5:
+                session.pop('reg_verification', None)
+                session.pop('reg_data', None)
+                flash("Too many failed attempts. Please register again.", "error")
+                return redirect(url_for('client.register'))
             flash("Invalid verification code. Please try again.", "error")
             return render_template('verify_email.html', email=verification.get('email'))
 
@@ -333,11 +342,12 @@ def resend_code():
         flash("Registration session expired. Please register again.", "error")
         return redirect(url_for('client.register'))
 
-    code = str(random.randint(100000, 999999))
+    code = str(secrets.randbelow(900000) + 100000)
     session['reg_verification'] = {
         'code': code,
         'email': reg_data['client_email'],
-        'expires_at': time.time() + 600
+        'expires_at': time.time() + 600,
+        'attempts': 0
     }
 
     ok, err = send_verification_email(reg_data['client_email'], code)
@@ -376,12 +386,13 @@ def forgot_password():
             flash("This account does not have a registered email address. Please contact support.", "error")
             return render_template('forgot_password.html')
 
-        code = str(random.randint(100000, 999999))
+        code = str(secrets.randbelow(900000) + 100000)
         session['reset_password_data'] = {
             'client_id': str(client.user_id),
             'email': client.client_email,
             'code': code,
-            'expires_at': time.time() + 600
+            'expires_at': time.time() + 600,
+            'attempts': 0
         }
 
         ok, err = send_password_reset_email(client.client_email, code)
@@ -417,7 +428,14 @@ def reset_password():
             session.pop('reset_password_data', None)
             return redirect(url_for('client.forgot_password'))
 
-        if entered_code != reset_data.get('code'):
+        if not secrets.compare_digest(entered_code, str(reset_data.get('code', ''))):
+            attempts = reset_data.get('attempts', 0) + 1
+            reset_data['attempts'] = attempts
+            session['reset_password_data'] = reset_data
+            if attempts >= 5:
+                session.pop('reset_password_data', None)
+                flash("Too many failed attempts. Please request a new code.", "error")
+                return redirect(url_for('client.forgot_password'))
             flash("Invalid verification code. Please try again.", "error")
             return render_template('reset_password.html', email=reset_data.get('email'))
 
@@ -456,9 +474,10 @@ def resend_reset_code():
         flash("Password reset session expired. Please start again.", "error")
         return redirect(url_for('client.forgot_password'))
 
-    code = str(random.randint(100000, 999999))
+    code = str(secrets.randbelow(900000) + 100000)
     session['reset_password_data']['code'] = code
     session['reset_password_data']['expires_at'] = time.time() + 600
+    session['reset_password_data']['attempts'] = 0
 
     ok, err = send_password_reset_email(reset_data['email'], code)
     if not ok:
