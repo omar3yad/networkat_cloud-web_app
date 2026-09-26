@@ -358,42 +358,53 @@
                         onclick="closeUpdatesModal()">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <!-- Current Version & Status Card -->
+                    <!-- Release channel, current version, and check/apply action -->
                     <div class="updates-status-card">
-                        <div class="current-version-row">
-                            <div class="version-label-group">
-                                <span class="version-label">Current version:</span>
-                                <span class="version-val" id="updates-installed-val">{{ peer_version or '—' }}</span>
+                        <div class="update-status-row">
+                            <div class="update-channel-group">
+                                <span class="setting-title">Channel</span>
+                                <div class="channel-toggle" id="update-channel-toggle" role="group"
+                                    aria-label="Release channel">
+                                    <button type="button" class="channel-toggle-chip active" data-channel="stable"
+                                        aria-pressed="true" onclick="onChannelChipClick('stable')" {% if admin_view
+                                        %}disabled{% endif %}>Stable</button>
+                                    <button type="button" class="channel-toggle-chip" data-channel="beta"
+                                        aria-pressed="false" onclick="onChannelChipClick('beta')" {% if admin_view
+                                        %}disabled{% endif %}>Beta</button>
+                                </div>
                             </div>
-                            <button type="button" class="btn-action btn-check-updates" id="btn-check-update"
-                                onclick="checkPeerUpdate()">
-                                <i class="fas fa-sync-alt"></i> Check for updates
-                            </button>
                         </div>
-                        <div class="updates-state-badge-row">
-                            <span class="badge-update-status state-up-to-date" id="updates-state-badge">
-                                <i class="fas fa-check-circle"></i> Up to date
-                            </span>
-                            <span class="updates-last-checked" id="updates-last-checked-text"></span>
-                        </div>
-                    </div>
 
-                    <!-- Available Update Card (shown ONLY when an update is actually available) -->
-                    <div class="updates-available-card" id="updates-available-card" style="display: none;">
-                        <div class="available-info-group">
-                            <i class="fas fa-arrow-alt-circle-up available-icon"></i>
-                            <div class="available-text-group">
-                                <div class="available-title">New version available</div>
-                                <div class="available-version-text">Version <strong id="updates-available-val"></strong>
-                                    is ready to install.</div>
+                        <hr class="update-status-divider">
+
+                        <div class="update-status-row">
+                            <div class="update-version-info">
+                                <span class="version-label">Version:</span>
+                                <span class="version-value-wrap">
+                                    <span class="version-val" id="updates-installed-val">{{ peer_version or '—' }}</span>
+                                    <span class="version-update-arrow" id="updates-arrow" style="display: none;">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </span>
+                                    <span class="version-val version-val-new" id="updates-available-val"
+                                        style="display: none;"></span>
+                                </span>
+                            </div>
+                            <div class="update-check-group">
+                                <div class="update-check-buttons">
+                                    <button type="button" class="btn-check-updates" id="btn-check-update"
+                                        onclick="checkPeerUpdate(true)">
+                                        <i class="fas fa-sync-alt"></i> <span id="btn-check-update-text">Check for updates</span>
+                                    </button>
+                                    {% if not admin_view %}
+                                    <button type="button" class="btn-apply-update" id="btn-apply-update"
+                                        onclick="applyPeerUpdate()" style="display: none;">
+                                        <i class="fas fa-download"></i> Update now
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                <span class="updates-last-checked" id="updates-last-checked-text"></span>
                             </div>
                         </div>
-                        {% if not admin_view %}
-                        <button type="button" class="btn-action btn-apply-update" id="btn-apply-update"
-                            onclick="applyPeerUpdate()">
-                            <i class="fas fa-download"></i> Update now
-                        </button>
-                        {% endif %}
                     </div>
 
                     <div class="updates-feedback-msg" id="updates-feedback-msg" style="display: none;"></div>

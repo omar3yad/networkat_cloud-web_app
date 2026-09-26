@@ -815,24 +815,39 @@ input:disabled + .slider {
     margin-bottom: 1rem;
 }
 
-.current-version-row {
+.update-status-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
+    gap: 0.75rem;
 }
 
-.version-label-group {
+.update-status-divider {
+    height: 1px;
+    background: rgba(226, 232, 240, 0.8);
+    border: none;
+    margin: 0.85rem 0 0.8rem;
+}
+
+.update-channel-group {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.update-version-info {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .version-label {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--nk-text-muted);
+    flex-shrink: 0;
 }
 
 .version-val {
@@ -840,43 +855,19 @@ input:disabled + .slider {
     font-weight: 700;
     color: var(--nk-text-main);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.btn-check-updates {
-    background: #ffffff;
-    border: 1px solid var(--nk-border);
-    color: var(--nk-text-main);
-    padding: 0.45rem 0.85rem;
-    font-size: 0.82rem;
-    font-weight: 600;
-    border-radius: var(--nk-radius-md);
-    cursor: pointer;
-    transition: var(--nk-transition);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-}
-
-.btn-check-updates:hover:not(:disabled) {
-    border-color: var(--nk-blue-primary);
-    color: var(--nk-blue-primary);
-    background: rgba(2, 132, 199, 0.04);
-}
-
-.btn-check-updates:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.updates-state-badge-row {
+/* Update arrow sits on the same baseline as the version number;
+   the up-to-date tag is lifted slightly (see .badge-mini). */
+.version-value-wrap {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-top: 0.85rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(226, 232, 240, 0.8);
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    min-width: 0;
 }
 
 .badge-update-status {
@@ -896,76 +887,107 @@ input:disabled + .slider {
     color: #059669;
 }
 
-.badge-update-status.state-update-available {
-    background: rgba(245, 158, 11, 0.12);
-    color: #d97706;
-}
-
-.badge-update-status.state-updating {
-    background: rgba(2, 132, 199, 0.12);
-    color: var(--nk-blue-primary);
-}
-
 .badge-update-status.state-unknown {
     background: #f1f5f9;
     color: var(--nk-text-muted);
 }
 
-.updates-last-checked {
-    font-size: 0.75rem;
-    color: var(--nk-text-muted);
+.badge-update-status.badge-mini {
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 0.08rem 0.4rem;
+    gap: 0.3em;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    flex-shrink: 0;
+    align-self: flex-start;
+    position: relative;
+    top: -10px;
 }
 
-/* Card for available update - displayed ONLY when an update is available */
-.updates-available-card {
-    display: none;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.9rem 1.15rem;
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.28);
-    border-radius: var(--nk-radius-md);
-    margin-bottom: 1rem;
-}
-
-.available-info-group {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.available-icon {
-    font-size: 1.35rem;
+/* Update-available: arrow + new version replace the tag, same
+   amber used everywhere else for "an update exists". */
+.version-update-arrow {
     color: #d97706;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
     flex-shrink: 0;
 }
 
-.available-text-group {
+.version-val-new {
+    color: #d97706;
+}
+
+.update-check-group {
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;
+    align-items: flex-end;
+    gap: 0.6rem;
+    flex-shrink: 0;
 }
 
-.available-title {
-    font-weight: 700;
-    font-size: 0.88rem;
-    color: #92400e;
+.update-check-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    position: relative;
+    top: 6px;
 }
 
-.available-version-text {
+.updates-last-checked {
+    font-size: 0.65rem;
+    color: var(--nk-text-muted);
+    white-space: nowrap;
+}
+
+/* Check-updates / apply-update share the same slot and sizing —
+   only one is visible at a time depending on update state. */
+.btn-check-updates {
+    background: transparent;
+    border: 1px solid var(--nk-blue-primary);
+    color: var(--nk-blue-primary);
+    height: 30px;
+    padding: 0 0.85rem;
     font-size: 0.8rem;
-    color: #78350f;
+    font-weight: 700;
+    border-radius: var(--nk-radius-sm);
+    cursor: pointer;
+    transition: var(--nk-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-check-updates:hover:not(:disabled) {
+    background: rgba(2, 132, 199, 0.08);
+}
+
+.btn-check-updates:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Up-to-date state: the Check button itself turns into a settled
+   green confirmation instead of staying blue-and-dimmed. */
+.btn-check-updates.btn-check-updates-done:disabled {
+    opacity: 1;
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #059669;
+    cursor: default;
 }
 
 .btn-apply-update {
     background: #059669;
     border: 1px solid #059669;
     color: #ffffff;
-    padding: 0.48rem 0.95rem;
-    font-size: 0.84rem;
-    font-weight: 600;
-    border-radius: var(--nk-radius-md);
+    height: 30px;
+    padding: 0 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border-radius: var(--nk-radius-sm);
     cursor: pointer;
     transition: var(--nk-transition);
     display: inline-flex;
@@ -1086,6 +1108,54 @@ input:disabled + .slider {
     background-color: #fff5f5 !important;
     box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
     color: #dc2626 !important;
+}
+
+.channel-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06), inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-sizing: border-box;
+}
+
+.channel-toggle-chip {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--nk-text-muted);
+    padding: 0 16px;
+    height: 32px;
+    min-width: 76px;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.channel-toggle-chip:hover:not(.active):not(:disabled) {
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--nk-text-main);
+}
+
+.channel-toggle-chip.active {
+    background: #ffffff;
+    color: var(--nk-blue-primary);
+    border-color: #e2e8f0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    font-weight: 700;
+}
+
+.channel-toggle-chip:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .interval-error-msg {

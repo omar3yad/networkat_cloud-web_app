@@ -755,6 +755,12 @@ def peer_update_config_api(peer_id):
                 except (ValueError, TypeError):
                     return jsonify({"error": "Invalid interval value"}), 400
 
+            if "channel" in data:
+                channel = data["channel"]
+                if channel not in ("stable", "beta"):
+                    return jsonify({"error": "Invalid channel"}), 400
+                agent_payload["channel"] = channel
+
             if not agent_payload:
                 return jsonify({"error": "No configuration parameters provided"}), 400
 

@@ -48,7 +48,7 @@ The system is designed using **Clean Architecture** to separate database operati
 
 4. **Heartbeat Scheduler (Background Job)**
    - **Role:** A continuous loop (`scheduler/peers_heartbeat.py`).
-   - **Purpose:** Runs every ~60 seconds to POST a heartbeat to all active edge peers via the mesh. This prevents edge routers from dropping into a "basic router" failsafe mode.
+   - **Purpose:** Runs every ~3 hours to POST a heartbeat to all active edge peers via the mesh. This prevents edge routers from dropping into a "basic router" failsafe mode.
 
 ---
 

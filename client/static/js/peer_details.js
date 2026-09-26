@@ -662,8 +662,10 @@
     // ==========================================================================
 
     let isApplyingUpdate = false;
+    let manualCheckUsed = false;
     let initialAutoUpdateEnabled = false;
     let initialIntervalHours = 12;
+    let initialChannel = 'stable';
 
     function escapeHtml(str) {
         if (!str) return '';
@@ -779,7 +781,8 @@
         if (modal) modal.classList.add("active");
         hideIntervalError();
         clearUpdatesFeedback();
-        checkPeerUpdate();
+        manualCheckUsed = false;
+        checkPeerUpdate(false);
         loadAutoUpdateConfig();
     }
 
@@ -813,6 +816,55 @@
         }
     }
 
+    function setChannelChipUI(channel) {
+        const chips = document.querySelectorAll("#update-channel-toggle .channel-toggle-chip");
+        chips.forEach((chip) => {
+            const isActive = chip.getAttribute("data-channel") === channel;
+            chip.classList.toggle("active", isActive);
+            chip.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+    }
+
+    let isChangingChannel = false;
+
+    async function onChannelChipClick(channel) {
+        if (isChangingChannel || channel === initialChannel) return;
+
+        const previousChannel = initialChannel;
+        isChangingChannel = true;
+        setChannelChipUI(channel);
+        setChannelChipsDisabled(true);
+        clearUpdatesFeedback();
+
+        try {
+            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update/config`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel: channel })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                throw new Error(data.error || "Failed to switch channel");
+            }
+
+            initialChannel = channel;
+            await checkPeerUpdate(false);
+        } catch (err) {
+            setChannelChipUI(previousChannel);
+            showUpdatesFeedback(err.message || "Failed to switch channel", "error");
+        } finally {
+            isChangingChannel = false;
+            setChannelChipsDisabled(false);
+            updateSaveButtonState();
+        }
+    }
+
+    function setChannelChipsDisabled(disabled) {
+        document.querySelectorAll("#update-channel-toggle .channel-toggle-chip").forEach((chip) => {
+            chip.disabled = disabled;
+        });
+    }
+
     function updateSaveButtonState() {
         const btnSave = document.getElementById("btn-save-update-config");
         if (!btnSave) return;
@@ -835,24 +887,47 @@
         btnSave.disabled = !isDirty;
     }
 
-    async function checkPeerUpdate() {
-        if (isApplyingUpdate) return;
+    function setCheckButtonUpToDate(isUpToDate) {
         const btnCheck = document.getElementById("btn-check-update");
-        const badgeState = document.getElementById("updates-state-badge");
+        const btnCheckText = document.getElementById("btn-check-update-text");
+        if (!btnCheck) return;
+        btnCheck.classList.toggle("btn-check-updates-done", isUpToDate);
+        if (isUpToDate) {
+            btnCheck.disabled = true;
+            if (btnCheckText) btnCheckText.textContent = "Up to date";
+            const icon = btnCheck.querySelector("i");
+            if (icon) icon.className = "fas fa-check-circle";
+        } else {
+            btnCheck.disabled = manualCheckUsed;
+            if (btnCheckText) btnCheckText.textContent = "Check for updates";
+            const icon = btnCheck.querySelector("i");
+            if (icon) icon.className = "fas fa-sync-alt";
+        }
+    }
+
+    async function checkPeerUpdate(isManual) {
+        if (isApplyingUpdate) return;
+        if (isManual) manualCheckUsed = true;
+
+        const btnCheck = document.getElementById("btn-check-update");
+        const btnCheckText = document.getElementById("btn-check-update-text");
+        const btnApply = document.getElementById("btn-apply-update");
         const installedVal = document.getElementById("updates-installed-val");
-        const availableCard = document.getElementById("updates-available-card");
+        const arrowEl = document.getElementById("updates-arrow");
         const availableVal = document.getElementById("updates-available-val");
         const lastCheckedText = document.getElementById("updates-last-checked-text");
 
         if (btnCheck) {
+            btnCheck.classList.remove("btn-check-updates-done");
             btnCheck.disabled = true;
-            btnCheck.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
-        }
-        if (badgeState) {
-            badgeState.className = "badge-update-status state-updating";
-            badgeState.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking for updates...';
+            if (btnCheckText) btnCheckText.textContent = "Checking...";
+            const icon = btnCheck.querySelector("i");
+            if (icon) icon.className = "fas fa-spinner fa-spin";
         }
         clearUpdatesFeedback();
+        // Final state (icon/text/disabled) for the "Check" button is decided
+        // per branch below via setCheckButtonUpToDate — this spinner state
+        // is only the in-flight placeholder.
 
         try {
             const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update`);
@@ -880,12 +955,19 @@
             const dotBadge = document.getElementById("update-badge-dot");
 
             if (state === "update-available" && available && available !== installed) {
-                if (badgeState) {
-                    badgeState.className = "badge-update-status state-update-available";
-                    badgeState.innerHTML = '<i class="fas fa-arrow-alt-circle-up"></i> Update available';
+                if (arrowEl) arrowEl.style.display = "";
+                if (availableVal) {
+                    availableVal.textContent = available;
+                    availableVal.style.display = "";
                 }
-                if (availableCard) availableCard.style.display = "flex";
-                if (availableVal) availableVal.textContent = available;
+                // Only swap the button slot when there's an apply button to
+                // swap to (client view) — admin (read-only) keeps "Check".
+                if (btnApply) {
+                    btnApply.style.display = "";
+                    if (btnCheck) btnCheck.style.display = "none";
+                } else if (btnCheck) {
+                    btnCheck.style.display = "";
+                }
                 if (versionBadge) {
                     const titleText = `available update: ${available}`;
                     versionBadge.title = titleText;
@@ -895,41 +977,42 @@
                     versionBadge.style.display = "inline-flex";
                 }
                 if (dotBadge) dotBadge.style.display = "inline-block";
+                setCheckButtonUpToDate(false);
             } else if (state === "up-to-date") {
-                if (badgeState) {
-                    badgeState.className = "badge-update-status state-up-to-date";
-                    badgeState.innerHTML = '<i class="fas fa-check-circle"></i> Up to date';
-                }
-                if (availableCard) availableCard.style.display = "none";
-                if (availableVal) availableVal.textContent = "";
+                if (arrowEl) arrowEl.style.display = "none";
+                if (availableVal) { availableVal.style.display = "none"; availableVal.textContent = ""; }
+                if (btnApply) btnApply.style.display = "none";
+                if (btnCheck) btnCheck.style.display = "";
                 if (versionBadge) versionBadge.style.display = "none";
                 if (dotBadge) dotBadge.style.display = "none";
+                setCheckButtonUpToDate(true);
             } else {
-                if (badgeState) {
-                    badgeState.className = "badge-update-status state-unknown";
-                    badgeState.innerHTML = '<i class="fas fa-question-circle"></i> Status unknown';
-                }
-                if (availableCard) availableCard.style.display = "none";
-                if (availableVal) availableVal.textContent = "";
+                if (arrowEl) arrowEl.style.display = "none";
+                if (availableVal) { availableVal.style.display = "none"; availableVal.textContent = ""; }
+                if (btnApply) btnApply.style.display = "none";
+                if (btnCheck) btnCheck.style.display = "";
                 if (versionBadge) versionBadge.style.display = "none";
                 if (dotBadge) dotBadge.style.display = "none";
+                setCheckButtonUpToDate(false);
             }
         } catch (err) {
-            if (badgeState) {
-                badgeState.className = "badge-update-status state-unknown";
-                badgeState.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Check failed';
-            }
+            if (arrowEl) arrowEl.style.display = "none";
+            if (availableVal) availableVal.style.display = "none";
+            if (btnApply) btnApply.style.display = "none";
+            if (btnCheck) btnCheck.style.display = "";
+            setCheckButtonUpToDate(false);
             showUpdatesFeedback(err.message || "Failed to check for updates", "error");
-        } finally {
-            if (btnCheck) {
-                btnCheck.disabled = false;
-                btnCheck.innerHTML = '<i class="fas fa-sync-alt"></i> Check for updates';
-            }
         }
     }
 
     async function applyPeerUpdate() {
         if (isApplyingUpdate) return;
+
+        const availableVal = document.getElementById("updates-available-val");
+        const targetVersion = availableVal ? availableVal.textContent : "";
+        const confirmMsg = targetVersion ? `Update to ${targetVersion} now?` : "Update now?";
+        if (!window.confirm(confirmMsg)) return;
+
         isApplyingUpdate = true;
 
         const btnApply = document.getElementById("btn-apply-update");
@@ -937,7 +1020,6 @@
         const btnSave = document.getElementById("btn-save-update-config");
         const btnCloseModal = document.getElementById("btn-close-updates-modal");
         const btnCancelModal = document.getElementById("btn-cancel-updates-modal");
-        const badgeState = document.getElementById("updates-state-badge");
 
         if (btnApply) {
             btnApply.disabled = true;
@@ -948,10 +1030,6 @@
         if (btnCloseModal) btnCloseModal.style.visibility = "hidden";
         if (btnCancelModal) btnCancelModal.disabled = true;
 
-        if (badgeState) {
-            badgeState.className = "badge-update-status state-updating";
-            badgeState.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Applying software update...';
-        }
         showUpdatesFeedback("Software update in progress. This may take up to 2 minutes, please do not close the window.", "info");
 
         try {
@@ -971,7 +1049,7 @@
             if (window.showSuccess) window.showSuccess("Update completed successfully");
 
             setTimeout(() => {
-                checkPeerUpdate();
+                checkPeerUpdate(false);
             }, 3000);
         } catch (err) {
             showUpdatesFeedback(err.message || "Failed to apply update", "error");
@@ -982,7 +1060,7 @@
                 btnApply.disabled = false;
                 btnApply.innerHTML = '<i class="fas fa-download"></i> Update now';
             }
-            if (btnCheck) btnCheck.disabled = false;
+            if (btnCheck) btnCheck.disabled = manualCheckUsed;
             updateSaveButtonState();
             if (btnCloseModal) btnCloseModal.style.visibility = "visible";
             if (btnCancelModal) btnCancelModal.disabled = false;
@@ -1017,8 +1095,12 @@
                 else wrapper.classList.add("disabled");
             }
 
+            const channel = (data.channel === 'beta') ? 'beta' : 'stable';
+            setChannelChipUI(channel);
+
             initialAutoUpdateEnabled = enabled;
             initialIntervalHours = hours;
+            initialChannel = channel;
             hideIntervalError();
             updateSaveButtonState();
         } catch (e) {
@@ -1116,4 +1198,5 @@
     window.onAutoUpdateFieldChange = onAutoUpdateFieldChange;
     window.onAutoUpdateToggleChange = onAutoUpdateFieldChange;
     window.saveAutoUpdateConfig = saveAutoUpdateConfig;
+    window.onChannelChipClick = onChannelChipClick;
 })();

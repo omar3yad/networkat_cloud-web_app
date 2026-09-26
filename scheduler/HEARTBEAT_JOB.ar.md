@@ -27,7 +27,7 @@
 كان يدخل failsafe رغم أنه سليم.
 
 **الحل (هذه الجلسة):** عملية دورية مستقلة في `core/web_app` تنادي `POST /heartbeat`
-على كل peer كل ~60 ثانية. إشارة الحياة أصبحت موثوقة ومستقلة عن نشاط الداشبورد.
+على كل peer كل ~3 ساعات. إشارة الحياة أصبحت موثوقة ومستقلة عن نشاط الداشبورد.
 
 ---
 
@@ -77,7 +77,7 @@ stderr_logfile_maxbytes=0
 
 ## 3. كيف يعمل `scheduler/peers_heartbeat.py`
 
-### 3.1 الدورة (round) — كل ~60 ثانية
+### 3.1 الدورة (round) — كل ~3 ساعات
 
 1. **جلب الـ peers** — نداء مباشر لـ NetBird API الداخلي:
    `GET http://netbird-server/api/peers` بترويسة
@@ -117,7 +117,7 @@ stderr_logfile_maxbytes=0
 
 | المتغيّر | الافتراضي | المعنى |
 |---|---|---|
-| `HEARTBEAT_INTERVAL_SECONDS` | `60` | الفاصل بين الدورات — مريح مقارنةً بمهلة الـ failsafe (`DEFAULT_TIMEOUT_SECONDS = 604800` = أسبوع على الأسطول)، فدورة أو اثنتان فائتتان لا تضرّ |
+| `HEARTBEAT_INTERVAL_SECONDS` | `10800` (3 ساعات) | الفاصل بين الدورات — مريح مقارنةً بمهلة الـ failsafe (`DEFAULT_TIMEOUT_SECONDS = 43200` = 12 ساعة على الأسطول)، فدورة أو اثنتان فائتتان لا تضرّ |
 | `HEARTBEAT_PEER_GROUP` | `all-peers` | مجموعة NetBird التي تُعتبر peers مُدارة |
 | `HEARTBEAT_WORKERS` | `20` | عرض التوازي |
 | `HEARTBEAT_REQUEST_TIMEOUT` | `5` | timeout نداء `/heartbeat` لكل peer (ثوانٍ) |
@@ -174,7 +174,7 @@ curl -s --connect-timeout 1 http://100.123.117.214:8765/failsafe | jq
     "state": "off",
     "rules_present": false,
     "filtering_enabled": true,
-    "timeout_seconds": 604800,
+    "timeout_seconds": 43200,
     "last_contact_age_seconds": 12,
     "reason": "reconcile_only"
   }
@@ -212,10 +212,10 @@ body: `{"timeout_seconds": <int>}` — بين `60` و `1209600`.
 
 ```bash
 curl -s --connect-timeout 1 -XPUT http://100.123.117.214:8765/failsafe/config \
-  -H 'content-type: application/json' -d '{"timeout_seconds": 604800}' | jq
+  -H 'content-type: application/json' -d '{"timeout_seconds": 43200}' | jq
 ```
 > الافتراضي الحالي في المُنصِّب (`failsafe_engine.py: DEFAULT_TIMEOUT_SECONDS`) =
-> `604800` ثانية (أسبوع). هذا الـ endpoint يسمح للـ Controller بضبطها لكل peer على
+> `43200` ثانية (12 ساعة). هذا الـ endpoint يسمح للـ Controller بضبطها لكل peer على
 > حدة. لا يلمس nft — يكتب المفتاح في جدول `setting` فقط.
 
 ---
@@ -225,13 +225,13 @@ curl -s --connect-timeout 1 -XPUT http://100.123.117.214:8765/failsafe/config \
 بعد `docker compose restart web_app`:
 
 ```
-2026-09-06 23:43:02  [heartbeat] INFO starting: interval=60s timeout=5.0s workers=20
+2026-09-06 23:43:02  [heartbeat] INFO starting: interval=10800s timeout=5.0s workers=20
 2026-09-06 23:43:03  [heartbeat] INFO round: 4 peers, 1 ok, 3 failed
 2026-09-06 23:44:03  [heartbeat] INFO round: 4 peers, 1 ok, 3 failed
 2026-09-06 23:45:03  [heartbeat] INFO round: 4 peers, 1 ok, 3 failed
 ```
 
-- الفاصل دقيق: 60 ثانية بالضبط بين الدورات.
+- الفاصل دقيق: 3 ساعات بالضبط بين الدورات.
 - `4 peers` = الأعضاء في `all-peers` المتصلون ولهم IP (`homeser`,
   `networkat-cloudedge`, `ads`, `networkat-cloudedge-2`).
 - `1 ok` = vm-3012 → `HTTP 200 {"ok":true,"timestamp":...}` (عليه الـ agent الجديد).
