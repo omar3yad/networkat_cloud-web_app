@@ -49,13 +49,13 @@ class FakeAgent(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = self._record()
-        if path.startswith("/logs/events/client") and FakeAgent.disabled:
+        if path.startswith("/logs/system/client") and FakeAgent.disabled:
             return self._json(403, {"ok": False, "code": "logs_disabled", "message": "off", "logs": []})
-        if path == "/logs/events/client":
+        if path == "/logs/system/client":
             return self._json(200, {"ok": True, "audience": "client", "entries": [ADMIN_ENTRY],
                                     "page": {"limit": 50, "count": 1, "has_more": False,
                                              "next_before_id": None}, "last_id": 7})
-        if path == "/logs/events/client/stream":
+        if path == "/logs/system/client/stream":
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Transfer-Encoding", "chunked")
@@ -66,14 +66,14 @@ class FakeAgent(BaseHTTPRequestHandler):
                 self.wfile.write(b"%x\r\n%s\r\n" % (len(piece), piece))
             self.wfile.write(b"0\r\n\r\n")
             return
-        if path == "/logs/config":
+        if path == "/logs/system/config":
             return self._json(200, {"ok": True, "enabled": True, "categories": {}, "bounds": {},
                                     "always_on": ["audit"]})
         self._json(404, {"detail": "Not Found"})
 
     def do_PUT(self):
         path = self._record()
-        if path == "/logs/config":
+        if path == "/logs/system/config":
             if "audit" in FakeAgent.calls[-1]["body"]["categories"]:
                 return self._json(400, {"ok": False, "code": "usage", "message": "audit: cannot", "logs": []})
             return self._json(200, {"ok": True, "enabled": True, "categories": {}, "bounds": {},
@@ -110,7 +110,7 @@ def test_list_is_client_only(peer):
     assert entry["message"] == "WAN1 is back up."
     assert not {"source", "admin_message", "admin_data"} & set(entry)
     call = FakeAgent.calls[-1]
-    assert call["path"] == "/logs/events/client"
+    assert call["path"] == "/logs/system/client"
     assert call["query"] == {"category": ["wan"], "limit": ["20"]}  # code/actor/empty q dropped
 
 

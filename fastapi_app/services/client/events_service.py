@@ -1,7 +1,7 @@
 """
 Client-portal event log — proxy to the peer agent's `/logs/*` (agent docs/logs.md).
 
-Client audience only: this module never calls `/logs/events/admin` or
+Client audience only: this module never calls `/logs/system/admin` or
 `audience=admin`, and every entry is cut down to CLIENT_ENTRY_FIELDS before
 it leaves (the agent already omits admin fields on client routes; this is
 the second lock).
@@ -102,7 +102,7 @@ def client_entry(entry: dict) -> dict:
 # ── Reads ─────────────────────────────────────────────────────────────────────
 
 def list_events(peer: dict, filters: dict) -> dict:
-    body = _call(peer, "GET", "/logs/events/client", params=_pick(filters, LIST_FILTERS))
+    body = _call(peer, "GET", "/logs/system/client", params=_pick(filters, LIST_FILTERS))
     return {
         "entries": [client_entry(e) for e in body.get("entries") or [] if isinstance(e, dict)],
         "page": body.get("page") or {"limit": 0, "count": 0, "has_more": False},
@@ -111,11 +111,11 @@ def list_events(peer: dict, filters: dict) -> dict:
 
 
 def list_categories(peer: dict) -> list:
-    return _call(peer, "GET", "/logs/categories", params={"audience": "client"}).get("categories") or []
+    return _call(peer, "GET", "/logs/system/categories", params={"audience": "client"}).get("categories") or []
 
 
 def get_config(peer: dict) -> dict:
-    body = _call(peer, "GET", "/logs/config")
+    body = _call(peer, "GET", "/logs/system/config")
     body.pop("ok", None)
     return body
 
@@ -123,14 +123,14 @@ def get_config(peer: dict) -> dict:
 # ── Changes (actor: client) ───────────────────────────────────────────────────
 
 def update_config(peer: dict, update: dict) -> dict:
-    body = _call(peer, "PUT", "/logs/config", json_body=update, actor=True)
+    body = _call(peer, "PUT", "/logs/system/config", json_body=update, actor=True)
     body.pop("ok", None)
     return body
 
 
 def clear_events(peer: dict, categories: Optional[str]) -> dict:
     params = {"category": categories} if categories else None
-    body = _call(peer, "DELETE", "/logs/events/client", params=params, actor=True)
+    body = _call(peer, "DELETE", "/logs/system/client", params=params, actor=True)
     return {"cleared": body.get("cleared") or [], "up_to_id": body.get("up_to_id")}
 
 
@@ -196,7 +196,7 @@ async def open_stream(peer: dict, filters: dict, last_event_id: Optional[str]) -
     stream bytes, like the agent itself). Returns the SSE byte iterator."""
     host = _host(peer)
     query = urlencode(_pick(filters, STREAM_FILTERS))
-    target = "/logs/events/client/stream" + (f"?{query}" if query else "")
+    target = "/logs/system/client/stream" + (f"?{query}" if query else "")
     headers = [("Host", f"{host}:{AGENT_PORT}"), ("Accept", "text/event-stream"), ("Connection", "close")]
     if last_event_id and last_event_id.isdigit():
         headers.append(("Last-Event-ID", last_event_id))
