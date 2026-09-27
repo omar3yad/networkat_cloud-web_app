@@ -1,5 +1,5 @@
 """
-Client-portal event log — proxy to the peer agent's `/logs/*` (agent docs/logs.md).
+Client-portal system log — proxy to the peer agent's `/logs/system/*` (agent docs/logs.md).
 
 Client audience only: this module never calls `/logs/system/admin` or
 `audience=admin`, and every entry is cut down to CLIENT_ENTRY_FIELDS before
@@ -35,6 +35,16 @@ SERVICE_SOURCE = "customer"      # agent ServiceSource for a customer's own togg
 # Filters a client may pass through (agent LOG_QUERY_PARAMS minus code/subject/actor).
 LIST_FILTERS = ("category", "level", "since", "until", "q", "limit", "before_id", "after_id")
 STREAM_FILTERS = ("category", "level", "q")
+
+# Peers before 1.7.1 serve the system log under its old paths. Tried only
+# when the new path does not exist on the peer; drop once every peer runs
+# 1.7.1 or newer.
+LEGACY_PATHS = {
+    "/logs/system/client": "/logs/events/client",
+    "/logs/system/client/stream": "/logs/events/client/stream",
+    "/logs/system/categories": "/logs/categories",
+    "/logs/system/config": "/logs/config",
+}
 
 
 class EventsError(Exception):
@@ -73,19 +83,29 @@ def _host(peer: dict) -> str:
     return peer["ip"]
 
 
+def _route_missing(status_code: int, body) -> bool:
+    """404 from the router itself — the agent's own 404s always carry a `code`."""
+    return status_code == 404 and not (isinstance(body, dict) and body.get("code"))
+
+
 def _call(peer: dict, method: str, path: str, *, params=None, json_body=None, actor=False) -> dict:
-    url = f"http://{_host(peer)}:{AGENT_PORT}{path}"
-    try:
-        resp = requests.request(
-            method, url, params=params, json=json_body,
-            headers=ACTOR_HEADERS if actor else None, timeout=AGENT_TIMEOUT,
-        )
-    except requests.RequestException:
-        raise _offline()
-    try:
-        body = resp.json()
-    except ValueError:
-        body = None
+    host = _host(peer)
+    for attempt in (path, LEGACY_PATHS.get(path)):
+        if attempt is None:
+            break
+        try:
+            resp = requests.request(
+                method, f"http://{host}:{AGENT_PORT}{attempt}", params=params, json=json_body,
+                headers=ACTOR_HEADERS if actor else None, timeout=AGENT_TIMEOUT,
+            )
+        except requests.RequestException:
+            raise _offline()
+        try:
+            body = resp.json()
+        except ValueError:
+            body = None
+        if not _route_missing(resp.status_code, body):
+            break
     if resp.status_code >= 400 or not isinstance(body, dict):
         raise _agent_error(resp.status_code, body)
     return body
@@ -191,16 +211,8 @@ def _filter_sse_block(block: bytes) -> bytes:
     return b"\n".join(lines) + b"\n\n"
 
 
-async def open_stream(peer: dict, filters: dict, last_event_id: Optional[str]) -> AsyncIterator[bytes]:
-    """Connect and check the agent's answer (errors raise EventsError before any
-    stream bytes, like the agent itself). Returns the SSE byte iterator."""
-    host = _host(peer)
-    query = urlencode(_pick(filters, STREAM_FILTERS))
-    target = "/logs/system/client/stream" + (f"?{query}" if query else "")
-    headers = [("Host", f"{host}:{AGENT_PORT}"), ("Accept", "text/event-stream"), ("Connection", "close")]
-    if last_event_id and last_event_id.isdigit():
-        headers.append(("Last-Event-ID", last_event_id))
-
+async def _connect_stream(host: str, target: str, headers: list):
+    """One attempt: returns (stream, None) on 200, else (None, (status, body))."""
     try:
         reader, writer = await asyncio.wait_for(
             asyncio.open_connection(host, AGENT_PORT), STREAM_CONNECT_TIMEOUT)
@@ -212,18 +224,38 @@ async def open_stream(peer: dict, filters: dict, last_event_id: Optional[str]) -
         response = await stream.next_event(STREAM_FIRST_BYTE_TIMEOUT)
         if not isinstance(response, h11.Response):
             raise _offline()
-        if response.status_code != 200:
-            try:
-                body = json.loads(await stream.read_body(STREAM_FIRST_BYTE_TIMEOUT) or b"null")
-            except ValueError:
-                body = None
-            raise _agent_error(response.status_code, body)
+        if response.status_code == 200:
+            return stream, None
+        try:
+            body = json.loads(await stream.read_body(STREAM_FIRST_BYTE_TIMEOUT) or b"null")
+        except ValueError:
+            body = None
+        stream.close()
+        return None, (response.status_code, body)
     except EventsError:
         stream.close()
         raise
     except (OSError, asyncio.TimeoutError, h11.ProtocolError):
         stream.close()
         raise _offline()
+
+
+async def open_stream(peer: dict, filters: dict, last_event_id: Optional[str]) -> AsyncIterator[bytes]:
+    """Connect and check the agent's answer (errors raise EventsError before any
+    stream bytes, like the agent itself). Returns the SSE byte iterator."""
+    host = _host(peer)
+    query = urlencode(_pick(filters, STREAM_FILTERS))
+    headers = [("Host", f"{host}:{AGENT_PORT}"), ("Accept", "text/event-stream"), ("Connection", "close")]
+    if last_event_id and last_event_id.isdigit():
+        headers.append(("Last-Event-ID", last_event_id))
+
+    path = "/logs/system/client/stream"
+    for attempt in (path, LEGACY_PATHS[path]):
+        stream, failure = await _connect_stream(host, attempt + (f"?{query}" if query else ""), headers)
+        if stream is not None or not _route_missing(*failure):
+            break
+    if stream is None:
+        raise _agent_error(*failure)
 
     async def events() -> AsyncIterator[bytes]:
         buffer = b""
