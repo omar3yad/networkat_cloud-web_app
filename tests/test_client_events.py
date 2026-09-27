@@ -24,7 +24,6 @@ ADMIN_ENTRY = {
 class FakeAgent(BaseHTTPRequestHandler):
     calls = []
     disabled = False
-    legacy = False  # a peer before 1.7.1: only the old /logs paths exist
 
     def log_message(self, *args):
         pass
@@ -46,9 +45,6 @@ class FakeAgent(BaseHTTPRequestHandler):
             "last_event_id": self.headers.get("Last-Event-ID"),
             "body": json.loads(self.rfile.read(length)) if length else None,
         })
-        if FakeAgent.legacy:
-            old = {v: k for k, v in svc.LEGACY_PATHS.items()}
-            return old.get(url.path) or ("/missing" if url.path.startswith("/logs/system") else url.path)
         return url.path
 
     def do_GET(self):
@@ -87,8 +83,7 @@ class FakeAgent(BaseHTTPRequestHandler):
         self._json(404, {"detail": "Not Found"})
 
     def do_DELETE(self):
-        if self._record() != "/logs/system/client":
-            return self._json(404, {"detail": "Not Found"})
+        self._record()
         self._json(200, {"ok": True, "cleared": ["wan"], "up_to_id": 7})
 
 
@@ -96,7 +91,6 @@ class FakeAgent(BaseHTTPRequestHandler):
 def peer(monkeypatch):
     FakeAgent.calls = []
     FakeAgent.disabled = False
-    FakeAgent.legacy = False
     server = ThreadingHTTPServer(("127.0.0.1", 0), FakeAgent)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     monkeypatch.setattr(svc, "AGENT_PORT", server.server_address[1])
@@ -166,28 +160,3 @@ def test_stream_error_before_any_bytes(peer):
     with pytest.raises(svc.EventsError) as exc:
         asyncio.run(svc.open_stream(peer, {}, None))
     assert (exc.value.status_code, exc.value.code) == (403, "logs_disabled")
-
-
-def test_older_peer_falls_back_to_old_paths(peer):
-    FakeAgent.legacy = True
-    assert svc.list_events(peer, {})["entries"][0]["id"] == 7
-    assert svc.get_config(peer)["always_on"] == ["audit"]
-    svc.clear_events(peer, "wan")
-    assert [c["path"] for c in FakeAgent.calls] == [
-        "/logs/system/client", "/logs/events/client",
-        "/logs/system/config", "/logs/config",
-        "/logs/system/client", "/logs/events/client",
-    ]
-
-    async def read():
-        events = await svc.open_stream(peer, {}, None)
-        return b"".join([chunk async for chunk in events])
-
-    assert b"id: 7" in asyncio.run(read())
-    assert FakeAgent.calls[-1]["path"] == "/logs/events/client/stream"
-
-
-def test_agent_error_is_not_retried(peer):
-    FakeAgent.disabled = True  # 403 with a code: answered on the new path, no retry
-    _error(svc.list_events, peer, {})
-    assert [c["path"] for c in FakeAgent.calls] == ["/logs/system/client"]
