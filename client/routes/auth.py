@@ -42,6 +42,7 @@ def login():
                 }
                 return redirect(url_for('client.verify_2fa'))
 
+            session.permanent = True
             session['client_logged_in'] = True
             session['client_user_id'] = res['id']
             session['client_customer_id'] = res['customer_id']
@@ -102,6 +103,7 @@ def verify_2fa():
             customer_service.client_repo.update_last_login(client.user_id)
             session.pop('pending_2fa', None)
             session.pop('pending_2fa_email_otp', None)
+            session.permanent = True
             session['client_logged_in'] = True
             session['client_user_id'] = client.user_id
             session['client_customer_id'] = client.user_id

@@ -17,6 +17,21 @@
 
     let isPeerOnline = false;
 
+    // Sets a toggle's checked state without animating the slider — used when
+    // JS applies a value fetched after the modal/list is already visible.
+    function setToggleCheckedNoAnim(input, value) {
+        if (!input) return;
+        const label = input.closest('.switch');
+        if (!label) {
+            input.checked = value;
+            return;
+        }
+        label.classList.add('no-anim');
+        input.checked = value;
+        void label.offsetWidth; // force reflow so the transition is actually suppressed
+        label.classList.remove('no-anim');
+    }
+
     function initPage(config) {
         currentPeerName = config.peerName || "";
         currentPeerNetwork = config.peerNetwork || "";
@@ -597,16 +612,22 @@
         list.style.display = 'none';
 
         try {
-            const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/services`);
-            const data = await resp.json().catch(() => ({}));
-            if (!resp.ok) {
-                throw new Error(data.error || 'Failed to load service settings');
-            }
+            const [servicesResult] = await Promise.all([
+                (async () => {
+                    const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/services`);
+                    const data = await resp.json().catch(() => ({}));
+                    if (!resp.ok) {
+                        throw new Error(data.error || 'Failed to load service settings');
+                    }
+                    return data;
+                })(),
+                loadEventLoggingState()
+            ]);
 
-            const services = data.services || [];
+            const services = servicesResult.services || [];
             services.forEach(svc => {
                 const toggle = document.querySelector(`.service-toggle[data-service="${svc.name}"]`);
-                if (toggle) toggle.checked = svc.state === 'enabled';
+                setToggleCheckedNoAnim(toggle, svc.state === 'enabled');
             });
 
             loading.style.display = 'none';
@@ -615,6 +636,43 @@
             loading.style.display = 'none';
             errorEl.textContent = err.message || 'Failed to load service settings';
             errorEl.style.display = 'block';
+        }
+    }
+
+    async function loadEventLoggingState() {
+        const toggle = document.getElementById('service-toggle-event-logging');
+        if (!toggle || !window.NkEvents) return;
+        try {
+            const cfg = await window.NkEvents.api.config(peerId);
+            setToggleCheckedNoAnim(toggle, !!cfg.enabled);
+        } catch (err) {
+            // Leave the toggle at its default; the row still opens the events page on click.
+        }
+    }
+
+    async function toggleEventLogging(checkbox) {
+        const on = checkbox.checked;
+        if (!window.NkEvents) return;
+        if (!on) {
+            const ok = window.nkConfirm ? await window.nkConfirm('Hide all events on this device?', 'Turn off event log?', 'Turn off') : true;
+            if (!ok) {
+                checkbox.checked = true;
+                return;
+            }
+        }
+        checkbox.disabled = true;
+        try {
+            await window.NkEvents.api.setService(peerId, on ? 'enabled' : 'disabled');
+            if (window.showSuccess) window.showSuccess(on ? 'Event log on' : 'Event log off');
+        } catch (err) {
+            checkbox.checked = !on;
+            if (window.showError) {
+                window.showError(err.message || 'Failed to update event log');
+            } else {
+                console.error('Failed to update event log:', err);
+            }
+        } finally {
+            checkbox.disabled = false;
         }
     }
 
@@ -1078,7 +1136,7 @@
             const wrapper = document.getElementById("auto-update-interval-wrapper");
 
             const enabled = !!data.auto_update_enabled;
-            if (toggle) toggle.checked = enabled;
+            setToggleCheckedNoAnim(toggle, enabled);
 
             let hours = 12;
             if (data.update_check_interval_hours !== undefined) {
@@ -1190,6 +1248,7 @@
     window.closeServicesModal = closeServicesModal;
     window.handleServicesModalOverlayClick = handleServicesModalOverlayClick;
     window.toggleService = toggleService;
+    window.toggleEventLogging = toggleEventLogging;
     window.openUpdatesModal = openUpdatesModal;
     window.closeUpdatesModal = closeUpdatesModal;
     window.handleUpdatesModalOverlayClick = handleUpdatesModalOverlayClick;

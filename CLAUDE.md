@@ -8,6 +8,10 @@ The git repo root is here (`core/web_app/`), but this directory is **not the who
 
 Everything below is specific to the application code in this directory.
 
+## ⚠️ This host is production
+
+This checkout is the **live production deployment** — not a local dev environment. There is no `compose.override.yaml` on this host, only `compose.yaml`, so the `web_app` container is built from a plain image with no bind mount and no `--reload`. Editing files here has **no effect on the running app** until you rebuild and recreate the container (`docker compose up -d --build web_app` from `core/`), which briefly restarts a service serving real tenant traffic. Confirm before rebuilding/restarting unless already asked to. See `/opt/networkat_sdwan/CLAUDE.md` for the full note.
+
 ## What this codebase is
 
 A single Python codebase that runs as **four separate processes** — two Flask apps + one FastAPI app + one background job loop — sharing one Postgres database and one set of SQLAlchemy models. Supervisor runs all four inside one container.
@@ -20,7 +24,7 @@ Designed to run inside Docker via Supervisor — there is no documented local ve
 docker compose up -d --build   # picks up compose.yaml + compose.override.yaml automatically
 ```
 
-`compose.override.yaml` bind-mounts this directory into the container and runs Gunicorn/Uvicorn with `--reload`, so edits are picked up live without rebuilding — just save.
+`compose.override.yaml` bind-mounts this directory into the container and runs Gunicorn/Uvicorn with `--reload`, so edits are picked up live without rebuilding — just save. **This describes local dev only; this host has no `compose.override.yaml`** (see the production warning above), so edits here require an explicit rebuild to reach the running container.
 
 Inside the container, `entrypoint.sh` waits for Postgres, runs `flask db upgrade` (Alembic), then execs `supervisord`, which runs `program:admin`, `program:client`, `program:api`, and `program:heartbeat` (`scheduler/peers_heartbeat.py`; see `supervisord.conf`). Ports: admin `5000`, client `8097`, FastAPI gateway `8098` (docs at `/docs`); `heartbeat` has no port.
 

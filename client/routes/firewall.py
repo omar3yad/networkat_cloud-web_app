@@ -7,6 +7,7 @@ from flask import render_template, request, redirect, url_for, session, flash, j
 
 from client.blueprint import client_bp
 from client.decorators import login_required, verify_peer_access, subscription_write_required
+from utils.agent_actor import CLIENT_ACTOR_HEADERS
 from models import Client
 from services.netbird_service import (
     get_cached_all_netbird_peers,
@@ -287,7 +288,7 @@ def add_peer_firewall_rule(peer_id):
         agent_payload["order"] = order
 
     try:
-        resp = requests.post(agent_url, json=agent_payload, timeout=(1, 15))
+        resp = requests.post(agent_url, json=agent_payload, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 15))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -341,7 +342,7 @@ def toggle_peer_firewall_rule(peer_id, rule_id):
             url = f"http://{peer_ip}:8765/firewall/rules/disable"
             
         payload = {"ids": [rule_slug]}
-        resp = requests.post(url, json=payload, timeout=(1, 10))
+        resp = requests.post(url, json=payload, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         if resp.ok and resp.json().get("ok"):
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -472,7 +473,7 @@ def edit_peer_firewall_rule(peer_id, rule_id):
         agent_payload["order"] = rule_order
 
     try:
-        resp = requests.put(agent_url, json=agent_payload, timeout=(1, 15))
+        resp = requests.put(agent_url, json=agent_payload, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 15))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -520,7 +521,7 @@ def delete_peer_firewall_rule(peer_id, rule_id):
 
     try:
         url = f"http://{peer_ip}:8765/firewall/rules/remove"
-        resp = requests.post(url, json={"ids": [slug]}, timeout=(1, 10))
+        resp = requests.post(url, json={"ids": [slug]}, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -586,7 +587,7 @@ def bulk_peer_firewall_rules(peer_id):
         else:
             return jsonify({"error": "Unsupported action"}), 400
 
-        resp = requests.post(url, json={"ids": slugs_to_act}, timeout=(1, 15))
+        resp = requests.post(url, json={"ids": slugs_to_act}, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 15))
         if resp.ok:
             path = f"/tmp/nbcache_firewall_rules_{peer_id}.json"
             try:
@@ -650,7 +651,7 @@ def reorder_peer_firewall_rules(peer_id):
 
     agent_url = f"http://{peer_ip}:8765/firewall/rules/reorder"
     try:
-        resp = requests.post(agent_url, json={"items": agent_items}, timeout=(1, 10))
+        resp = requests.post(agent_url, json={"items": agent_items}, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -678,7 +679,7 @@ def sync_peer_firewall_rules(peer_id):
     agent_url = f"http://{peer_ip}:8765/firewall/rules/sync"
 
     try:
-        resp = requests.post(agent_url, timeout=(1, 15))
+        resp = requests.post(agent_url, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 15))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)
@@ -721,7 +722,7 @@ def reset_peer_firewall_rule_counter(peer_id, rule_id):
     agent_url = f"http://{peer_ip}:8765/firewall/rules/reset-counter"
 
     try:
-        resp = requests.post(agent_url, json=payload, timeout=(1, 10))
+        resp = requests.post(agent_url, json=payload, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         if resp.ok:
             with firewall_cache_lock:
                 firewall_rules_cache.pop(peer_id, None)

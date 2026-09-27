@@ -5,6 +5,7 @@ from flask import render_template, request, redirect, url_for, session, flash, j
 
 from client.blueprint import client_bp
 from client.decorators import login_required, verify_peer_access, subscription_write_required
+from utils.agent_actor import CLIENT_ACTOR_HEADERS
 from models import Client
 from services.netbird_service import (
     get_cached_customer_peer_ids,
@@ -209,7 +210,7 @@ def add_peer_address_list_proxy(peer_id):
 
     try:
         data = request.get_json() or {}
-        resp = requests.post(agent_url, json=data, timeout=(1, 10))
+        resp = requests.post(agent_url, json=data, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"detail": "Device agent is offline or unreachable"}), 503
@@ -235,12 +236,12 @@ def modify_peer_address_list_proxy(peer_id, slug):
     try:
         if request.method == 'PUT':
             data = request.get_json() or {}
-            resp = requests.put(agent_url, json=data, timeout=(1, 10))
+            resp = requests.put(agent_url, json=data, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         elif request.method == 'PATCH':
             data = request.get_json() or {}
-            resp = requests.patch(agent_url, json=data, timeout=(1, 10))
+            resp = requests.patch(agent_url, json=data, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         else:
-            resp = requests.delete(agent_url, timeout=(1, 10))
+            resp = requests.delete(agent_url, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"detail": "Device agent is offline or unreachable"}), 503
@@ -264,7 +265,7 @@ def sync_peer_address_lists_proxy(peer_id):
     agent_url = f"http://{peer_ip}:8765/aliases/sync"
 
     try:
-        resp = requests.post(agent_url, timeout=(1, 10))
+        resp = requests.post(agent_url, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.RequestException as e:
         return jsonify({"detail": "Device agent is offline or unreachable"}), 503
@@ -324,7 +325,7 @@ def update_peer_resolver_config_proxy(peer_id):
             peer_ip = peer.get("ip")
             agent_url = f"http://{peer_ip}:8765/dns-forwarding"
             try:
-                agent_resp = requests.put(agent_url, json=forwarding_config, timeout=(1, 10))
+                agent_resp = requests.put(agent_url, json=forwarding_config, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
                 if not agent_resp.ok:
                     current_app.logger.error(f"Failed to update dns-forwarding on agent: {agent_resp.text}")
             except Exception as e:

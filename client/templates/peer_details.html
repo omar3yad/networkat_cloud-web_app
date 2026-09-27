@@ -4,6 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/peer_details.css') }}">
+{% if not admin_view %}<link rel="stylesheet" href="{{ url_for('static', filename='css/events.css') }}">{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -273,10 +274,29 @@
                 </div>
             </div>
 
-            <!-- System Events -->
+            <!-- System logs: last 5 from the peer's event log, live (peer_events_widget.js) -->
+            {% if not admin_view %}
+            <div class="ev-widget" id="ev-widget" data-peer-id="{{ peer_id }}"
+                data-peer-online="{{ 'true' if is_online else 'false' }}" style="margin-top: 2rem;">
+                <h3 class="card-title ev-widget-title">
+                    <span><i class="fas fa-list-ul"></i> System logs</span>
+                    <span class="ev-widget-actions">
+                        <span class="ev-live" id="ev-live" data-state="connecting" title="Live updates" hidden>
+                            <span class="ev-live-dot"></span><span id="ev-live-text">Connecting</span>
+                        </span>
+                        <a href="{{ url_for('client.peer_events', peer_id=peer_id, name=peer_name) }}" class="ev-view-all">View all &rarr;</a>
+                    </span>
+                </h3>
+                <ul class="ev-widget-list" id="ev-widget-list" hidden></ul>
+                <div class="ev-state" id="ev-widget-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span class="ev-state-title">Loading</span>
+                </div>
+            </div>
+            {% else %}
             <div class="under-dev-section" style="margin-top: 2rem;">
                 <h3 class="card-title">
-                    <i class="fas fa-list-ul"></i> System Events
+                    <i class="fas fa-list-ul"></i> System logs
                 </h3>
                 <div class="under-dev-wrapper">
                     <div class="under-dev-overlay">
@@ -293,6 +313,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!-- Service Settings Modal -->
@@ -338,6 +359,17 @@
                             <label class="switch">
                                 <input type="checkbox" class="service-toggle" data-service="mesh_network"
                                     onchange="toggleService(this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="service-row" data-service="event_logging">
+                            <div class="service-info">
+                                <span class="service-name">System logs</span>
+                                <span class="service-desc">Enable system logging</span>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="service-toggle-event-logging"
+                                    onchange="toggleEventLogging(this)">
                                 <span class="slider"></span>
                             </label>
                         </div>
@@ -498,6 +530,10 @@
 
     {% block extra_scripts %}
     <script src="{{ url_for('static', filename='js/peer_details.js') }}"></script>
+    {% if not admin_view %}
+    <script src="{{ url_for('static', filename='js/events_common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/peer_events_widget.js') }}"></script>
+    {% endif %}
     <script>
         window.API_BASE = {{ (api_base or '')| tojson }};
         window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};

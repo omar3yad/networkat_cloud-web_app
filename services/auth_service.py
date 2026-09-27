@@ -55,6 +55,7 @@ class AuthService:
             }
             return True, "2fa_required"
 
+        session.permanent = True
         session['admin_logged_in'] = True
         session['admin_user_id'] = str(user.id)
         session['admin_username'] = user.username
@@ -66,6 +67,7 @@ class AuthService:
         """Finalize login after successful 2FA verification."""
         session.pop('pending_2fa', None)
         session.pop('pending_2fa_email_otp', None)
+        session.permanent = True
         session['admin_logged_in'] = True
         session['admin_user_id'] = str(user.id)
         session['admin_username'] = user.username

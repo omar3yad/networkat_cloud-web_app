@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, flash, redirect, url_for
+from flask import Flask, request, jsonify, flash, redirect, url_for, render_template
 import requests
 import os
 from dotenv import load_dotenv
@@ -33,17 +33,28 @@ def create_app():
             return send_from_directory(root_static_dir, filename)
         return send_from_directory(client_static_dir, filename)
 
+    app.config['SESSION_COOKIE_NAME'] = 'networkat_admin_session'
+
     db.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
-    login_manager.login_view = "client.login"
+    login_manager.login_view = "admin.login"
 
     @login_manager.user_loader
     def load_user(user_id):
         return None
+
+    from flask_wtf.csrf import CSRFError
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        if request.is_json or request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': e.description or 'Session expired. Please refresh the page.'}), 400
+        flash('Session expired. Please sign in again.', 'error')
+        return render_template('login.html'), 400
 
     @app.errorhandler(RateLimitExceeded)
     def handle_rate_limit(e):

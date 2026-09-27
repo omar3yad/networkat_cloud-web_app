@@ -798,6 +798,13 @@ input:disabled + .slider {
     cursor: not-allowed;
 }
 
+/* Suppress the slide transition when JS sets checked state programmatically
+   (e.g. applying a value fetched after the modal is already visible). */
+.switch.no-anim .slider,
+.switch.no-anim .slider:before {
+    transition: none;
+}
+
 /* ==========================================================================
    Software Updates Feature Styling
    ========================================================================== */

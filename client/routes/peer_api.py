@@ -8,6 +8,7 @@ from sqlalchemy import or_
 
 from client.blueprint import client_bp
 from client.decorators import login_required, no_cache_json, verify_peer_access, subscription_write_required
+from utils.agent_actor import CLIENT_ACTOR_HEADERS
 from models import Client
 from services.netbird_service import (
     get_cached_customer_peer_ids,
@@ -333,7 +334,7 @@ def delete_peer(peer_id):
     if peer_ip:
         agent_url = f"http://{peer_ip}:8765/uninstall"
         try:
-            agent_resp = requests.post(agent_url, timeout=(1, 3))
+            agent_resp = requests.post(agent_url, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 3))
             logger.info(f"Agent uninstall call to {agent_url} returned {agent_resp.status_code}")
         except Exception as agent_err:
             logger.info(f"Agent uninstall call skipped/failed for {peer_ip}: {agent_err}")
@@ -557,7 +558,7 @@ def peer_vpn_only_proxy(peer_id):
             data = request.get_json() or {}
             if "action" in data and "operation" not in data:
                 data["operation"] = data.pop("action")
-            resp = requests.post(agent_url, json=data, timeout=(1, 10))
+            resp = requests.post(agent_url, json=data, headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10))
         else:
             resp = requests.get(agent_url, timeout=(1, 10))
 
@@ -628,7 +629,7 @@ def peer_services_proxy(peer_id):
             resp = requests.put(
                 agent_url,
                 json={"services": internal_services, "source": "customer"},
-                timeout=(1, 10),
+                headers=CLIENT_ACTOR_HEADERS, timeout=(1, 10),
             )
         else:
             resp = requests.get(agent_url, timeout=(1, 5))
@@ -696,7 +697,7 @@ def peer_update_api(peer_id):
         if request.method == 'POST':
             payload = request.get_json(silent=True) or {}
             # Software apply can take up to 3 minutes for tarball download and engine apply
-            resp = requests.post(agent_url, json=payload, timeout=(2, 180))
+            resp = requests.post(agent_url, json=payload, headers=CLIENT_ACTOR_HEADERS, timeout=(2, 180))
         else:
             resp = requests.get(agent_url, timeout=(2, 15))
 
@@ -764,7 +765,7 @@ def peer_update_config_api(peer_id):
             if not agent_payload:
                 return jsonify({"error": "No configuration parameters provided"}), 400
 
-            resp = requests.put(agent_url, json=agent_payload, timeout=(2, 10))
+            resp = requests.put(agent_url, json=agent_payload, headers=CLIENT_ACTOR_HEADERS, timeout=(2, 10))
         else:
             resp = requests.get(agent_url, timeout=(2, 10))
 

@@ -1,5 +1,6 @@
 # /opt/networkat_sdwan/core/web_app/config/settings.py
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 load_dotenv(override=True)
 class Config:
@@ -7,6 +8,11 @@ class Config:
     Base Application Configuration
     """
     SECRET_KEY = os.getenv("SECRET_KEY", "networkat_sdwan_secret_key_prod_2026")
+    PERMANENT_SESSION_LIFETIME = timedelta(days=14)
+    WTF_CSRF_TIME_LIMIT = None  # Token valid for duration of session (prevents 'CSRF token has expired' error)
+    WTF_CSRF_SSL_STRICT = False  # Reverse proxy friendly
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
     RECAPTCHA_SITE_KEY = os.getenv("RECAPTCHA_SITE_KEY")
     RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY")
     MAIL_SERVER = os.getenv("MAIL_SERVER", "premium155.web-hosting.com")
