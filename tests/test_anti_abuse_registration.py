@@ -139,13 +139,20 @@ class TestAntiAbuseRegistration(unittest.TestCase):
                 'phone_verified': True
             }
 
-        res = self.test_client.post('/verify-card', data={'payment_method_id': 'pm_card_duplicate_test'}, follow_redirects=True)
-        self.assertEqual(res.status_code, 200)
-        self.assertIn(b'This payment card has already been used for another account.', res.data)
+        try:
+            res = self.test_client.post('/verify-card', data={'payment_method_id': 'pm_card_duplicate_test'}, follow_redirects=True)
+            self.assertEqual(res.status_code, 200)
+            self.assertIn(b'This payment card has already been used for another account.', res.data)
 
-        # Ensure reg_data does NOT have card_verified
-        with self.test_client.session_transaction() as sess:
-            self.assertFalse(sess['reg_data'].get('card_verified', False))
+            # Ensure reg_data does NOT have card_verified
+            with self.test_client.session_transaction() as sess:
+                self.assertFalse(sess['reg_data'].get('card_verified', False))
+        finally:
+            with self.client_app.app_context():
+                c = Client.query.filter_by(username='cardholder_original').first()
+                if c:
+                    db.session.delete(c)
+                    db.session.commit()
 
     def test_verify_card_success_advances_to_email(self):
         """A new unique card saves the fingerprint and advances to /verify-email."""

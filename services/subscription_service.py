@@ -659,5 +659,7 @@ class SubscriptionService:
             "billing_cycle": client.billing_cycle or "monthly",
             "renewal_date": client.renewal_date.isoformat() if client.renewal_date else None,
             "grace_expires_at": client.grace_expires_at.isoformat() if client.grace_expires_at else None,
+            "is_trial": bool(getattr(client, "is_trial", False)),
+            "is_paid": client.is_paid,
         }
 

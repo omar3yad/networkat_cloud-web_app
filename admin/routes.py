@@ -531,7 +531,15 @@ def update_customer_subscription(customer_id):
         except Exception as e:
             current_app.logger.warning(f"Error parsing renewal date: {e}")
 
-    # Commit updated attributes (allowed_peers_count, plan_id, billing_cycle, renewal_date)
+    # Update is_trial flag
+    if 'is_trial' in data:
+        trial_val = data.get('is_trial')
+        if isinstance(trial_val, str):
+            customer.is_trial = trial_val.lower() in ('true', '1', 'trial')
+        else:
+            customer.is_trial = bool(trial_val)
+
+    # Commit updated attributes (allowed_peers_count, plan_id, billing_cycle, renewal_date, is_trial)
     db.session.commit()
 
     # Handle status transition if changed

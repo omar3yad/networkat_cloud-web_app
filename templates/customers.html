@@ -714,6 +714,30 @@
             border-color: #e9d5ff;
         }
 
+        .badge-trial {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.72rem;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .badge-paid {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.72rem;
+            display: inline-flex;
+            align-items: center;
+        }
+
         .sub-details {
             display: flex;
             flex-direction: column;
@@ -1427,6 +1451,11 @@
                                                 class="badge-plan {% if 'pro' in sub_clean %}pro{% elif 'enterprise' in sub_clean %}enterprise{% endif %}">
                                                 {{ (c.subscription or 'Basic') | title }}
                                             </span>
+                                            {% if c.is_trial %}
+                                            <span class="badge-trial" title="Free trial account">Trial</span>
+                                            {% else %}
+                                            <span class="badge-paid" title="Paid account">Paid</span>
+                                            {% endif %}
                                             <span class="sub-cycle-text" style="margin-left: 0.25rem;">
                                                 {{ (c.billing_cycle or 'monthly') | title }}
                                             </span>

@@ -967,6 +967,14 @@
                                 (customer.subscription_status or 'active') }}
                             </span>
                         </div>
+                        <div class="meta-item">
+                            <span
+                                class="badge-status-pill {% if customer.is_trial %}status-grace_period{% else %}status-active{% endif %}"
+                                id="customer-header-trial-badge">
+                                <i class="fas {% if customer.is_trial %}fa-flask{% else %}fa-check-circle{% endif %}"></i>
+                                {{ 'Free Trial' if customer.is_trial else 'Paid Plan' }}
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -1209,11 +1217,18 @@
                             {{ subscription_info.plan_display if subscription_info else 'Starter Plan' }}
                         </h3>
                         <div
-                            style="font-size: 0.9rem; color: var(--gray-600); display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-calendar-check" style="color: var(--primary);"></i>
-                            <span>Cycle: <strong id="sub-card-cycle" style="text-transform: capitalize;">{{
-                                    subscription_info.billing_cycle if subscription_info else 'Monthly'
-                                    }}</strong></span>
+                            style="font-size: 0.9rem; color: var(--gray-600); display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-calendar-check" style="color: var(--primary);"></i>
+                                <span>Cycle: <strong id="sub-card-cycle" style="text-transform: capitalize;">{{
+                                        subscription_info.billing_cycle if subscription_info else 'Monthly'
+                                        }}</strong></span>
+                            </div>
+                            <span class="badge-status-pill {% if customer.is_trial %}status-grace_period{% else %}status-active{% endif %}"
+                                style="font-size: 0.75rem; padding: 0.2rem 0.6rem;" id="sub-card-trial-badge">
+                                <i class="fas {% if customer.is_trial %}fa-flask{% else %}fa-check-circle{% endif %}"></i>
+                                {{ 'Free Trial' if customer.is_trial else 'Paid Plan' }}
+                            </span>
                         </div>
                     </div>
 
@@ -1309,9 +1324,20 @@
                                             (subscription_info and subscription_info.plan_id==plan.id) or
                                             (customer.plan_id==plan.id) %}selected{% endif %}>
                                             {{ plan.display_name }} ({{ plan.allowed_peers_count }} Peers - ${{
-                                            plan.price_monthly }}/mo)
+                                             plan.price_monthly }}/mo)
                                         </option>
                                         {% endfor %}
+                                    </select>
+                                </div>
+
+                                <!-- Account Mode / Trial vs Paid -->
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label
+                                        style="display: block; font-weight: 600; color: var(--gray-800); margin-bottom: 0.5rem;">Account Type</label>
+                                    <select id="sub-select-is-trial"
+                                        style="width: 100%; padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--gray-200); font-size: 0.95rem; background: white;">
+                                        <option value="true" {% if customer.is_trial %}selected{% endif %}>Free Trial (Gated: 3 Logs, 3 Days MPLS)</option>
+                                        <option value="false" {% if not customer.is_trial %}selected{% endif %}>Paid Plan (Full Access & Unlimited Logs)</option>
                                     </select>
                                 </div>
 
@@ -1903,6 +1929,8 @@
 
         async function updateSubscription() {
             const planId = document.getElementById('sub-select-plan').value;
+            const isTrialSelect = document.getElementById('sub-select-is-trial');
+            const isTrial = isTrialSelect ? (isTrialSelect.value === 'true') : true;
             const billingCycle = document.getElementById('sub-select-cycle').value;
             const renewalDate = document.getElementById('sub-input-renewal').value;
             const status = document.getElementById('sub-select-status').value;
@@ -1920,6 +1948,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         plan_id: planId,
+                        is_trial: isTrial,
                         billing_cycle: billingCycle,
                         renewal_date: renewalDate,
                         status: status,
@@ -1928,14 +1957,14 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    showNotification('✓ Subscription updated successfully');
-                    setTimeout(() => location.reload(), 1200);
+                    showNotification('✓ Subscription updated');
+                    setTimeout(() => location.reload(), 1000);
                 } else {
-                    alert('Error updating subscription: ' + (data.error || 'Unknown error'));
+                    showNotification('⚠️ Update failed');
                 }
             } catch (err) {
                 console.error('Error updating subscription:', err);
-                alert('An error occurred while updating subscription.');
+                showNotification('⚠️ Connection error');
             } finally {
                 saveBtn.innerHTML = origText;
                 saveBtn.disabled = false;

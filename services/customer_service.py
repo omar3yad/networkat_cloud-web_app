@@ -115,7 +115,9 @@ class CustomerService:
                 'online_count': online_count,
                 'allowed_peers_count': c.allowed_peers_count or 5,
                 'netbird_group_id': c.netbird_group_id,
-                'active': bool(c.active)
+                'active': bool(c.active),
+                'is_trial': bool(getattr(c, 'is_trial', False)),
+                'is_paid': c.is_paid
             })
         return customers_data
     

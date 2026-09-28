@@ -164,7 +164,7 @@
                         `<i class="fas fa-crown" style="color:#d97706;"></i>` +
                         `<span>Showing latest 3 records on trial account. Upgrade to view complete logs history.</span>` +
                         `</div>` +
-                        `<a href="/subscription" class="sl-premium-btn">Upgrade Plan</a>`;
+                        `<a href="/contact" class="sl-premium-btn">Upgrade Plan</a>`;
                     $('sl-table-wrap').appendChild(banner);
                 }
             } else if (existingBanner) {
