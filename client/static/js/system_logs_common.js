@@ -37,7 +37,10 @@
     const STATES = {
         offline: { icon: 'fa-plug', title: 'Device offline' },
         logs_disabled: { icon: 'fa-eye-slash', title: 'System logs off' },
-        unsupported: { icon: 'fa-arrow-alt-circle-up', title: 'Update device' },
+        unsupported: {
+            icon: 'fa-arrow-alt-circle-up', title: 'Update required',
+            text: 'This device\'s version doesn\'t support system logs.',
+        },
         not_found: { icon: 'fa-question-circle', title: 'Device not found' },
         signed_out: { icon: 'fa-lock', title: 'Signed out' },
         error: { icon: 'fa-exclamation-triangle', title: 'Couldn\'t load' },
@@ -151,11 +154,26 @@
     function stateFor(err) {
         const code = err && err.code;
         const s = STATES[code] || STATES.error;
-        return { code: STATES[code] ? code : 'error', icon: s.icon, title: s.title };
+        return { code: STATES[code] ? code : 'error', icon: s.icon, title: s.title, text: s.text || '' };
+    }
+
+    // "Update device" link: opens the update window on the details page, or goes
+    // there with ?update=1 (peer_details.js opens it on load).
+    function updateLink(detailsUrl) {
+        const a = document.createElement('a');
+        a.className = 'sl-state-link';
+        a.innerHTML = '<i class="fas fa-arrow-alt-circle-up"></i><span>Update device</span>';
+        if (typeof window.openUpdatesModal === 'function') {
+            a.href = 'javascript:void(0)';
+            a.onclick = () => window.openUpdatesModal();
+        } else {
+            a.href = `${detailsUrl}${detailsUrl.includes('?') ? '&' : '?'}update=1`;
+        }
+        return a;
     }
 
     window.NkSystemLogs = {
         CATEGORY_LABELS, CATEGORY_ICONS, LEVELS, ApiError, api, esc,
-        categoryLabel, actorLabel, levelLabel, levelBadge, shortTime, fullTime, stateFor,
+        categoryLabel, actorLabel, levelLabel, levelBadge, shortTime, fullTime, stateFor, updateLink,
     };
 })();

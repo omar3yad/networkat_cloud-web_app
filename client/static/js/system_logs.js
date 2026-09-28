@@ -17,6 +17,7 @@
     const S = {
         peerId: '',
         readonly: false,
+        detailsUrl: '',
         filters: { category: '', level: '', range: '', q: '' },
         rows: [],              // newest first
         ids: new Set(),
@@ -202,10 +203,12 @@
 
     // ── States ───────────────────────────────────────────────────────────────
 
-    function showState({ icon, title, spin = false, action = null }) {
+    function showState({ icon, title, text = '', spin = false, action = null, link = null }) {
         const el = $('sl-state');
         el.innerHTML = `<i class="fas ${icon}${spin ? ' fa-spin' : ''}"></i>` +
-            `<span class="sl-state-title">${E.esc(title)}</span>`;
+            `<span class="sl-state-title">${E.esc(title)}</span>` +
+            (text ? `<span class="sl-state-text">${E.esc(text)}</span>` : '');
+        if (link) el.appendChild(link);
         if (action) {
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -233,7 +236,8 @@
         }
         $('sl-table').hidden = true;
         $('sl-btn-more').hidden = true;
-        showState({ icon: st.icon, title: st.title, action });
+        const link = st.code === 'unsupported' ? E.updateLink(S.detailsUrl) : null;
+        showState({ icon: st.icon, title: st.title, text: st.text, action, link });
     }
 
     // ── Loading ──────────────────────────────────────────────────────────────
@@ -599,6 +603,7 @@
         if (!page) return;
         S.peerId = page.dataset.peerId;
         S.readonly = page.dataset.readonly === 'true';
+        S.detailsUrl = page.dataset.detailsUrl || '';
         renderChips();
         loadCategories();
         refresh();

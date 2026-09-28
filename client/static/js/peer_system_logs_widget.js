@@ -44,9 +44,11 @@
         $('sl-widget-state').hidden = true;
     }
 
-    function setState(icon, title) {
+    function setState(icon, title, text = '', link = null) {
         const el = $('sl-widget-state');
-        el.innerHTML = `<i class="fas ${icon}"></i><span class="sl-state-title">${E.esc(title)}</span>`;
+        el.innerHTML = `<i class="fas ${icon}"></i><span class="sl-state-title">${E.esc(title)}</span>` +
+            (text ? `<span class="sl-state-text">${E.esc(text)}</span>` : '');
+        if (link) el.appendChild(link);
         el.hidden = false;
     }
 
@@ -94,7 +96,7 @@
         } catch (err) {
             const st = E.stateFor(err);
             $('sl-widget-list').hidden = true;
-            setState(st.icon, st.title);
+            setState(st.icon, st.title, st.text, st.code === 'unsupported' ? E.updateLink('') : null);
             S.ready = false;
             stopStream();
             setLive('off');

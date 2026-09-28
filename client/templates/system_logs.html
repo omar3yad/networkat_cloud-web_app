@@ -10,6 +10,7 @@
 {% block content %}
 {% set ns = namespace(name=request.args.get('name') or 'Device') %}{% for p in (sidebar_peers or []) if p.id == peer_id %}{% set ns.name = p.name %}{% endfor %}
 <div class="details-container sl-page" id="system-logs-page" data-peer-id="{{ peer_id }}"
+    data-details-url="{{ url_for('client.peer_details', peer_id=peer_id) }}"
     data-readonly="{{ 'true' if is_readonly_subscription else 'false' }}">
 
     <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link">

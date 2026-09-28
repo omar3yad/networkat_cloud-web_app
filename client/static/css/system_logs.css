@@ -352,6 +352,24 @@
     font-size: 0.95rem;
 }
 
+.sl-state-text {
+    font-size: 0.85rem;
+}
+
+.sl-state-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--nk-blue-primary);
+    text-decoration: none;
+}
+
+.sl-state-link:hover {
+    text-decoration: underline;
+}
+
 .sl-new-pill {
     position: fixed;
     top: 1.25rem;

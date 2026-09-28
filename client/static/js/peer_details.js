@@ -43,6 +43,15 @@
         loadFleetContext();
         bindInputListeners();
 
+        // ?update=1 (the system logs "Update device" link) opens the update window.
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("update") === "1") {
+            params.delete("update");
+            const qs = params.toString();
+            history.replaceState(null, "", window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash);
+            openUpdatesModal();
+        }
+
         // Immediately sync current peer status in the sidebar
         if (peerId) {
             const sidebarDot = document.getElementById(`sidebar-dot-${peerId}`);
