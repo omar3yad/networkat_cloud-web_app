@@ -106,7 +106,7 @@ graph TD
 ## 5. Client Route Controllers (`client/routes/`) — Complete Endpoints Reference
 
 ### 5.1 [client/routes/__init__.py](file:///opt/networkat_sdwan/core/web_app/client/routes/__init__.py)
-* **Responsibility & Role:** Aggregates all route modules (`auth`, `dashboard`, `peer_api`, `firewall`, `aliases`, `web_filter`, `events`) and registers their endpoints onto `client_bp`.
+* **Responsibility & Role:** Aggregates all route modules (`auth`, `dashboard`, `peer_api`, `firewall`, `aliases`, `web_filter`, `system_logs`) and registers their endpoints onto `client_bp`.
 
 ---
 
@@ -493,18 +493,18 @@ graph TD
 
 ---
 
-### 5.8 [client/routes/events.py](file:///opt/networkat_sdwan/core/web_app/client/routes/events.py) — System logs Page (render only)
+### 5.8 [client/routes/system_logs.py](file:///opt/networkat_sdwan/core/web_app/client/routes/system_logs.py) — System logs Page (render only)
 
 #### 1. System logs Page View
-* **Route Path:** `GET /peers/<peer_id>/events`
-* **Internal Endpoint Name:** `client.peer_events`
-* **Decorators:** `@login_required` only — the route renders `events.html` and nothing else (no data, no agent/NetBird calls). New backend work goes to FastAPI only.
+* **Route Path:** `GET /peers/<peer_id>/logs/system`
+* **Internal Endpoint Name:** `client.peer_system_logs`
+* **Decorators:** `@login_required` only — the route renders `system_logs.html` and nothing else (no data, no agent/NetBird calls). New backend work goes to FastAPI only.
 * **URL Params / Query:** `peer_id`, optional `name` (fallback title; the sidebar peer name wins).
-* **Data:** loaded in the browser from the FastAPI gateway, `/api/v2/client/peers/<peer_id>/events/...` (`fastapi_app/routes/client/events.py`), proxied by nginx on the dashboard host and authenticated by the client session cookie (+ `X-CSRFToken` on changes, writable subscription). Ownership of `peer_id` is checked there (404 otherwise).
+* **Data:** loaded in the browser from the FastAPI gateway, `/api/v2/client/peers/<peer_id>/logs/system/...` (`fastapi_app/routes/client/system_logs.py`), proxied by nginx on the dashboard host and authenticated by the client session cookie (+ `X-CSRFToken` on changes, writable subscription). Ownership of `peer_id` is checked there (404 otherwise).
   * `GET ""` list (filters `category`, `level`, `since`, `q`, `limit`, `before_id`, `after_id`) · `GET /stream` SSE live · `GET /categories` · `GET/PUT /config` · `DELETE ""?category=` clear (never `audit`) · `PUT /service` turn the log on/off.
-  * Errors: `{"detail", "code"}` — `offline`, `logs_disabled`, `unsupported` (agent without the event log), `bad_category`, `usage`.
-* **Assets:** `events.html`, `static/js/events_common.js` (shared API + labels), `static/js/events.js`, `static/css/events.css`.
-* **Peer details widget:** the "System logs" card of `peer_details.html` (client view only) shows the latest 15 via `static/js/peer_events_widget.js`, with `View all →` to this page.
+  * Errors: `{"detail", "code"}` — `offline`, `logs_disabled`, `unsupported` (agent without system logs), `bad_category`, `usage`.
+* **Assets:** `system_logs.html`, `static/js/system_logs_common.js` (shared API + labels), `static/js/system_logs.js`, `static/css/system_logs.css`.
+* **Peer details widget:** the "System logs" card of `peer_details.html` (client view only) shows the latest 15 via `static/js/peer_system_logs_widget.js`, with `View all →` to this page.
 
 ---
 

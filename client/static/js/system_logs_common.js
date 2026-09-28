@@ -1,9 +1,9 @@
 /**
- * Event log — shared by the Event log page (events.js) and the peer details
- * widget (peer_events_widget.js).
+ * System logs — shared by the System logs page (system_logs.js) and the peer details
+ * widget (peer_system_logs_widget.js).
  *
- * Data comes from FastAPI, not Flask: /api/v2/client/peers/<id>/events/...
- * (fastapi_app/routes/client/events.py), authenticated by the session cookie.
+ * Data comes from FastAPI, not Flask: /api/v2/client/peers/<id>/logs/system/...
+ * (fastapi_app/routes/client/system_logs.py), authenticated by the session cookie.
  * Errors come back as {"detail": "...", "code": "..."}; `code` picks the state.
  */
 (function () {
@@ -52,7 +52,7 @@
     }
 
     function base(peerId) {
-        return `/api/v2/client/peers/${encodeURIComponent(peerId)}/events`;
+        return `/api/v2/client/peers/${encodeURIComponent(peerId)}/logs/system`;
     }
 
     async function request(peerId, path, { method = 'GET', params, body } = {}) {
@@ -145,7 +145,7 @@
 
     function levelBadge(level) {
         const lv = LEVELS.includes(level) ? level : 'info';
-        return `<span class="ev-level ev-level-${lv}">${esc(levelLabel(lv))}</span>`;
+        return `<span class="sl-level sl-level-${lv}">${esc(levelLabel(lv))}</span>`;
     }
 
     function stateFor(err) {
@@ -154,7 +154,7 @@
         return { code: STATES[code] ? code : 'error', icon: s.icon, title: s.title };
     }
 
-    window.NkEvents = {
+    window.NkSystemLogs = {
         CATEGORY_LABELS, CATEGORY_ICONS, LEVELS, ApiError, api, esc,
         categoryLabel, actorLabel, levelLabel, levelBadge, shortTime, fullTime, stateFor,
     };

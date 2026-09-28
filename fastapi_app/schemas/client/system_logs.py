@@ -1,7 +1,7 @@
 """
-Client-portal event log — request/response models.
+Client-portal system logs — request/response models.
 
-Mirrors the client side of the peer agent's event log (agent docs/logs.md).
+Mirrors the client side of the peer agent's system logs (agent docs/logs.md).
 Only client fields exist here: an entry never carries `source`,
 `admin_message` or `admin_data`, even if the agent sent them.
 """
@@ -25,7 +25,7 @@ class ServiceState(str, Enum):
 
 
 # Everything a client may see of one entry. Anything else is dropped
-# (services/client/events_service.client_entry).
+# (services/client/system_logs_service.client_entry).
 CLIENT_ENTRY_FIELDS = (
     "id", "time", "level", "category", "code", "subject", "actor",
     "message", "data", "repeat_count",
@@ -52,7 +52,7 @@ class LogPage(BaseModel):
     next_before_id: Optional[int] = None
 
 
-class LogEventsResponse(BaseModel):
+class SystemLogsResponse(BaseModel):
     entries: list[LogEntry]
     page: LogPage
     last_id: Optional[int] = None

@@ -1,10 +1,10 @@
 /**
- * Peer details → "System logs": the latest 5 events, kept live over the same
- * SSE stream as the full page (events.js). New events slide in on top; the
+ * Peer details → "System logs": the latest 5 entries, kept live over the same
+ * SSE stream as the full page (system_logs.js). New entries slide in on top; the
  * stream pauses while the tab is hidden and catches up (after_id) on reconnect.
  */
 (function () {
-    const E = window.NkEvents;
+    const E = window.NkSystemLogs;
     const LIMIT = 5;
     const RETRY_MS = 30000;
 
@@ -23,39 +23,39 @@
 
     function itemHtml(e, fresh) {
         const repeat = (e.repeat_count || 1) > 1;
-        const cls = ['ev-widget-item', repeat ? 'ev-row-repeat' : '', fresh ? 'ev-row-new' : ''].join(' ').trim();
+        const cls = ['sl-widget-item', repeat ? 'sl-row-repeat' : '', fresh ? 'sl-row-new' : ''].join(' ').trim();
         return `<li class="${cls}">` +
-            `<span class="ev-col-time" title="${E.esc(E.fullTime(e.time))}">${E.esc(E.shortTime(e.time))}</span>` +
+            `<span class="sl-col-time" title="${E.esc(E.fullTime(e.time))}">${E.esc(E.shortTime(e.time))}</span>` +
             E.levelBadge(e.level) +
-            `<span class="ev-msg" title="${E.esc(E.categoryLabel(e.category))} · ${E.esc(E.actorLabel(e.actor))}">` +
-            `${E.esc(e.message || '')}${repeat ? ` <span class="ev-repeat">×${Number(e.repeat_count)}</span>` : ''}</span>` +
+            `<span class="sl-msg" title="${E.esc(E.categoryLabel(e.category))} · ${E.esc(E.actorLabel(e.actor))}">` +
+            `${E.esc(e.message || '')}${repeat ? ` <span class="sl-repeat">×${Number(e.repeat_count)}</span>` : ''}</span>` +
             `</li>`;
     }
 
     function render(freshIds) {
-        const list = $('ev-widget-list');
+        const list = $('sl-widget-list');
         if (!S.rows.length) {
             list.hidden = true;
-            setState('fa-inbox', 'No events');
+            setState('fa-inbox', 'No entries');
             return;
         }
         list.innerHTML = S.rows.map((e) => itemHtml(e, freshIds && freshIds.has(e.id))).join('');
         list.hidden = false;
-        $('ev-widget-state').hidden = true;
+        $('sl-widget-state').hidden = true;
     }
 
     function setState(icon, title) {
-        const el = $('ev-widget-state');
-        el.innerHTML = `<i class="fas ${icon}"></i><span class="ev-state-title">${E.esc(title)}</span>`;
+        const el = $('sl-widget-state');
+        el.innerHTML = `<i class="fas ${icon}"></i><span class="sl-state-title">${E.esc(title)}</span>`;
         el.hidden = false;
     }
 
     function setLive(state) {
-        const el = $('ev-live');
+        const el = $('sl-live');
         if (!el) return;
         el.hidden = state === 'off';
         el.dataset.state = state;
-        $('ev-live-text').textContent = { connecting: 'Connecting', live: 'Live', paused: 'Paused', offline: 'Offline' }[state] || '';
+        $('sl-live-text').textContent = { connecting: 'Connecting', live: 'Live', paused: 'Paused', offline: 'Offline' }[state] || '';
     }
 
     function add(entries) {
@@ -93,7 +93,7 @@
             startStream();
         } catch (err) {
             const st = E.stateFor(err);
-            $('ev-widget-list').hidden = true;
+            $('sl-widget-list').hidden = true;
             setState(st.icon, st.title);
             S.ready = false;
             stopStream();
@@ -159,7 +159,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const widget = $('ev-widget');
+        const widget = $('sl-widget');
         if (!widget || !E) return;
         S.peerId = widget.dataset.peerId;
         load();
@@ -168,11 +168,11 @@
             if (!S.ready) return;
             if (document.hidden) {
                 if (S.es) stopStream('paused');
-            } else if (!S.es && $('ev-live').dataset.state === 'paused') {
+            } else if (!S.es && $('sl-live').dataset.state === 'paused') {
                 startStream();
             }
         });
     });
 
-    window.EventsWidget = { load, _state: S };
+    window.SystemLogsWidget = { load, _state: S };
 })();

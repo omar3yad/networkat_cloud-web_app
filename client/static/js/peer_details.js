@@ -621,7 +621,7 @@
                     }
                     return data;
                 })(),
-                loadEventLoggingState()
+                loadSystemLogsState()
             ]);
 
             const services = servicesResult.services || [];
@@ -639,22 +639,22 @@
         }
     }
 
-    async function loadEventLoggingState() {
-        const toggle = document.getElementById('service-toggle-event-logging');
-        if (!toggle || !window.NkEvents) return;
+    async function loadSystemLogsState() {
+        const toggle = document.getElementById('service-toggle-system-logs');
+        if (!toggle || !window.NkSystemLogs) return;
         try {
-            const cfg = await window.NkEvents.api.config(peerId);
+            const cfg = await window.NkSystemLogs.api.config(peerId);
             setToggleCheckedNoAnim(toggle, !!cfg.enabled);
         } catch (err) {
-            // Leave the toggle at its default; the row still opens the events page on click.
+            // Leave the toggle at its default; the row still opens the system logs page on click.
         }
     }
 
-    async function toggleEventLogging(checkbox) {
+    async function toggleSystemLogs(checkbox) {
         const on = checkbox.checked;
-        if (!window.NkEvents) return;
+        if (!window.NkSystemLogs) return;
         if (!on) {
-            const ok = window.nkConfirm ? await window.nkConfirm('Hide all events on this device?', 'Turn off event log?', 'Turn off') : true;
+            const ok = window.nkConfirm ? await window.nkConfirm('Hide all logs on this device?', 'Turn off system logs?', 'Turn off') : true;
             if (!ok) {
                 checkbox.checked = true;
                 return;
@@ -662,14 +662,14 @@
         }
         checkbox.disabled = true;
         try {
-            await window.NkEvents.api.setService(peerId, on ? 'enabled' : 'disabled');
-            if (window.showSuccess) window.showSuccess(on ? 'Event log on' : 'Event log off');
+            await window.NkSystemLogs.api.setService(peerId, on ? 'enabled' : 'disabled');
+            if (window.showSuccess) window.showSuccess(on ? 'System logs on' : 'System logs off');
         } catch (err) {
             checkbox.checked = !on;
             if (window.showError) {
-                window.showError(err.message || 'Failed to update event log');
+                window.showError(err.message || 'Failed to update system logs');
             } else {
-                console.error('Failed to update event log:', err);
+                console.error('Failed to update system logs:', err);
             }
         } finally {
             checkbox.disabled = false;
@@ -1248,7 +1248,7 @@
     window.closeServicesModal = closeServicesModal;
     window.handleServicesModalOverlayClick = handleServicesModalOverlayClick;
     window.toggleService = toggleService;
-    window.toggleEventLogging = toggleEventLogging;
+    window.toggleSystemLogs = toggleSystemLogs;
     window.openUpdatesModal = openUpdatesModal;
     window.closeUpdatesModal = closeUpdatesModal;
     window.handleUpdatesModalOverlayClick = handleUpdatesModalOverlayClick;

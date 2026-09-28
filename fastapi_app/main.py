@@ -9,8 +9,8 @@ from fastapi_app.routes.adguard import dns as adguard_dns
 from fastapi_app.dependencies import get_db, verify_api_key
 from fastapi_app.routes.controller import commands as controller_commands
 from fastapi_app.routes import auth as client_auth
-from fastapi_app.routes.client import events as client_events
-from fastapi_app.services.client.events_service import EventsError
+from fastapi_app.routes.client import system_logs as client_system_logs
+from fastapi_app.services.client.system_logs_service import SystemLogsError
 from fastapi_app.routes.netbird import (
     setup_keys as netbird_setup_keys,
     routes as netbird_routes,
@@ -45,11 +45,11 @@ app.include_router(client_auth.router)
 
 # ── Client-portal routers — client session cookie, not the Bearer token ───────
 # (fastapi_app/dependencies.py: get_client_session / get_client_peer)
-app.include_router(client_events.router)
+app.include_router(client_system_logs.router)
 
 
-@app.exception_handler(EventsError)
-async def events_error_handler(request: Request, exc: EventsError):
+@app.exception_handler(SystemLogsError)
+async def system_logs_error_handler(request: Request, exc: SystemLogsError):
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail, "code": exc.code})
 
 # ── Public static scripts — served at /scripts/<filename> ─────────────────────

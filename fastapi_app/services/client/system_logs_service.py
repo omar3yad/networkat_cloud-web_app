@@ -1,5 +1,5 @@
 """
-Client-portal event log — proxy to the peer agent's `/logs/*` (agent docs/logs.md).
+Client-portal system logs — proxy to the peer agent's `/logs/*` (agent docs/logs.md).
 
 Client audience only: this module never calls `/logs/system/admin` or
 `audience=admin`, and every entry is cut down to CLIENT_ENTRY_FIELDS before
@@ -21,7 +21,7 @@ from urllib.parse import urlencode
 import h11
 import requests
 
-from fastapi_app.schemas.client.events import CLIENT_ENTRY_FIELDS
+from fastapi_app.schemas.client.system_logs import CLIENT_ENTRY_FIELDS
 
 AGENT_PORT = 8765
 AGENT_TIMEOUT = (5, 20)          # connect, read — the agent runs logs_engine.py per call
@@ -37,7 +37,7 @@ LIST_FILTERS = ("category", "level", "since", "until", "q", "limit", "before_id"
 STREAM_FILTERS = ("category", "level", "q")
 
 
-class EventsError(Exception):
+class SystemLogsError(Exception):
     """Terse, client-safe failure. `code` lets the page pick its state (offline, off, …)."""
 
     def __init__(self, status_code: int, detail: str, code: str):
@@ -47,24 +47,24 @@ class EventsError(Exception):
         self.code = code
 
 
-def _offline() -> EventsError:
-    return EventsError(503, "Device offline", "offline")
+def _offline() -> SystemLogsError:
+    return SystemLogsError(503, "Device offline", "offline")
 
 
-def _agent_error(status_code: int, body) -> EventsError:
+def _agent_error(status_code: int, body) -> SystemLogsError:
     code = body.get("code") if isinstance(body, dict) else None
     if code == "logs_disabled":
-        return EventsError(403, "Event log off", "logs_disabled")
+        return SystemLogsError(403, "System logs off", "logs_disabled")
     if code == "bad_category":
-        return EventsError(404, "Unknown category", "bad_category")
+        return SystemLogsError(404, "Unknown category", "bad_category")
     if status_code == 400:
-        return EventsError(400, "Invalid request", "usage")
+        return SystemLogsError(400, "Invalid request", "usage")
     if status_code == 404:
-        # No /logs routes at all: an agent from before the event log.
-        return EventsError(501, "Update device", "unsupported")
+        # No /logs routes at all: an agent from before system logs.
+        return SystemLogsError(501, "Update device", "unsupported")
     if status_code == 503:
-        return EventsError(502, "Event log unavailable", code or "state_failed")
-    return EventsError(502, "Device error", "agent_error")
+        return SystemLogsError(502, "System logs unavailable", code or "state_failed")
+    return SystemLogsError(502, "Device error", "agent_error")
 
 
 def _host(peer: dict) -> str:
@@ -101,7 +101,7 @@ def client_entry(entry: dict) -> dict:
 
 # ── Reads ─────────────────────────────────────────────────────────────────────
 
-def list_events(peer: dict, filters: dict) -> dict:
+def list_logs(peer: dict, filters: dict) -> dict:
     body = _call(peer, "GET", "/logs/system/client", params=_pick(filters, LIST_FILTERS))
     return {
         "entries": [client_entry(e) for e in body.get("entries") or [] if isinstance(e, dict)],
@@ -128,7 +128,7 @@ def update_config(peer: dict, update: dict) -> dict:
     return body
 
 
-def clear_events(peer: dict, categories: Optional[str]) -> dict:
+def clear_logs(peer: dict, categories: Optional[str]) -> dict:
     params = {"category": categories} if categories else None
     body = _call(peer, "DELETE", "/logs/system/client", params=params, actor=True)
     return {"cleared": body.get("cleared") or [], "up_to_id": body.get("up_to_id")}
@@ -192,7 +192,7 @@ def _filter_sse_block(block: bytes) -> bytes:
 
 
 async def open_stream(peer: dict, filters: dict, last_event_id: Optional[str]) -> AsyncIterator[bytes]:
-    """Connect and check the agent's answer (errors raise EventsError before any
+    """Connect and check the agent's answer (errors raise SystemLogsError before any
     stream bytes, like the agent itself). Returns the SSE byte iterator."""
     host = _host(peer)
     query = urlencode(_pick(filters, STREAM_FILTERS))
@@ -218,14 +218,14 @@ async def open_stream(peer: dict, filters: dict, last_event_id: Optional[str]) -
             except ValueError:
                 body = None
             raise _agent_error(response.status_code, body)
-    except EventsError:
+    except SystemLogsError:
         stream.close()
         raise
     except (OSError, asyncio.TimeoutError, h11.ProtocolError):
         stream.close()
         raise _offline()
 
-    async def events() -> AsyncIterator[bytes]:
+    async def entries() -> AsyncIterator[bytes]:
         buffer = b""
         try:
             while True:
@@ -241,4 +241,4 @@ async def open_stream(peer: dict, filters: dict, last_event_id: Optional[str]) -
         finally:
             stream.close()
 
-    return events()
+    return entries()

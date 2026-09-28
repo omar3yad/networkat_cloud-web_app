@@ -112,7 +112,7 @@
                                         {% endif %}
                                     {% else %}
                                         {% if is_current_peer %}
-                                            {% if request.endpoint in ['client.peer_details', 'client.peer_events'] %}
+                                            {% if request.endpoint in ['client.peer_details', 'client.peer_system_logs'] %}
                                                 {% set target_url = 'javascript:void(0);' %}
                                                 {% set click_handler = 'onclick="event.preventDefault();"' %}
                                             {% else %}
@@ -121,8 +121,8 @@
                                             {% endif %}
                                         {% else %}
                                             {% set click_handler = '' %}
-                                            {% if request.endpoint == 'client.peer_events' %}
-                                                {% set target_url = url_for('client.peer_events', peer_id=p.id, name=p.name) %}
+                                            {% if request.endpoint == 'client.peer_system_logs' %}
+                                                {% set target_url = url_for('client.peer_system_logs', peer_id=p.id, name=p.name) %}
                                             {% elif p.connected %}
                                                 {% if request.endpoint in ['client.peer_web_filter', 'client.peer_filtering'] %}
                                                     {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}

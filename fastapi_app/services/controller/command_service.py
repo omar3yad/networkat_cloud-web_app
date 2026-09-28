@@ -27,8 +27,8 @@ AGENT_CONNECT_TIMEOUT = 1
 AGENT_TIMEOUT_SECONDS = 30  # spec Open Decision #3 default
 AGENT_TIMEOUT = (AGENT_CONNECT_TIMEOUT, AGENT_TIMEOUT_SECONDS)
 
-# Who the agent records as the actor of the audit events a command causes
-# (agent docs/logs.md). Absent = "controller". Agents without the event log
+# Who the agent records as the actor of the audit entries a command causes
+# (agent docs/logs.md). Absent = "controller". Agents without system logs
 # ignore the header.
 ACTOR_HEADER = "X-Networkat-Actor"
 _SOURCE_TO_ACTOR = {"subscription": "subscription", "customer": "client", "client": "client"}

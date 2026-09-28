@@ -1,14 +1,14 @@
 /**
- * Event log page (client/templates/events.html).
+ * System logs page (client/templates/system_logs.html).
  *
- * List + filters + "Load older" over GET /events, live updates over the SSE
+ * List + filters + "Load older" over GET /logs/system, live updates over the SSE
  * stream (EventSource; it resends Last-Event-ID itself after the 30-minute
- * close). After every (re)connect the gap is filled from GET /events?after_id=,
+ * close). After every (re)connect the gap is filled from GET /logs/system?after_id=,
  * and rows are de-duplicated by id. The stream is closed while the tab is
  * hidden.
  */
 (function () {
-    const E = window.NkEvents;
+    const E = window.NkSystemLogs;
     const CATEGORY_ORDER = Object.keys(E.CATEGORY_LABELS);
     const PAGE_SIZE = 50;
     const RETRY_MS = 30000;
@@ -51,22 +51,22 @@
 
     function setCategory(name) {
         S.filters.category = name;
-        document.querySelectorAll('#ev-chips .ev-chip').forEach((chip) => {
+        document.querySelectorAll('#sl-chips .sl-chip').forEach((chip) => {
             chip.classList.toggle('active', chip.dataset.category === name);
         });
         refresh();
     }
 
     function applyFilters() {
-        S.filters.level = $('ev-level').value;
-        S.filters.range = $('ev-range').value;
+        S.filters.level = $('sl-level').value;
+        S.filters.range = $('sl-range').value;
         refresh();
     }
 
     function onSearchInput() {
         clearTimeout(S.searchTimer);
         S.searchTimer = setTimeout(() => {
-            const q = $('ev-q').value;
+            const q = $('sl-q').value;
             if (q.trim() === S.filters.q.trim()) return;
             S.filters.q = q;
             refresh();
@@ -81,14 +81,14 @@
     // ── Chips / counts ───────────────────────────────────────────────────────
 
     function renderChips() {
-        const wrap = $('ev-chips');
+        const wrap = $('sl-chips');
         CATEGORY_ORDER.forEach((name) => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'ev-chip';
+            btn.className = 'sl-chip';
             btn.dataset.category = name;
             btn.innerHTML = `<i class="fas ${E.CATEGORY_ICONS[name]}"></i><span>${E.esc(E.categoryLabel(name))}</span>` +
-                `<span class="ev-chip-count" id="ev-count-${name}"></span>`;
+                `<span class="sl-chip-count" id="sl-count-${name}"></span>`;
             btn.onclick = () => setCategory(name);
             wrap.appendChild(btn);
         });
@@ -98,11 +98,11 @@
         let total = 0;
         CATEGORY_ORDER.forEach((name) => {
             const n = S.counts[name];
-            const el = $(`ev-count-${name}`);
+            const el = $(`sl-count-${name}`);
             if (el) el.textContent = typeof n === 'number' ? n : '';
             if (typeof n === 'number') total += n;
         });
-        const all = $('ev-count-all');
+        const all = $('sl-count-all');
         if (all) all.textContent = S.categories.length ? total : '';
     }
 
@@ -113,7 +113,7 @@
             S.counts = {};
             S.categories.forEach((c) => {
                 S.counts[c.name] = c.count || 0;
-                const chip = document.querySelector(`#ev-chips .ev-chip[data-category="${c.name}"]`);
+                const chip = document.querySelector(`#sl-chips .sl-chip[data-category="${c.name}"]`);
                 if (chip && c.description) chip.title = c.description;
             });
             renderCounts();
@@ -127,27 +127,27 @@
     function rowHtml(e) {
         const repeat = (e.repeat_count || 1) > 1;
         const icon = E.CATEGORY_ICONS[e.category] || 'fa-circle';
-        return `<tr class="ev-row ev-row-${E.esc(e.level)}${repeat ? ' ev-row-repeat' : ''}" data-id="${e.id}">` +
-            `<td class="ev-col-time" title="${E.esc(E.fullTime(e.time))}">${E.esc(E.shortTime(e.time))}</td>` +
-            `<td class="ev-col-level">${E.levelBadge(e.level)}</td>` +
-            `<td class="ev-col-cat"><i class="fas ${icon}"></i> ${E.esc(E.categoryLabel(e.category))}</td>` +
-            `<td class="ev-msg">${E.esc(e.message || '')}` +
-            (repeat ? ` <span class="ev-repeat">×${Number(e.repeat_count)}</span>` : '') + `</td>` +
-            `<td class="ev-col-by">${E.esc(E.actorLabel(e.actor))}</td>` +
+        return `<tr class="sl-row sl-row-${E.esc(e.level)}${repeat ? ' sl-row-repeat' : ''}" data-id="${e.id}">` +
+            `<td class="sl-col-time" title="${E.esc(E.fullTime(e.time))}">${E.esc(E.shortTime(e.time))}</td>` +
+            `<td class="sl-col-level">${E.levelBadge(e.level)}</td>` +
+            `<td class="sl-col-cat"><i class="fas ${icon}"></i> ${E.esc(E.categoryLabel(e.category))}</td>` +
+            `<td class="sl-msg">${E.esc(e.message || '')}` +
+            (repeat ? ` <span class="sl-repeat">×${Number(e.repeat_count)}</span>` : '') + `</td>` +
+            `<td class="sl-col-by">${E.esc(E.actorLabel(e.actor))}</td>` +
             `</tr>`;
     }
 
     function renderRows() {
-        const body = $('ev-rows');
+        const body = $('sl-rows');
         body.innerHTML = S.rows.map(rowHtml).join('');
         if (S.rows.length) {
-            $('ev-table').hidden = false;
+            $('sl-table').hidden = false;
             hideState();
         } else {
-            $('ev-table').hidden = true;
-            showState({ icon: 'fa-inbox', title: 'No events' });
+            $('sl-table').hidden = true;
+            showState({ icon: 'fa-inbox', title: 'No entries' });
         }
-        $('ev-btn-more').hidden = !S.hasMore;
+        $('sl-btn-more').hidden = !S.hasMore;
     }
 
     function addEntries(entries) {
@@ -172,44 +172,44 @@
             renderCounts();
         }
 
-        const body = $('ev-rows');
+        const body = $('sl-rows');
         const idx = S.rows.indexOf(e);
         const tpl = document.createElement('tbody');
         tpl.innerHTML = rowHtml(e);
         const tr = tpl.firstChild;
-        tr.classList.add('ev-row-new');
+        tr.classList.add('sl-row-new');
         body.insertBefore(tr, body.children[idx] || null);
-        $('ev-table').hidden = false;
+        $('sl-table').hidden = false;
         hideState();
 
         if (isScrolledAway()) {
             S.pendingNew += 1;
-            $('ev-new-text').textContent = S.pendingNew === 1 ? '1 new event' : `${S.pendingNew} new events`;
-            $('ev-new-pill').hidden = false;
+            $('sl-new-text').textContent = S.pendingNew === 1 ? '1 new entry' : `${S.pendingNew} new entries`;
+            $('sl-new-pill').hidden = false;
         }
     }
 
     function isScrolledAway() {
-        const card = $('ev-table-wrap');
+        const card = $('sl-table-wrap');
         return card && card.getBoundingClientRect().top < 0;
     }
 
     function showNew() {
         S.pendingNew = 0;
-        $('ev-new-pill').hidden = true;
-        $('ev-chips').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        $('sl-new-pill').hidden = true;
+        $('sl-chips').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     // ── States ───────────────────────────────────────────────────────────────
 
     function showState({ icon, title, spin = false, action = null }) {
-        const el = $('ev-state');
+        const el = $('sl-state');
         el.innerHTML = `<i class="fas ${icon}${spin ? ' fa-spin' : ''}"></i>` +
-            `<span class="ev-state-title">${E.esc(title)}</span>`;
+            `<span class="sl-state-title">${E.esc(title)}</span>`;
         if (action) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'ev-btn';
+            btn.className = 'sl-btn';
             btn.innerHTML = action.html;
             btn.onclick = action.onClick;
             el.appendChild(btn);
@@ -218,7 +218,7 @@
     }
 
     function hideState() {
-        $('ev-state').hidden = true;
+        $('sl-state').hidden = true;
     }
 
     function showError(err) {
@@ -231,8 +231,8 @@
         } else if (st.code === 'signed_out') {
             action = { html: '<i class="fas fa-sign-in-alt"></i><span>Sign in</span>', onClick: () => { window.location.href = '/login'; } };
         }
-        $('ev-table').hidden = true;
-        $('ev-btn-more').hidden = true;
+        $('sl-table').hidden = true;
+        $('sl-btn-more').hidden = true;
         showState({ icon: st.icon, title: st.title, action });
     }
 
@@ -244,9 +244,9 @@
         S.rows = [];
         S.ids = new Set();
         S.pendingNew = 0;
-        $('ev-new-pill').hidden = true;
-        $('ev-table').hidden = true;
-        $('ev-btn-more').hidden = true;
+        $('sl-new-pill').hidden = true;
+        $('sl-table').hidden = true;
+        $('sl-btn-more').hidden = true;
         showState({ icon: 'fa-spinner', title: 'Loading', spin: true });
         try {
             const data = await E.api.list(S.peerId, { ...filterParams(), limit: PAGE_SIZE });
@@ -268,7 +268,7 @@
 
     async function loadOlder() {
         if (!S.hasMore || !S.nextBeforeId) return;
-        const btn = $('ev-btn-more');
+        const btn = $('sl-btn-more');
         btn.disabled = true;
         try {
             const data = await E.api.list(S.peerId, { ...filterParams(), limit: PAGE_SIZE, before_id: S.nextBeforeId });
@@ -297,9 +297,9 @@
     // ── Live stream ──────────────────────────────────────────────────────────
 
     function setLive(state) {
-        const el = $('ev-live');
+        const el = $('sl-live');
         el.dataset.state = state;
-        $('ev-live-text').textContent = { connecting: 'Connecting', live: 'Live', paused: 'Paused', offline: 'Offline', off: 'Off' }[state] || state;
+        $('sl-live-text').textContent = { connecting: 'Connecting', live: 'Live', paused: 'Paused', offline: 'Offline', off: 'Off' }[state] || state;
     }
 
     function stopStream(state) {
@@ -359,24 +359,24 @@
     }
 
     async function openSettings() {
-        openModal('ev-settings-modal');
-        $('ev-settings-loading').hidden = false;
-        $('ev-settings-error').hidden = true;
-        $('ev-settings-body').hidden = true;
+        openModal('sl-settings-modal');
+        $('sl-settings-loading').hidden = false;
+        $('sl-settings-error').hidden = true;
+        $('sl-settings-body').hidden = true;
         try {
             S.config = await E.api.config(S.peerId);
             renderSettings();
-            $('ev-settings-body').hidden = false;
+            $('sl-settings-body').hidden = false;
         } catch (err) {
-            $('ev-settings-error').textContent = E.stateFor(err).title;
-            $('ev-settings-error').hidden = false;
+            $('sl-settings-error').textContent = E.stateFor(err).title;
+            $('sl-settings-error').hidden = false;
         } finally {
-            $('ev-settings-loading').hidden = true;
+            $('sl-settings-loading').hidden = true;
         }
     }
 
     function closeSettings() {
-        closeModal('ev-settings-modal');
+        closeModal('sl-settings-modal');
     }
 
     function pausedLabel(iso) {
@@ -392,55 +392,55 @@
         const me = bounds.max_entries || [1000, 200000];
         const levels = bounds.min_level || E.LEVELS;
 
-        const toggle = $('ev-service-toggle');
+        const toggle = $('sl-service-toggle');
         toggle.checked = !!cfg.enabled;
         toggle.disabled = S.readonly;
 
         const names = CATEGORY_ORDER.filter((n) => cfg.categories && cfg.categories[n])
             .concat(Object.keys(cfg.categories || {}).filter((n) => !CATEGORY_ORDER.includes(n)));
 
-        $('ev-settings-list').innerHTML = names.map((name) => {
+        $('sl-settings-list').innerHTML = names.map((name) => {
             const c = cfg.categories[name];
             const locked = alwaysOn.includes(name);
             const pauseOpts = [`<option value="">${c.paused_until ? E.esc(pausedLabel(c.paused_until)) : 'Not paused'}</option>`]
                 .concat(c.paused_until ? ['<option value="0">Resume now</option>'] : [])
                 .concat(PAUSE_OPTIONS.map(([m, l]) => `<option value="${m}">Pause ${l}</option>`)).join('');
             return `
-            <div class="ev-set-row" data-category="${E.esc(name)}">
-                <div class="ev-set-head">
-                    <span class="ev-set-name"><i class="fas ${E.CATEGORY_ICONS[name] || 'fa-circle'}"></i> ${E.esc(E.categoryLabel(name))}
-                        ${locked ? '<i class="fas fa-lock ev-lock" title="Always on"></i>' : ''}</span>
+            <div class="sl-set-row" data-category="${E.esc(name)}">
+                <div class="sl-set-head">
+                    <span class="sl-set-name"><i class="fas ${E.CATEGORY_ICONS[name] || 'fa-circle'}"></i> ${E.esc(E.categoryLabel(name))}
+                        ${locked ? '<i class="fas fa-lock sl-lock" title="Always on"></i>' : ''}</span>
                     <label class="switch" title="${locked ? 'Always on' : 'Show'}">
                         <input type="checkbox" data-field="enabled" ${c.enabled ? 'checked' : ''} ${locked || S.readonly ? 'disabled' : ''}>
                         <span class="slider"></span>
                     </label>
                 </div>
-                <div class="ev-set-grid">
-                    <label class="ev-field"><span>Keep (days)</span>
-                        <input type="number" class="ev-input" data-field="retention_days" min="${rd[0]}" max="${rd[1]}" step="1" value="${c.retention_days}" ${dis}>
+                <div class="sl-set-grid">
+                    <label class="sl-field"><span>Keep (days)</span>
+                        <input type="number" class="sl-input" data-field="retention_days" min="${rd[0]}" max="${rd[1]}" step="1" value="${c.retention_days}" ${dis}>
                     </label>
-                    <label class="ev-field"><span>Max events</span>
-                        <input type="number" class="ev-input" data-field="max_entries" min="${me[0]}" max="${me[1]}" step="1000" value="${c.max_entries}" ${dis}>
+                    <label class="sl-field"><span>Max entries</span>
+                        <input type="number" class="sl-input" data-field="max_entries" min="${me[0]}" max="${me[1]}" step="1000" value="${c.max_entries}" ${dis}>
                     </label>
-                    <label class="ev-field"><span>Min level</span>
-                        <select class="ev-select" data-field="min_level" ${dis}>
+                    <label class="sl-field"><span>Min level</span>
+                        <select class="sl-select" data-field="min_level" ${dis}>
                             ${levels.map((l) => `<option value="${l}" ${l === c.min_level ? 'selected' : ''}>${E.levelLabel(l)}</option>`).join('')}
                         </select>
                     </label>
-                    ${locked ? '' : `<label class="ev-field"><span>Pause</span>
-                        <select class="ev-select" data-field="pause_minutes" ${dis || (c.enabled ? '' : 'disabled')}>${pauseOpts}</select>
+                    ${locked ? '' : `<label class="sl-field"><span>Pause</span>
+                        <select class="sl-select" data-field="pause_minutes" ${dis || (c.enabled ? '' : 'disabled')}>${pauseOpts}</select>
                     </label>`}
                 </div>
-                <div class="inline-error-msg ev-set-error" hidden></div>
+                <div class="inline-error-msg sl-set-error" hidden></div>
             </div>`;
         }).join('');
 
-        $('ev-settings-list').querySelectorAll('input, select').forEach((el) => {
+        $('sl-settings-list').querySelectorAll('input, select').forEach((el) => {
             el.addEventListener('input', onSettingsChange);
             el.addEventListener('change', onSettingsChange);
         });
-        $('ev-settings-warn').hidden = true;
-        const save = $('ev-settings-save');
+        $('sl-settings-warn').hidden = true;
+        const save = $('sl-settings-save');
         if (save) save.disabled = true;
     }
 
@@ -451,7 +451,7 @@
         const changes = {};
         let errors = 0;
         let shrinks = false;
-        document.querySelectorAll('#ev-settings-list .ev-set-row').forEach((row) => {
+        document.querySelectorAll('#sl-settings-list .sl-set-row').forEach((row) => {
             const name = row.dataset.category;
             const cur = cfg.categories[name];
             const out = {};
@@ -465,11 +465,11 @@
                     const v = Number(el.value);
                     const [lo, hi] = bounds[field] || [1, Infinity];
                     if (!Number.isInteger(v) || v < lo || v > hi) {
-                        error = `${field === 'retention_days' ? 'Days' : 'Max events'}: ${lo}–${hi}`;
-                        el.classList.add('ev-input-error');
+                        error = `${field === 'retention_days' ? 'Days' : 'Max entries'}: ${lo}–${hi}`;
+                        el.classList.add('sl-input-error');
                         return;
                     }
-                    el.classList.remove('ev-input-error');
+                    el.classList.remove('sl-input-error');
                     if (v !== cur[field]) {
                         out[field] = v;
                         if (v < cur[field]) shrinks = true;
@@ -480,7 +480,7 @@
                     if (!el.disabled && el.value !== '') out.pause_minutes = Number(el.value);
                 }
             });
-            const errEl = row.querySelector('.ev-set-error');
+            const errEl = row.querySelector('.sl-set-error');
             errEl.textContent = error;
             errEl.hidden = !error;
             if (error) errors += 1;
@@ -492,19 +492,19 @@
     function onSettingsChange(ev) {
         // Pause only applies while the category is shown.
         if (ev && ev.target && ev.target.dataset.field === 'enabled') {
-            const pause = ev.target.closest('.ev-set-row').querySelector('[data-field="pause_minutes"]');
+            const pause = ev.target.closest('.sl-set-row').querySelector('[data-field="pause_minutes"]');
             if (pause) pause.disabled = !ev.target.checked || S.readonly;
         }
         const { changes, errors, shrinks } = collectSettings();
-        $('ev-settings-warn').hidden = !shrinks;
-        const save = $('ev-settings-save');
+        $('sl-settings-warn').hidden = !shrinks;
+        const save = $('sl-settings-save');
         if (save) save.disabled = errors > 0 || Object.keys(changes).length === 0;
     }
 
     async function saveSettings() {
         const { changes, errors } = collectSettings();
         if (errors || !Object.keys(changes).length) return;
-        const save = $('ev-settings-save');
+        const save = $('sl-settings-save');
         save.disabled = true;
         try {
             S.config = await E.api.saveConfig(S.peerId, changes);
@@ -520,7 +520,7 @@
     async function toggleService(input) {
         const on = input.checked;
         if (!on) {
-            const ok = await window.nkConfirm('Hide all events on this device?', 'Turn off system logs?', 'Turn off');
+            const ok = await window.nkConfirm('Hide all logs on this device?', 'Turn off system logs?', 'Turn off');
             if (!ok) {
                 input.checked = true;
                 return;
@@ -551,33 +551,33 @@
     function openClear() {
         const alwaysOn = (S.config && S.config.always_on) || ['audit'];
         const names = CATEGORY_ORDER.filter((n) => !alwaysOn.includes(n));
-        $('ev-clear-list').innerHTML = names.map((n) => {
-            const count = typeof S.counts[n] === 'number' ? `<span class="ev-chip-count">${S.counts[n]}</span>` : '';
+        $('sl-clear-list').innerHTML = names.map((n) => {
+            const count = typeof S.counts[n] === 'number' ? `<span class="sl-chip-count">${S.counts[n]}</span>` : '';
             const checked = !S.filters.category || S.filters.category === n ? 'checked' : '';
-            return `<label class="ev-clear-item"><input type="checkbox" value="${n}" ${checked}>` +
+            return `<label class="sl-clear-item"><input type="checkbox" value="${n}" ${checked}>` +
                 `<i class="fas ${E.CATEGORY_ICONS[n]}"></i><span>${E.esc(E.categoryLabel(n))}</span>${count}</label>`;
         }).join('');
-        $('ev-clear-list').querySelectorAll('input').forEach((el) => el.addEventListener('change', updateClearButton));
+        $('sl-clear-list').querySelectorAll('input').forEach((el) => el.addEventListener('change', updateClearButton));
         updateClearButton();
-        openModal('ev-clear-modal');
+        openModal('sl-clear-modal');
     }
 
     function closeClear() {
-        closeModal('ev-clear-modal');
+        closeModal('sl-clear-modal');
     }
 
     function selectedClear() {
-        return Array.from($('ev-clear-list').querySelectorAll('input:checked')).map((el) => el.value);
+        return Array.from($('sl-clear-list').querySelectorAll('input:checked')).map((el) => el.value);
     }
 
     function updateClearButton() {
-        $('ev-clear-confirm').disabled = selectedClear().length === 0;
+        $('sl-clear-confirm').disabled = selectedClear().length === 0;
     }
 
     async function confirmClear() {
         const cats = selectedClear();
         if (!cats.length) return;
-        const btn = $('ev-clear-confirm');
+        const btn = $('sl-clear-confirm');
         btn.disabled = true;
         try {
             await E.api.clear(S.peerId, cats);
@@ -595,7 +595,7 @@
     // ── Init ─────────────────────────────────────────────────────────────────
 
     function init() {
-        const page = $('events-page');
+        const page = $('system-logs-page');
         if (!page) return;
         S.peerId = page.dataset.peerId;
         S.readonly = page.dataset.readonly === 'true';
@@ -606,25 +606,25 @@
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 if (S.es) stopStream('paused');
-            } else if (!S.es && $('ev-live').dataset.state === 'paused') {
+            } else if (!S.es && $('sl-live').dataset.state === 'paused') {
                 startStream();
             }
         });
         window.addEventListener('scroll', () => {
             if (S.pendingNew && !isScrolledAway()) {
                 S.pendingNew = 0;
-                $('ev-new-pill').hidden = true;
+                $('sl-new-pill').hidden = true;
             }
         }, { passive: true });
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closeSettings();
-                if ($('ev-clear-modal')) closeClear();
+                if ($('sl-clear-modal')) closeClear();
             }
         });
     }
 
-    window.EventsPage = {
+    window.SystemLogsPage = {
         setCategory, applyFilters, onSearchInput, loadOlder, showNew,
         openSettings, closeSettings, saveSettings, toggleService,
         openClear, closeClear, confirmClear, overlayClose,

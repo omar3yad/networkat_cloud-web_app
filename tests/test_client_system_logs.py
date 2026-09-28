@@ -1,5 +1,5 @@
 """
-Client-portal event log proxy (fastapi_app/services/client/events_service.py)
+Client-portal system logs proxy (fastapi_app/services/client/system_logs_service.py)
 against a fake agent on 127.0.0.1 — real HTTP, and a chunked SSE stream like
 uvicorn sends.
 """
@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from fastapi_app.services.client import events_service as svc
+from fastapi_app.services.client import system_logs_service as svc
 
 ADMIN_ENTRY = {
     "id": 7, "time": "2026-09-25T10:17:40.123Z", "level": "notice", "category": "wan",
@@ -99,13 +99,13 @@ def peer(monkeypatch):
 
 
 def _error(fn, *args):
-    with pytest.raises(svc.EventsError) as exc:
+    with pytest.raises(svc.SystemLogsError) as exc:
         fn(*args)
     return exc.value.status_code, exc.value.code
 
 
 def test_list_is_client_only(peer):
-    out = svc.list_events(peer, {"category": "wan", "limit": 20, "code": "x", "actor": "y", "q": ""})
+    out = svc.list_logs(peer, {"category": "wan", "limit": 20, "code": "x", "actor": "y", "q": ""})
     entry = out["entries"][0]
     assert entry["message"] == "WAN1 is back up."
     assert not {"source", "admin_message", "admin_data"} & set(entry)
@@ -116,7 +116,7 @@ def test_list_is_client_only(peer):
 
 def test_changes_carry_client_actor(peer):
     svc.update_config(peer, {"categories": {"wan": {"retention_days": 10}}})
-    svc.clear_events(peer, "wan")
+    svc.clear_logs(peer, "wan")
     svc.set_logs_service(peer, "enabled")
     config, clear, service = FakeAgent.calls
     assert all(c["actor"] == "client" for c in (config, clear, service))
@@ -128,24 +128,24 @@ def test_changes_carry_client_actor(peer):
 
 def test_errors_are_mapped(peer):
     FakeAgent.disabled = True
-    assert _error(svc.list_events, peer, {}) == (403, "logs_disabled")
+    assert _error(svc.list_logs, peer, {}) == (403, "logs_disabled")
     assert _error(svc.update_config, peer, {"categories": {"audit": {"enabled": False}}}) == (400, "usage")
     assert _error(svc.list_categories, peer) == (501, "unsupported")  # fake agent has no route
-    assert _error(svc.list_events, {"ip": "127.0.0.1", "connected": False}, {}) == (503, "offline")
+    assert _error(svc.list_logs, {"ip": "127.0.0.1", "connected": False}, {}) == (503, "offline")
 
 
 def test_unreachable_agent_is_offline(peer, monkeypatch):
     monkeypatch.setattr(svc, "AGENT_PORT", 1)
     assert _error(svc.get_config, peer) == (503, "offline")
-    with pytest.raises(svc.EventsError) as exc:
+    with pytest.raises(svc.SystemLogsError) as exc:
         asyncio.run(svc.open_stream(peer, {}, None))
     assert exc.value.code == "offline"
 
 
-def test_stream_passes_events_without_admin_fields(peer):
+def test_stream_passes_entries_without_admin_fields(peer):
     async def read():
-        events = await svc.open_stream(peer, {"category": "wan", "since": "x"}, "5")
-        return b"".join([chunk async for chunk in events])
+        entries = await svc.open_stream(peer, {"category": "wan", "since": "x"}, "5")
+        return b"".join([chunk async for chunk in entries])
 
     body = asyncio.run(read()).decode()
     assert body.startswith("retry: 3000\n\n: keepalive\n\nid: 7\nevent: log\ndata: ")
@@ -157,6 +157,6 @@ def test_stream_passes_events_without_admin_fields(peer):
 
 def test_stream_error_before_any_bytes(peer):
     FakeAgent.disabled = True
-    with pytest.raises(svc.EventsError) as exc:
+    with pytest.raises(svc.SystemLogsError) as exc:
         asyncio.run(svc.open_stream(peer, {}, None))
     assert (exc.value.status_code, exc.value.code) == (403, "logs_disabled")

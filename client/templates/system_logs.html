@@ -1,0 +1,169 @@
+{% extends "client_base.html" %}
+
+{% block title %}{% set ns = namespace(name=request.args.get('name') or 'Device') %}{% for p in (sidebar_peers or []) if p.id == peer_id %}{% set ns.name = p.name %}{% endfor %}System logs · {{ ns.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/peer_details.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/system_logs.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set ns = namespace(name=request.args.get('name') or 'Device') %}{% for p in (sidebar_peers or []) if p.id == peer_id %}{% set ns.name = p.name %}{% endfor %}
+<div class="details-container sl-page" id="system-logs-page" data-peer-id="{{ peer_id }}"
+    data-readonly="{{ 'true' if is_readonly_subscription else 'false' }}">
+
+    <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to {{ ns.name }}
+    </a>
+
+    <div class="header-section sl-header">
+        <div class="title-area">
+            <h1>System logs</h1>
+            <p>{{ ns.name }}</p>
+        </div>
+        <div class="sl-header-actions">
+            <span class="sl-live" id="sl-live" data-state="connecting" title="Live updates">
+                <span class="sl-live-dot"></span><span id="sl-live-text">Connecting</span>
+            </span>
+            <button type="button" class="sl-btn" id="sl-btn-settings" onclick="SystemLogsPage.openSettings()" title="Log settings">
+                <i class="fas fa-cog"></i><span>Settings</span>
+            </button>
+            {% if not is_readonly_subscription %}
+            <button type="button" class="sl-btn sl-btn-danger" id="sl-btn-clear" onclick="SystemLogsPage.openClear()" title="Clear logs">
+                <i class="fas fa-eraser"></i><span>Clear</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="details-card sl-card">
+        <!-- Categories -->
+        <div class="sl-chips" id="sl-chips" role="tablist" aria-label="Categories">
+            <button type="button" class="sl-chip active" data-category="" onclick="SystemLogsPage.setCategory('')">
+                <span>All</span><span class="sl-chip-count" id="sl-count-all"></span>
+            </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="sl-filters">
+            <select id="sl-level" class="sl-select" onchange="SystemLogsPage.applyFilters()" aria-label="Level">
+                <option value="">All levels</option>
+                <option value="notice">Notice and up</option>
+                <option value="warning">Warning and up</option>
+                <option value="error">Error and up</option>
+                <option value="critical">Critical</option>
+            </select>
+            <select id="sl-range" class="sl-select" onchange="SystemLogsPage.applyFilters()" aria-label="Time">
+                <option value="">Any time</option>
+                <option value="1">Last hour</option>
+                <option value="24">Last 24 hours</option>
+                <option value="168">Last 7 days</option>
+                <option value="720">Last 30 days</option>
+            </select>
+            <div class="sl-search">
+                <i class="fas fa-search"></i>
+                <input type="search" id="sl-q" placeholder="Search" maxlength="200" autocomplete="off"
+                    oninput="SystemLogsPage.onSearchInput()">
+            </div>
+        </div>
+
+        <!-- New entries pill (shown when scrolled away from the top) -->
+        <button type="button" class="sl-new-pill" id="sl-new-pill" onclick="SystemLogsPage.showNew()" hidden>
+            <i class="fas fa-arrow-up"></i> <span id="sl-new-text"></span>
+        </button>
+
+        <!-- Table -->
+        <div class="sl-table-wrap" id="sl-table-wrap">
+            <table class="sl-table" id="sl-table" hidden>
+                <thead>
+                    <tr>
+                        <th class="sl-col-time">Time</th>
+                        <th class="sl-col-level">Level</th>
+                        <th class="sl-col-cat">Category</th>
+                        <th>Message</th>
+                        <th class="sl-col-by">By</th>
+                    </tr>
+                </thead>
+                <tbody id="sl-rows"></tbody>
+            </table>
+
+            <div class="sl-state" id="sl-state">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span class="sl-state-title">Loading</span>
+            </div>
+        </div>
+
+        <div class="sl-more">
+            <button type="button" class="sl-btn" id="sl-btn-more" onclick="SystemLogsPage.loadOlder()" hidden>
+                <i class="fas fa-chevron-down"></i><span>Load older</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings modal -->
+    <div class="modal-overlay" id="sl-settings-modal" onclick="SystemLogsPage.overlayClose(event, 'settings')">
+        <div class="modal-card sl-settings-card">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> Log settings</h2>
+                <button type="button" class="modal-close" onclick="SystemLogsPage.closeSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="services-loading" id="sl-settings-loading"><i class="fas fa-spinner fa-spin"></i> Loading</div>
+                <div class="services-error" id="sl-settings-error" hidden></div>
+                <div id="sl-settings-body" hidden>
+                    <div class="service-row sl-service-row">
+                        <div class="service-info">
+                            <span class="service-name">System logs</span>
+                            <span class="service-desc">Enable system logging</span>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="sl-service-toggle" onchange="SystemLogsPage.toggleService(this)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="sl-settings-list" id="sl-settings-list"></div>
+                    <div class="sl-settings-warn" id="sl-settings-warn" hidden>
+                        <i class="fas fa-exclamation-triangle"></i> Older entries deleted
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-action btn-cancel" onclick="SystemLogsPage.closeSettings()">Close</button>
+                {% if not is_readonly_subscription %}
+                <button type="button" class="btn-action btn-primary" id="sl-settings-save" onclick="SystemLogsPage.saveSettings()" disabled>
+                    <i class="fas fa-save"></i> Save changes
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear modal -->
+    {% if not is_readonly_subscription %}
+    <div class="modal-overlay" id="sl-clear-modal" onclick="SystemLogsPage.overlayClose(event, 'clear')">
+        <div class="modal-card">
+            <div class="modal-header delete-modal-header">
+                <h2><i class="fas fa-eraser"></i> Clear logs</h2>
+                <button type="button" class="modal-close" onclick="SystemLogsPage.closeClear()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="sl-clear-title">Clear selected logs?</p>
+                <div class="sl-clear-list" id="sl-clear-list"></div>
+                <p class="sl-clear-note"><i class="fas fa-lock"></i> Changes always kept</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-action btn-cancel" onclick="SystemLogsPage.closeClear()">Cancel</button>
+                <button type="button" class="btn-action btn-danger" id="sl-clear-confirm" onclick="SystemLogsPage.confirmClear()">
+                    <i class="fas fa-eraser"></i> Clear
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/system_logs_common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/system_logs.js') }}"></script>
+{% endblock %}
