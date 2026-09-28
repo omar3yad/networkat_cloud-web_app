@@ -7,6 +7,7 @@ It is registered separately in main.py WITHOUT the auth_dependency.
 """
 import os
 import time
+from datetime import datetime, timedelta
 import requests
 import logging
 from threading import Lock
@@ -473,7 +474,10 @@ async def create_peer_route(
                     c.user_id,
                     c.active,
                     c.netbird_group_id,
-                    c.subscription_status
+                    c.subscription_status,
+                    c.is_trial,
+                    c.mpls_activated_at,
+                    c.mpls_trial_expires_at
                 FROM clients c
                 WHERE c.username = :u
                 LIMIT 1
@@ -487,14 +491,41 @@ async def create_peer_route(
                 content={"error": "Unauthorized", "message": "Client account is invalid or not active."}
             )
 
-        user_id, active, netbird_group_id, subscription_status = row
-        subscription_status = subscription_status or "active"
+        user_id = row[0]
+        active = row[1]
+        netbird_group_id = row[2]
+        subscription_status = (row[3] or "active") if len(row) > 3 else "active"
+        is_trial = bool(row[4]) if len(row) > 4 else False
+        mpls_activated_at = row[5] if len(row) > 5 else None
+        mpls_trial_expires_at = row[6] if len(row) > 6 else None
 
         if subscription_status != "active":
             return JSONResponse(
                 status_code=403,
                 content={"error": "Forbidden", "message": "Subscription is inactive. Modification not allowed."}
             )
+
+        # Check MPLS trial gating
+        now = datetime.utcnow()
+        if is_trial:
+            if mpls_trial_expires_at:
+                exp = mpls_trial_expires_at.replace(tzinfo=None) if hasattr(mpls_trial_expires_at, 'tzinfo') and mpls_trial_expires_at.tzinfo else mpls_trial_expires_at
+                if now > exp:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"error": "Forbidden", "message": "MPLS trial expired. Please upgrade subscription."}
+                    )
+            elif not mpls_activated_at:
+                # Activate 3-day MPLS trial now
+                exp_date = now + timedelta(days=3)
+                try:
+                    db.execute(
+                        text("UPDATE clients SET mpls_activated_at = :now, mpls_trial_expires_at = :exp WHERE user_id = :uid"),
+                        {"now": now, "exp": exp_date, "uid": str(user_id)}
+                    )
+                    db.commit()
+                except Exception as ex:
+                    logger.warning(f"[peer-route-api] Failed to record MPLS activation: {ex}")
 
         NETBIRD_BASE_URL = os.getenv("NETBIRD_API_URL", "http://netbird-server/api").rstrip("/")
         NETBIRD_TOKEN = os.getenv("NETBIRD_TOKEN")

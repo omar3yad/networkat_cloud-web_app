@@ -126,6 +126,16 @@
     // ── Rows ─────────────────────────────────────────────────────────────────
 
     function rowHtml(e) {
+        const isGated = e.code === 'premium_only';
+        if (isGated) {
+            return `<tr class="sl-row sl-row-gated" data-id="${e.id}">` +
+                `<td class="sl-col-time" title="${E.esc(E.fullTime(e.time))}">${E.esc(E.shortTime(e.time))}</td>` +
+                `<td class="sl-col-level"><span class="sl-premium-badge"><i class="fas fa-crown"></i> Premium Only</span></td>` +
+                `<td class="sl-col-cat"><i class="fas fa-lock"></i> System</td>` +
+                `<td class="sl-msg"><i class="fas fa-lock" style="margin-right:0.35rem; color:#b45309;"></i> Available with Premium plan</td>` +
+                `<td class="sl-col-by">&mdash;</td>` +
+                `</tr>`;
+        }
         const repeat = (e.repeat_count || 1) > 1;
         const icon = E.CATEGORY_ICONS[e.category] || 'fa-circle';
         return `<tr class="sl-row sl-row-${E.esc(e.level)}${repeat ? ' sl-row-repeat' : ''}" data-id="${e.id}">` +
@@ -141,14 +151,31 @@
     function renderRows() {
         const body = $('sl-rows');
         body.innerHTML = S.rows.map(rowHtml).join('');
+        const existingBanner = $('sl-premium-banner');
         if (S.rows.length) {
             $('sl-table').hidden = false;
             hideState();
+            if (S.isGated) {
+                if (!existingBanner) {
+                    const banner = document.createElement('div');
+                    banner.id = 'sl-premium-banner';
+                    banner.className = 'sl-premium-banner';
+                    banner.innerHTML = `<div class="sl-premium-banner-left">` +
+                        `<i class="fas fa-crown" style="color:#d97706;"></i>` +
+                        `<span>Showing latest 3 records on trial account. Upgrade to view complete logs history.</span>` +
+                        `</div>` +
+                        `<a href="/subscription" class="sl-premium-btn">Upgrade Plan</a>`;
+                    $('sl-table-wrap').appendChild(banner);
+                }
+            } else if (existingBanner) {
+                existingBanner.remove();
+            }
         } else {
             $('sl-table').hidden = true;
+            if (existingBanner) existingBanner.remove();
             showState({ icon: 'fa-inbox', title: 'No entries' });
         }
-        $('sl-btn-more').hidden = !S.hasMore;
+        $('sl-btn-more').hidden = S.isGated ? true : !S.hasMore;
     }
 
     function addEntries(entries) {
@@ -255,6 +282,7 @@
         try {
             const data = await E.api.list(S.peerId, { ...filterParams(), limit: PAGE_SIZE });
             if (seq !== S.reloadSeq) return;
+            S.isGated = !!data.is_gated;
             addEntries(data.entries || []);
             if (data.last_id && data.last_id > S.topId) S.topId = data.last_id;
             S.hasMore = !!(data.page && data.page.has_more);

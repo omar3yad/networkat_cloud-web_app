@@ -92,10 +92,18 @@ def peers_page():
         flash("Customer not found", "error")
         return redirect(url_for('client.login'))
     
+    customer = Client.query.get(customer_id) if customer_id else None
+    is_mpls_allowed = customer.is_mpls_allowed if customer else True
+    mpls_days_remaining = customer.mpls_days_remaining if customer else None
+    is_trial = getattr(customer, 'is_trial', False) if customer else False
+
     return render_template(
         'peers.html',
         customer_name=customer_name,
-        netbird_peers=[]
+        netbird_peers=[],
+        is_mpls_allowed=is_mpls_allowed,
+        mpls_days_remaining=mpls_days_remaining,
+        is_trial=is_trial
     )
 
 

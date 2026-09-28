@@ -437,6 +437,12 @@
     }
 
     function enablePeerRouteEditMode(peerId) {
+        if (window.MPLS_ALLOWED === false) {
+            if (window.showToast) {
+                window.showToast("MPLS trial expired. Please upgrade.", "error");
+            }
+            return;
+        }
         const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peerId}"]`);
         const routeView = document.getElementById(`peer-route-view-${peerId}`);
         const routeWrapper = document.getElementById(`route-input-wrapper-${peerId}`);

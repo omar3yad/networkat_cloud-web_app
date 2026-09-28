@@ -56,6 +56,8 @@ class SystemLogsResponse(BaseModel):
     entries: list[LogEntry]
     page: LogPage
     last_id: Optional[int] = None
+    is_gated: bool = False
+    gated_count: int = 0
 
 
 class LogCategoryConfigUpdate(BaseModel):

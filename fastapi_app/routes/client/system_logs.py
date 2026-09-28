@@ -14,7 +14,9 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, Query
 from fastapi.responses import StreamingResponse
 
-from fastapi_app.dependencies import get_client_peer, require_client_write
+from fastapi_app.dependencies import get_client_peer, require_client_write, get_client_session
+from fastapi_app.services.client.session import ClientSession
+from fastapi_app.services.client.peer_access import is_paid_client
 from fastapi_app.schemas.client.system_logs import (
     LogConfigUpdate,
     SystemLogsResponse,
@@ -39,10 +41,36 @@ def list_logs(
     limit: int = Query(50, ge=1, le=500),
     before_id: Optional[int] = Query(None, ge=0),
     after_id: Optional[int] = Query(None, ge=0),
+    session: ClientSession = Depends(get_client_session),
 ):
     filters = {"category": category, "level": level.value if level else None, "since": since,
                "until": until, "q": q, "limit": limit, "before_id": before_id, "after_id": after_id}
-    return system_logs_service.list_logs(peer, filters)
+    res = system_logs_service.list_logs(peer, filters)
+
+    # Feature Gating: 3 logs only for trial / unpaid users
+    if not is_paid_client(session.customer_id):
+        entries = res.get("entries") or []
+        res["is_gated"] = True
+        if len(entries) > 3:
+            res["gated_count"] = len(entries) - 3
+            masked_entries = []
+            for idx, entry in enumerate(entries):
+                if idx < 3:
+                    masked_entries.append(entry)
+                else:
+                    gated_entry = dict(entry)
+                    gated_entry["message"] = "Available with Premium plan"
+                    gated_entry["data"] = None
+                    gated_entry["code"] = "premium_only"
+                    masked_entries.append(gated_entry)
+            res["entries"] = masked_entries
+        else:
+            res["gated_count"] = 0
+    else:
+        res["is_gated"] = False
+        res["gated_count"] = 0
+
+    return res
 
 
 @router.get("/stream")
@@ -52,11 +80,24 @@ async def stream_logs(
     level: Optional[LogLevel] = None,
     q: Optional[str] = Query(None, max_length=200),
     last_event_id: Optional[str] = Header(None, alias="Last-Event-ID", max_length=20),
+    session: ClientSession = Depends(get_client_session),
 ):
     filters = {"category": category, "level": level.value if level else None, "q": q}
-    entries = await system_logs_service.open_stream(peer, filters, last_event_id)
+    raw_entries = await system_logs_service.open_stream(peer, filters, last_event_id)
+    is_paid = is_paid_client(session.customer_id)
+
+    async def _gated_stream():
+        count = 0
+        async for chunk in raw_entries:
+            if not is_paid and chunk.startswith(b"data:"):
+                count += 1
+                if count > 3:
+                    yield b"event: gated\ndata: {\"code\":\"premium_only\",\"message\":\"Streaming limited on trial accounts\"}\n\n"
+                    break
+            yield chunk
+
     return StreamingResponse(
-        entries, media_type="text/event-stream",
+        _gated_stream() if not is_paid else raw_entries, media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 

@@ -84,12 +84,16 @@
             S.rows = [];
             S.ids = new Set();
             S.topId = 0;
+            S.isGated = !!data.is_gated;
             (data.entries || []).forEach((e) => {
                 S.rows.push(e);
                 S.ids.add(e.id);
                 if (e.id > S.topId) S.topId = e.id;
             });
             S.rows.sort((a, b) => b.id - a.id);
+            if (S.isGated && S.rows.length > 3) {
+                S.rows = S.rows.slice(0, 3);
+            }
             render(null);
             S.ready = true;
             startStream();

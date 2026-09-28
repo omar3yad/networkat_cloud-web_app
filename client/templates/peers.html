@@ -31,6 +31,13 @@
                     <span class="peer-status-bulb offline"></span>
                     <span class="status-pill-text"><strong id="peers-offline-count">{{ sidebar_offline_count if sidebar_offline_count is defined else 0 }}</strong> Offline</span>
                 </button>
+                {% if is_trial %}
+                <div class="header-status-pill" style="background: {% if is_mpls_allowed %}#eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;{% else %}#fef2f2; color: #b91c1c; border: 1px solid #fecaca;{% endif %}"
+                    title="MPLS trial status">
+                    <i class="fas fa-route"></i>
+                    <span class="status-pill-text"><strong>MPLS trial:</strong> {% if is_mpls_allowed %}{{ mpls_days_remaining }}d left{% else %}Expired{% endif %}</span>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -39,6 +46,13 @@
     <div class="readonly-notice-banner">
         <i class="fas fa-lock"></i>
         <span><strong>Read-Only Mode</strong></span>
+    </div>
+    {% endif %}
+
+    {% if is_trial and not is_mpls_allowed %}
+    <div class="readonly-notice-banner" style="background:#fff7ed; border-color:#fed7aa; color:#9a3412; margin-bottom:1rem;">
+        <i class="fas fa-lock" style="color:#f97316;"></i>
+        <span><strong>MPLS trial expired</strong> &mdash; Branch routing is locked. Upgrade your subscription to continue.</span>
     </div>
     {% endif %}
 
@@ -69,5 +83,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+    window.MPLS_ALLOWED = {{ 'true' if is_mpls_allowed else 'false' }};
+</script>
 <script src="{{ url_for('static', filename='js/peers.js') }}"></script>
 {% endblock %}

@@ -1,11 +1,13 @@
 import os
 import time
+from datetime import datetime, timedelta
 import requests
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import request, session, jsonify, current_app
 from sqlalchemy import or_
 
+from config.database import db
 from client.blueprint import client_bp
 from client.decorators import login_required, no_cache_json, verify_peer_access, subscription_write_required
 from utils.agent_actor import CLIENT_ACTOR_HEADERS
@@ -180,6 +182,18 @@ def proxy_post_route():
         if not verify_peer_access(customer, target_peer):
             return jsonify({"error": "This peer does not belong to your account"}), 403
 
+        # Check MPLS trial gating
+        if not customer.is_mpls_allowed:
+            return jsonify({
+                "error": "MPLS trial expired",
+                "message": "MPLS trial expired. Please upgrade."
+            }), 403
+
+        if customer.is_trial and not customer.mpls_activated_at:
+            customer.mpls_activated_at = datetime.utcnow()
+            customer.mpls_trial_expires_at = datetime.utcnow() + timedelta(days=3)
+            db.session.commit()
+
         # Validate network format and duplicate subnet
         network_val = req_data.get("network", "")
         valid, err_msg, normalized_net = validate_route_network(customer, target_peer, network_val)
@@ -230,6 +244,13 @@ def proxy_put_route(route_id):
         target_peer = req_data.get("peer")
         if not verify_peer_access(customer, target_peer):
             return jsonify({"error": "This peer does not belong to your account"}), 403
+
+        # Check MPLS trial gating
+        if not customer.is_mpls_allowed:
+            return jsonify({
+                "error": "MPLS trial expired",
+                "message": "MPLS trial expired. Please upgrade."
+            }), 403
 
         # Validate network format and duplicate subnet
         network_val = req_data.get("network", "")

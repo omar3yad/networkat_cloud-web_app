@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Networkat · Phone Verification</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .verify-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .logo .brand-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #ecfdf5;
+            color: #059669;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .logo h1 {
+            color: #1e2a41;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .logo p {
+            color: #5e6c84;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        .verify-instructions {
+            color: #5e6c84;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .phone-highlight {
+            color: #059669;
+            font-weight: 700;
+            direction: ltr;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .code-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e1e4e8;
+            border-radius: 8px;
+            font-size: 26px;
+            letter-spacing: 8px;
+            text-align: center;
+            font-weight: 700;
+            color: #1e2a41;
+            transition: border-color 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 13px;
+            background-color: #059669;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover {
+            background-color: #047857;
+        }
+
+        .btn-submit:disabled {
+            background-color: #a7f3d0;
+            cursor: not-allowed;
+        }
+
+        .resend-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f2f5;
+            font-size: 13px;
+            color: #5e6c84;
+        }
+
+        .btn-resend {
+            background: none;
+            border: none;
+            color: #0078d4;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 13px;
+        }
+
+        .btn-resend:hover:not(:disabled) {
+            text-decoration: underline;
+        }
+
+        .btn-resend:disabled {
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 18px;
+            color: #64748b;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .back-link:hover {
+            color: #1e293b;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-error {
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .alert-success {
+            background-color: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="verify-container">
+        <div class="logo">
+            <div class="brand-icon">
+                <i class="fab fa-whatsapp"></i>
+            </div>
+            <h1>Verify your phone</h1>
+            <p>Step 1 of 3: Phone security verification</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category if category != 'danger' else 'error' }}">
+            <i class="fas {% if category == 'error' or category == 'danger' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% if mock_code %}
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-bottom:18px; font-size:13px; color:#92400e; text-align:left;">
+            <div style="font-weight:600; margin-bottom:4px;"><i class="fas fa-flask"></i> Development Mode</div>
+            <div>WhatsApp gateway is not configured yet. Your verification code is: <strong style="letter-spacing:2px; font-size:15px; color:#1e2a41;">{{ mock_code }}</strong></div>
+        </div>
+        {% endif %}
+
+        <div class="verify-instructions">
+            Please enter the 6-digit code sent to your WhatsApp number:
+            <span class="phone-highlight">{{ phone or '' }}</span>
+        </div>
+
+        <form method="POST" action="{{ url_for('client.verify_phone') }}" id="verifyForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+                <input type="text" name="code" class="code-input" maxlength="6" pattern="[0-9]{6}"
+                    placeholder="------" autocomplete="one-time-code" required autofocus>
+            </div>
+            <button type="submit" class="btn-submit" id="submitBtn">
+                <i class="fas fa-check"></i>
+                <span>Verify and continue</span>
+            </button>
+        </form>
+
+        <div class="resend-section">
+            Did not receive the code?
+            <button type="button" class="btn-resend" id="resendBtn" onclick="resendOtp()">
+                Resend code
+            </button>
+            <span id="countdownText" style="display:none; color:#94a3b8; margin-left:4px;"></span>
+        </div>
+
+        <div>
+            <a href="{{ url_for('client.register') }}" class="back-link">
+                <i class="fas fa-arrow-left"></i> Change phone number
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let countdown = 60;
+        let timer = null;
+
+        function startCountdown() {
+            const btn = document.getElementById('resendBtn');
+            const cdText = document.getElementById('countdownText');
+            btn.disabled = true;
+            countdown = 60;
+            cdText.style.display = 'inline';
+            cdText.textContent = `(${countdown}s)`;
+
+            if (timer) clearInterval(timer);
+            timer = setInterval(() => {
+                countdown--;
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    cdText.style.display = 'none';
+                } else {
+                    cdText.textContent = `(${countdown}s)`;
+                }
+            }, 1000);
+        }
+
+        async function resendOtp() {
+            const btn = document.getElementById('resendBtn');
+            btn.disabled = true;
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            try {
+                const res = await fetch("{{ url_for('client.resend_phone_otp') }}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken
+                    }
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    startCountdown();
+                } else {
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>

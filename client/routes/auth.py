@@ -8,6 +8,14 @@ from client.blueprint import client_bp
 from extensions import limiter
 from services.customer_service import CustomerService
 from utils.email import send_verification_email, send_password_reset_email, send_2fa_email_otp
+from utils.whatsapp import send_whatsapp_otp, normalize_phone_number, is_whatsapp_configured
+from utils.stripe_service import (
+    create_setup_intent,
+    verify_and_extract_card,
+    is_card_fingerprint_used,
+    get_stripe_keys,
+    is_stripe_mock_mode
+)
 from utils.two_factor import (
     verify_totp_code,
     verify_and_consume_recovery_code,
@@ -171,7 +179,7 @@ def register():
     recaptcha_secret = current_app.config.get('RECAPTCHA_SECRET_KEY')
 
     if request.method == 'POST':
-        if recaptcha_site_key and recaptcha_secret:
+        if not current_app.config.get('TESTING') and recaptcha_site_key and recaptcha_secret:
             recaptcha_response = request.form.get('g-recaptcha-response')
             if not recaptcha_response:
                 flash("Security verification token is missing. Please try again.", "error")
@@ -246,7 +254,7 @@ def register():
             flash(f'Phone number "{client_phone_number}" is already registered. Please use another.', "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
-        code = str(secrets.randbelow(900000) + 100000)
+        phone_code = str(secrets.randbelow(900000) + 100000)
         session['reg_data'] = {
             'username': username,
             'password': password,
@@ -255,25 +263,174 @@ def register():
             'client_email': client_email,
             'client_phone_number': client_phone_number,
             'client_country': client_country or None,
-            'subscription': 'basic'
+            'subscription': 'basic',
+            'is_trial': True,
+            'phone_verified': False
         }
-        session['reg_verification'] = {
-            'code': code,
-            'email': client_email,
+        # If WhatsApp gateway credentials are not yet configured, do not block customer registration
+        if not is_whatsapp_configured():
+            current_app.logger.info("WhatsApp credentials not set; bypassing phone OTP to prevent blocking customer registration.")
+            session['reg_data']['phone_verified'] = True
+            flash("Please verify your payment method to continue.", "info")
+            return redirect(url_for('client.verify_card'))
+
+        session['reg_phone_verification'] = {
+            'code': phone_code,
+            'phone': client_phone_number,
             'expires_at': time.time() + 600,
             'attempts': 0
         }
 
-        ok, err = send_verification_email(client_email, code)
+        ok, err = send_whatsapp_otp(client_phone_number, phone_code)
         if not ok:
-            current_app.logger.error(f"Failed to send email verification to {client_email}: {err}")
-            flash("Failed to send verification email. Please verify your email address or try again later.", "error")
+            current_app.logger.error(f"Failed to send WhatsApp verification to {client_phone_number}: {err}")
+            flash(err or "Failed to send WhatsApp verification code. Please check your phone number.", "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
-        flash("A verification code has been sent to your email. Please enter it below to complete registration.", "success")
-        return redirect(url_for('client.verify_email'))
+        flash("A verification code has been sent to your WhatsApp. Please enter it below.", "success")
+        return redirect(url_for('client.verify_phone'))
 
     return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
+
+
+@client_bp.route('/verify-phone', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
+def verify_phone():
+    if session.get('client_logged_in'):
+        return redirect(url_for('client.dashboard'))
+
+    phone_verif = session.get('reg_phone_verification')
+    reg_data = session.get('reg_data')
+
+    if not phone_verif or not reg_data:
+        flash("Registration session expired. Please register again.", "error")
+        return redirect(url_for('client.register'))
+
+    if request.method == 'POST':
+        entered_code = request.form.get('code', '').strip()
+
+        if time.time() > phone_verif.get('expires_at', 0):
+            flash("Verification code has expired. Please register again.", "error")
+            session.pop('reg_phone_verification', None)
+            session.pop('reg_data', None)
+            return redirect(url_for('client.register'))
+
+        if not secrets.compare_digest(entered_code, str(phone_verif.get('code', ''))):
+            attempts = phone_verif.get('attempts', 0) + 1
+            phone_verif['attempts'] = attempts
+            session['reg_phone_verification'] = phone_verif
+            if attempts >= 5:
+                session.pop('reg_phone_verification', None)
+                session.pop('reg_data', None)
+                flash("Too many failed attempts. Please register again.", "error")
+                return redirect(url_for('client.register'))
+            flash("Invalid verification code. Please try again.", "error")
+            return render_template('verify_phone.html', phone=phone_verif.get('phone'))
+
+        # Phone verified successfully
+        reg_data['phone_verified'] = True
+        session['reg_data'] = reg_data
+        session.pop('reg_phone_verification', None)
+
+        flash("Phone verified. Please verify your payment method to continue.", "success")
+        return redirect(url_for('client.verify_card'))
+
+    mock_code = phone_verif.get('code') if not is_whatsapp_configured() else None
+    return render_template('verify_phone.html', phone=phone_verif.get('phone'), mock_code=mock_code)
+
+
+@client_bp.route('/verify-card', methods=['GET', 'POST'])
+@limiter.limit("10 per minute", methods=["POST"])
+def verify_card():
+    if session.get('client_logged_in'):
+        return redirect(url_for('client.dashboard'))
+
+    reg_data = session.get('reg_data')
+    if not reg_data or not reg_data.get('phone_verified'):
+        flash("Registration session expired or phone not verified. Please register again.", "error")
+        return redirect(url_for('client.register'))
+
+    pub_key, _ = get_stripe_keys()
+    mock_mode = is_stripe_mock_mode()
+
+    if request.method == 'POST':
+        payment_method_id = request.form.get('payment_method_id', '').strip()
+        if not payment_method_id:
+            flash("Please provide valid card details.", "error")
+            return redirect(url_for('client.verify_card'))
+
+        card_info, err = verify_and_extract_card(payment_method_id)
+        if err or not card_info:
+            current_app.logger.warning(f"Card extraction failed: {err}")
+            flash(err or "Unable to verify payment card. Please check your card info.", "error")
+            return redirect(url_for('client.verify_card'))
+
+        fingerprint = card_info.get('fingerprint')
+        if is_card_fingerprint_used(fingerprint):
+            current_app.logger.warning(f"Duplicate card fingerprint rejected: {fingerprint}")
+            flash("This payment card has already been used for another account.", "error")
+            return redirect(url_for('client.verify_card'))
+
+        # Card is unique and validated
+        reg_data['card_fingerprint'] = fingerprint
+        reg_data['stripe_payment_method_id'] = card_info.get('payment_method_id')
+        reg_data['card_verified'] = True
+        session['reg_data'] = reg_data
+
+        # Proceed to step 3: Email verification
+        email_code = str(secrets.randbelow(900000) + 100000)
+        session['reg_verification'] = {
+            'code': email_code,
+            'email': reg_data['client_email'],
+            'expires_at': time.time() + 600,
+            'attempts': 0
+        }
+
+        ok, err_email = send_verification_email(reg_data['client_email'], email_code)
+        if not ok:
+            current_app.logger.error(f"Failed to send email verification to {reg_data['client_email']}: {err_email}")
+            flash("Card verified! However, failed to send verification email. Please try again.", "error")
+            return redirect(url_for('client.verify_email'))
+
+        flash("Card verified successfully. A verification code has been sent to your email.", "success")
+        return redirect(url_for('client.verify_email'))
+
+    client_secret, customer_id, _ = create_setup_intent(
+        customer_name=reg_data.get('client_name'),
+        customer_email=reg_data.get('client_email')
+    )
+    if customer_id:
+        reg_data['stripe_customer_id'] = customer_id
+        session['reg_data'] = reg_data
+
+    return render_template(
+        'verify_card.html',
+        publishable_key=pub_key or 'pk_test_placeholder',
+        client_secret=client_secret or '',
+        is_mock_mode=mock_mode
+    )
+
+
+@client_bp.route('/resend-phone-otp', methods=['POST'])
+@limiter.limit("3 per minute")
+def resend_phone_otp():
+    phone_verif = session.get('reg_phone_verification')
+    reg_data = session.get('reg_data')
+    if not phone_verif or not reg_data:
+        return jsonify({"success": False, "message": "Session expired."}), 400
+
+    phone = phone_verif.get('phone')
+    new_code = str(secrets.randbelow(900000) + 100000)
+    phone_verif['code'] = new_code
+    phone_verif['expires_at'] = time.time() + 600
+    phone_verif['attempts'] = 0
+    session['reg_phone_verification'] = phone_verif
+
+    ok, err = send_whatsapp_otp(phone, new_code)
+    if not ok:
+        return jsonify({"success": False, "message": err or "Failed to resend code."}), 500
+
+    return jsonify({"success": True, "message": "Code sent via WhatsApp."}), 200
 
 
 @client_bp.route('/verify-email', methods=['GET', 'POST'])
@@ -288,6 +445,12 @@ def verify_email():
     if not verification or not reg_data:
         flash("Registration session expired or invalid. Please start again.", "error")
         return redirect(url_for('client.register'))
+
+    if not reg_data.get('phone_verified'):
+        return redirect(url_for('client.verify_phone'))
+
+    if not reg_data.get('card_verified'):
+        return redirect(url_for('client.verify_card'))
 
     if request.method == 'POST':
         entered_code = request.form.get('code', '').strip()

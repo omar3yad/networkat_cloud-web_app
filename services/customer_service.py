@@ -266,6 +266,17 @@ class CustomerService:
             client.billing_cycle = billing_cycle
             client.renewal_date = renewal_date
             client.subscription_status = 'active'
+            client.is_trial = data.get('is_trial', True)
+            if client.is_trial:
+                client.trial_started_at = datetime.utcnow()
+                client.trial_expires_at = datetime.utcnow() + timedelta(days=30)
+            client.phone_verified = data.get('phone_verified', False)
+            if data.get('card_fingerprint'):
+                client.card_fingerprint = data.get('card_fingerprint')
+            if data.get('stripe_customer_id'):
+                client.stripe_customer_id = data.get('stripe_customer_id')
+            if data.get('stripe_payment_method_id'):
+                client.stripe_payment_method_id = data.get('stripe_payment_method_id')
 
             # Initialize allowed_peers_count from custom override or plan default
             custom_peers = data.get('allowed_peers_count')

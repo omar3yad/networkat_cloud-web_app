@@ -33,10 +33,20 @@ def _client_row(customer_id: str) -> Optional[dict]:
         return None
     with SessionLocal() as db:
         row = db.execute(
-            text("SELECT netbird_group_id, subscription_status FROM clients WHERE user_id = :id"),
+            text("SELECT netbird_group_id, subscription_status, is_trial, subscription FROM clients WHERE user_id = :id"),
             {"id": customer_id},
         ).mappings().first()
     return dict(row) if row else None
+
+
+def is_paid_client(customer_id: str) -> bool:
+    """Returns True if customer has paid/active subscription (not a trial)."""
+    row = _client_row(customer_id)
+    if not row:
+        return False
+    if row.get("is_trial"):
+        return False
+    return row.get("subscription_status") in _WRITE_STATUSES
 
 
 def _group_peer_ids(group_id: str) -> frozenset:

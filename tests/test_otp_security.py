@@ -31,7 +31,9 @@ class TestOtpSecurity(unittest.TestCase):
                 'client_email': 'newuser@example.com',
                 'client_phone_number': '+1234567890',
                 'client_country': None,
-                'subscription': 'basic'
+                'subscription': 'basic',
+                'phone_verified': True,
+                'card_verified': True
             }
             sess['reg_verification'] = {
                 'code': '654321',

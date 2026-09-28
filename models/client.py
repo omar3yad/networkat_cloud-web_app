@@ -137,6 +137,55 @@ class Client(BaseModel):
         default=datetime.utcnow
     )
 
+    # --- Anti-Abuse, Trial & Payment Fields ---
+    is_trial = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    trial_started_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
+    trial_expires_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
+    mpls_activated_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
+    mpls_trial_expires_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=True
+    )
+
+    phone_verified = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False
+    )
+
+    card_fingerprint = db.Column(
+        db.String(128),
+        nullable=True,
+        unique=True
+    )
+
+    stripe_customer_id = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
+    stripe_payment_method_id = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
     # --- Relationships ---
     plan = db.relationship(
         "SubscriptionPlan",
@@ -174,6 +223,34 @@ class Client(BaseModel):
     def can_add_peers(self):
         """Returns True only if subscription is strictly active (not in grace_period, limit_control, or inactive)."""
         return bool(self.active and self.subscription_status == "active")
+
+    @property
+    def is_paid(self):
+        """Returns True if client is a paid subscriber (not in trial)."""
+        return bool(not self.is_trial and self.subscription_status in ("active", "grace_period"))
+
+    @property
+    def is_mpls_allowed(self):
+        """Returns True if client is paid or within the 3-day MPLS trial."""
+        if self.is_paid:
+            return True
+        if self.mpls_trial_expires_at is None:
+            return True
+        now = datetime.utcnow()
+        exp = self.mpls_trial_expires_at.replace(tzinfo=None) if hasattr(self.mpls_trial_expires_at, 'tzinfo') and self.mpls_trial_expires_at and self.mpls_trial_expires_at.tzinfo else self.mpls_trial_expires_at
+        return now < exp
+
+    @property
+    def mpls_days_remaining(self):
+        """Returns remaining days in MPLS trial, or None if paid/unlimited."""
+        if self.is_paid:
+            return None
+        if not self.mpls_trial_expires_at:
+            return 3
+        now = datetime.utcnow()
+        exp = self.mpls_trial_expires_at.replace(tzinfo=None) if hasattr(self.mpls_trial_expires_at, 'tzinfo') and self.mpls_trial_expires_at and self.mpls_trial_expires_at.tzinfo else self.mpls_trial_expires_at
+        diff = (exp - now).total_seconds()
+        return max(0, int(diff // 86400) + 1) if diff > 0 else 0
 
     # --- Subscription Limit Column & Source of Truth ---
     _allowed_peers_count = db.Column(
