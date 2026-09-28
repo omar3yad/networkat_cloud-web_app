@@ -63,7 +63,7 @@
     function add(entries) {
         const fresh = new Set();
         entries.forEach((e) => {
-            if (!e || typeof e.id !== 'number' || S.ids.has(e.id)) return;
+            if (!e || typeof e.id !== 'number' || S.ids.has(e.id) || e.code === 'paid_only' || e.code === 'premium_only') return;
             S.ids.add(e.id);
             S.rows.push(e);
             fresh.add(e.id);
@@ -86,13 +86,14 @@
             S.topId = 0;
             S.isGated = !!data.is_gated;
             (data.entries || []).forEach((e) => {
+                if (e.code === 'paid_only' || e.code === 'premium_only') return;
                 S.rows.push(e);
                 S.ids.add(e.id);
                 if (e.id > S.topId) S.topId = e.id;
             });
             S.rows.sort((a, b) => b.id - a.id);
-            if (S.isGated && S.rows.length > 3) {
-                S.rows = S.rows.slice(0, 3);
+            if (S.rows.length > LIMIT) {
+                S.rows = S.rows.slice(0, LIMIT);
             }
             render(null);
             S.ready = true;

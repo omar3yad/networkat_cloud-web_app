@@ -24,6 +24,7 @@ from fastapi_app.schemas.client.system_logs import (
     LogServiceUpdate,
 )
 from fastapi_app.services.client import system_logs_service
+from services.settings_service import settings as app_settings
 
 router = APIRouter(prefix="/api/v2/client/peers/{peer_id}/logs/system", tags=["Client system logs"])
 
@@ -47,21 +48,22 @@ def list_logs(
                "until": until, "q": q, "limit": limit, "before_id": before_id, "after_id": after_id}
     res = system_logs_service.list_logs(peer, filters)
 
-    # Feature Gating: 3 logs only for trial / unpaid users
+    # Feature Gating: configurable log limit for trial / unpaid users
+    trial_log_limit = app_settings.get_int("trial.log_limit", default=3)
     if not is_paid_client(session.customer_id):
         entries = res.get("entries") or []
         res["is_gated"] = True
-        if len(entries) > 3:
-            res["gated_count"] = len(entries) - 3
+        if len(entries) > trial_log_limit:
+            res["gated_count"] = len(entries) - trial_log_limit
             masked_entries = []
             for idx, entry in enumerate(entries):
-                if idx < 3:
+                if idx < trial_log_limit:
                     masked_entries.append(entry)
                 else:
                     gated_entry = dict(entry)
-                    gated_entry["message"] = "Available with Premium plan"
+                    gated_entry["message"] = "Available on paid plans"
                     gated_entry["data"] = None
-                    gated_entry["code"] = "premium_only"
+                    gated_entry["code"] = "paid_only"
                     masked_entries.append(gated_entry)
             res["entries"] = masked_entries
         else:
@@ -85,14 +87,15 @@ async def stream_logs(
     filters = {"category": category, "level": level.value if level else None, "q": q}
     raw_entries = await system_logs_service.open_stream(peer, filters, last_event_id)
     is_paid = is_paid_client(session.customer_id)
+    trial_log_limit = app_settings.get_int("trial.log_limit", default=3)
 
     async def _gated_stream():
         count = 0
         async for chunk in raw_entries:
             if not is_paid and chunk.startswith(b"data:"):
                 count += 1
-                if count > 3:
-                    yield b"event: gated\ndata: {\"code\":\"premium_only\",\"message\":\"Streaming limited on trial accounts\"}\n\n"
+                if count > trial_log_limit:
+                    yield b"event: gated\ndata: {\"code\":\"paid_only\",\"message\":\"Available on paid plans\"}\n\n"
                     break
             yield chunk
 

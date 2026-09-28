@@ -246,7 +246,11 @@ class Client(BaseModel):
         if self.is_paid:
             return None
         if not self.mpls_trial_expires_at:
-            return 3
+            try:
+                from services.settings_service import settings as app_settings
+                return app_settings.get_int("trial.mpls_days", default=3)
+            except Exception:
+                return 3
         now = datetime.utcnow()
         exp = self.mpls_trial_expires_at.replace(tzinfo=None) if hasattr(self.mpls_trial_expires_at, 'tzinfo') and self.mpls_trial_expires_at and self.mpls_trial_expires_at.tzinfo else self.mpls_trial_expires_at
         diff = (exp - now).total_seconds()

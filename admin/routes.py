@@ -658,6 +658,47 @@ def send_customer_renewal_reminder(customer_id):
 # ----------------------------------------------------------------------
 # Staff / Employees Management Routes & APIs
 # ----------------------------------------------------------------------
+# System Settings (Feature Flags & Limits)
+# ----------------------------------------------------------------------
+
+@admin_bp.route('/settings')
+@admin_required
+def system_settings():
+    from services.settings_service import settings as app_settings
+    from models.system_setting import SystemSetting
+    by_category = app_settings.all_by_category()
+    return render_template('settings.html', settings_by_category=by_category)
+
+
+@admin_bp.route('/api/settings', methods=['PATCH', 'POST'])
+@admin_required
+def update_settings():
+    from services.settings_service import settings as app_settings
+    data = request.get_json() or {}
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+    actor = session.get('admin_username', 'admin')
+    try:
+        app_settings.set_many(data, updated_by=actor)
+        return jsonify({'success': True})
+    except Exception as exc:
+        current_app.logger.error("Settings update error: %s", exc)
+        return jsonify({'success': False, 'error': 'Update failed'}), 500
+
+
+@admin_bp.route('/api/settings/<string:key>', methods=['GET'])
+@login_required
+def get_setting(key):
+    from services.settings_service import settings as app_settings
+    val = app_settings.get(key)
+    if val is None:
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+    return jsonify({'success': True, 'key': key, 'value': val})
+
+
+# ----------------------------------------------------------------------
+# Staff Management
+# ----------------------------------------------------------------------
 
 @admin_bp.route('/staff')
 @admin_required

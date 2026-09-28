@@ -190,8 +190,10 @@ def proxy_post_route():
             }), 403
 
         if customer.is_trial and not customer.mpls_activated_at:
+            from services.settings_service import settings as app_settings
+            mpls_days = app_settings.get_int("trial.mpls_days", default=3)
             customer.mpls_activated_at = datetime.utcnow()
-            customer.mpls_trial_expires_at = datetime.utcnow() + timedelta(days=3)
+            customer.mpls_trial_expires_at = datetime.utcnow() + timedelta(days=mpls_days)
             db.session.commit()
 
         # Validate network format and duplicate subnet

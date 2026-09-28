@@ -706,7 +706,8 @@
     justify-content: space-between;
     gap: 1rem;
     padding: 0.9rem 1.25rem;
-    margin-top: 1rem;
+    margin-top: 0;
+    margin-bottom: 1.25rem;
     background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
     border: 1px dashed #93c5fd;
     border-radius: 10px;

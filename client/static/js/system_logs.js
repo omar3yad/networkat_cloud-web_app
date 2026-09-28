@@ -126,13 +126,13 @@
     // ── Rows ─────────────────────────────────────────────────────────────────
 
     function rowHtml(e) {
-        const isGated = e.code === 'premium_only';
+        const isGated = e.code === 'paid_only' || e.code === 'premium_only';
         if (isGated) {
             return `<tr class="sl-row sl-row-gated" data-id="${e.id}">` +
                 `<td class="sl-col-time" title="${E.esc(E.fullTime(e.time))}">${E.esc(E.shortTime(e.time))}</td>` +
-                `<td class="sl-col-level"><span class="sl-premium-badge"><i class="fas fa-crown"></i> Premium Only</span></td>` +
+                `<td class="sl-col-level"><span class="sl-premium-badge"><i class="fas fa-lock"></i> Paid plan</span></td>` +
                 `<td class="sl-col-cat"><i class="fas fa-lock"></i> System</td>` +
-                `<td class="sl-msg"><i class="fas fa-lock" style="margin-right:0.35rem; color:#b45309;"></i> Available with Premium plan</td>` +
+                `<td class="sl-msg"><i class="fas fa-lock" style="margin-right:0.35rem; color:#b45309;"></i> Available on paid plans</td>` +
                 `<td class="sl-col-by">&mdash;</td>` +
                 `</tr>`;
         }
@@ -151,6 +151,7 @@
     function renderRows() {
         const body = $('sl-rows');
         body.innerHTML = S.rows.map(rowHtml).join('');
+        const bannerArea = $('sl-banner-area');
         const existingBanner = $('sl-premium-banner');
         if (S.rows.length) {
             $('sl-table').hidden = false;
@@ -161,11 +162,15 @@
                     banner.id = 'sl-premium-banner';
                     banner.className = 'sl-premium-banner';
                     banner.innerHTML = `<div class="sl-premium-banner-left">` +
-                        `<i class="fas fa-crown" style="color:#d97706;"></i>` +
-                        `<span>Showing latest 3 records on trial account. Upgrade to view complete logs history.</span>` +
+                        `<i class="fas fa-lock" style="color:#2563eb;"></i>` +
+                        `<span>To view all logs, upgrade to a paid plan</span>` +
                         `</div>` +
-                        `<a href="/contact" class="sl-premium-btn">Upgrade Plan</a>`;
-                    $('sl-table-wrap').appendChild(banner);
+                        `<a href="/contact" class="sl-premium-btn"><i class="fas fa-arrow-up-right-from-square"></i> Upgrade plan</a>`;
+                    if (bannerArea) {
+                        bannerArea.appendChild(banner);
+                    } else {
+                        $('sl-table-wrap').prepend(banner);
+                    }
                 }
             } else if (existingBanner) {
                 existingBanner.remove();

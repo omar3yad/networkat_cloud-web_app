@@ -86,9 +86,9 @@ class TestFeatureGating:
             assert res["entries"][1]["message"] == "Log msg 2"
             assert res["entries"][2]["message"] == "Log msg 3"
             # Entries 4 and 5 are masked
-            assert res["entries"][3]["code"] == "premium_only"
-            assert res["entries"][3]["message"] == "Available with Premium plan"
-            assert res["entries"][4]["code"] == "premium_only"
+            assert res["entries"][3]["code"] == "paid_only"
+            assert res["entries"][3]["message"] == "Available on paid plans"
+            assert res["entries"][4]["code"] == "paid_only"
 
             # 2. Paid client
             mock_paid.return_value = True
