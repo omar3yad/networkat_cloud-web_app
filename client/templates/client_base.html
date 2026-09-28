@@ -87,7 +87,7 @@
                                     {% set is_current_peer = (peer_id is defined and peer_id == p.id) or (selected_peer_id is defined and selected_peer_id == p.id) %}
                                     {% if admin_view %}
                                         {% if is_current_peer %}
-                                            {% if request.endpoint == 'admin.admin_view_peer_details' %}
+                                            {% if request.endpoint in ['admin.admin_view_peer_details', 'admin.admin_view_peer_system_logs'] %}
                                                 {% set target_url = 'javascript:void(0);' %}
                                                 {% set click_handler = 'onclick="event.preventDefault();"' %}
                                             {% else %}
@@ -96,7 +96,9 @@
                                             {% endif %}
                                         {% else %}
                                             {% set click_handler = '' %}
-                                            {% if p.connected %}
+                                            {% if request.endpoint == 'admin.admin_view_peer_system_logs' %}
+                                                {% set target_url = url_for('admin.admin_view_peer_system_logs', customer_id=admin_customer_id, peer_id=p.id) %}
+                                            {% elif p.connected %}
                                                 {% if request.endpoint == 'admin.admin_view_peer_web_filter' %}
                                                     {% set target_url = url_for('admin.admin_view_peer_web_filter', customer_id=admin_customer_id, peer_id=p.id) %}
                                                 {% elif request.endpoint == 'admin.admin_view_peer_firewall' %}

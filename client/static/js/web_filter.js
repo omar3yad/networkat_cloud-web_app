@@ -208,7 +208,11 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             const tdActions = document.createElement('td');
             tdActions.className = 'cell-actions';
             if (_adminView) {
-                tdActions.innerHTML = `<span style="opacity: 0.4;">—</span>`;
+                tdActions.innerHTML = `
+                    <button class="btn-icon-action" onclick="openViewRuleModal('${rule.id}')" title="View details" style="color: var(--nk-blue-primary, #0078d4);">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                `;
             } else {
                 tdActions.innerHTML = `
                     <button class="btn-icon-action" onclick="openEditRuleModal('${rule.id}')" title="Edit rule">
@@ -456,10 +460,51 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
         document.getElementById('ruleModal').classList.add('active');
     }
 
+    function openViewRuleModal(ruleId) {
+        const rule = currentRules.find(r => r.id === ruleId);
+        if (!rule) return;
+
+        editingRuleId = ruleId;
+        clearAllFieldErrors();
+
+        document.getElementById('ruleModalTitle').textContent = 'Rule details';
+        const submitBtn = document.getElementById('btn-submit-rule');
+        if (submitBtn) submitBtn.style.display = 'none';
+
+        const commentVal = rule.comment || '';
+        document.getElementById('ruleComment').value = commentVal;
+        const commentCounter = document.getElementById('ruleComment-counter');
+        if (commentCounter) {
+            commentCounter.textContent = `${commentVal.length} / 200`;
+            commentCounter.className = 'char-counter';
+        }
+
+        document.getElementById('ruleSrc').value = (rule.src || []).map(s => resolveAliasIdToName(s)).join(', ');
+        document.getElementById('ruleDomains').value = (rule.domains || []).map(d => resolveAliasIdToName(d)).join(', ');
+        updateAddressMultiBtnState('ruleSrc');
+
+        const form = document.getElementById('ruleForm');
+        if (form) {
+            form.querySelectorAll('input, select, textarea').forEach(el => {
+                el.disabled = true;
+            });
+        }
+
+        document.getElementById('ruleModal').classList.add('active');
+    }
+
     function closeRuleModal() {
         document.getElementById('ruleModal').classList.remove('active');
         clearAllFieldErrors();
         document.querySelectorAll('.custom-autocomplete-dropdown').forEach(d => d.style.display = 'none');
+        const form = document.getElementById('ruleForm');
+        if (form) {
+            form.querySelectorAll('input, select, textarea').forEach(el => {
+                el.disabled = false;
+            });
+        }
+        const submitBtn = document.getElementById('btn-submit-rule');
+        if (submitBtn) submitBtn.style.display = '';
     }
 
     // =========================================================================

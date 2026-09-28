@@ -125,9 +125,9 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             tdSlug.className = 'cell-name';
             tdSlug.style.fontWeight = '700';
             const items = list.list || [];
-            const countClickAttr = _adminView ? '' : `onclick="openEditListModal('${list.slug}')"`;
-            const countStyle = _adminView ? 'style="cursor: default;"' : '';
-            const countTitle = _adminView ? 'Items count' : 'Click to Edit Alias';
+            const countClickAttr = _adminView ? `onclick="openViewListModal('${list.slug}')"` : `onclick="openEditListModal('${list.slug}')"`;
+            const countStyle = '';
+            const countTitle = _adminView ? 'View details' : 'Click to edit alias';
             tdSlug.innerHTML = `
                 <div class="alias-name-wrapper">
                     <span class="alias-name-text">${list.name || list.slug}</span>
@@ -194,7 +194,13 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             tdActions.style.textAlign = 'center';
 
             if (_adminView) {
-                tdActions.innerHTML = `<span style="opacity: 0.4;">—</span>`;
+                tdActions.innerHTML = `
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                        <button class="btn-delete btn-edit-action" onclick="openViewListModal('${list.slug}')" title="View details" style="color: var(--nk-blue-primary, #0078d4);">
+                            <i class="far fa-eye"></i>
+                        </button>
+                    </div>
+                `;
             } else {
                 const disabledAttr = !isPeerOnline ? 'disabled' : '';
                 const peerName = currentPeerName;
@@ -380,9 +386,72 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
         }
     }
 
+    function openViewListModal(slug) {
+        const listObj = cachedAddressLists.find(l => l.slug === slug);
+        if (!listObj) return;
+
+        document.getElementById('listModalTitle').textContent = 'Alias details';
+        document.getElementById('listActionType').value = 'view';
+        const submitBtn = document.getElementById('btn-submit-list');
+        if (submitBtn) submitBtn.style.display = 'none';
+
+        const addRowBtn = document.getElementById('btn-add-item-row') || document.querySelector('.btn-add-addr');
+        if (addRowBtn) addRowBtn.style.display = 'none';
+
+        clearAllFieldErrors();
+
+        const nameVal = listObj.name || slug;
+        document.getElementById('listSlug').value = nameVal;
+        document.getElementById('listSlug').disabled = true;
+        const slugCounter = document.getElementById('listSlug-counter');
+        if (slugCounter) {
+            slugCounter.textContent = `${nameVal.length} / 200`;
+            slugCounter.className = 'char-counter';
+        }
+
+        const commentVal = listObj.comment || '';
+        document.getElementById('listComment').value = commentVal;
+        document.getElementById('listComment').disabled = true;
+        const commentCounter = document.getElementById('listComment-counter');
+        if (commentCounter) {
+            commentCounter.textContent = `${commentVal.length} / 200`;
+            commentCounter.className = 'char-counter';
+        }
+
+        document.getElementById('listType').value = listObj.type || 'normal';
+        document.getElementById('listType').disabled = true;
+
+        const container = document.getElementById('address-rows-container');
+        container.innerHTML = '';
+
+        if (listObj.list && listObj.list.length > 0) {
+            listObj.list.forEach(item => {
+                const val = item.address || item.hostname || item.domain || '';
+                addAddressRow(val, item.comment || '');
+            });
+        } else {
+            addAddressRow();
+        }
+
+        container.querySelectorAll('input').forEach(input => input.disabled = true);
+        container.querySelectorAll('.btn-delete').forEach(btn => btn.style.display = 'none');
+
+        document.getElementById('listModal').classList.add('active');
+    }
+
     function closeListModal() {
         document.getElementById('listModal').classList.remove('active');
         clearAllFieldErrors();
+        const submitBtn = document.getElementById('btn-submit-list');
+        if (submitBtn) submitBtn.style.display = '';
+        const addRowBtn = document.getElementById('btn-add-item-row') || document.querySelector('.btn-add-addr');
+        if (addRowBtn) addRowBtn.style.display = '';
+        const slugInput = document.getElementById('listSlug');
+        if (slugInput) slugInput.disabled = false;
+        const commentInput = document.getElementById('listComment');
+        if (commentInput) commentInput.disabled = false;
+        const typeSelect = document.getElementById('listType');
+        if (typeSelect) typeSelect.disabled = false;
     }
 
     // =========================================================================
@@ -1052,12 +1121,27 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
             addLocalDnsRow();
         }
 
+        if (_adminView) {
+            const btnSubmit = document.getElementById('btn-submit-resolver');
+            if (btnSubmit) btnSubmit.style.display = 'none';
+            const btnAdd = document.getElementById('btn-add-dns-row');
+            if (btnAdd) btnAdd.style.display = 'none';
+            container.querySelectorAll('input').forEach(i => i.disabled = true);
+            container.querySelectorAll('.btn-delete, button').forEach(b => {
+                if (b.closest('.local-dns-row')) b.style.display = 'none';
+            });
+        }
+
         document.getElementById('resolverModal').classList.add('active');
     }
 
     function closeResolverModal() {
         document.getElementById('resolverModal').classList.remove('active');
         clearAllFieldErrors();
+        const btnSubmit = document.getElementById('btn-submit-resolver');
+        if (btnSubmit) btnSubmit.style.display = '';
+        const btnAdd = document.getElementById('btn-add-dns-row');
+        if (btnAdd) btnAdd.style.display = '';
     }
 
     async function submitResolverConfig(e) {

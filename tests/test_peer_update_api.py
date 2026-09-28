@@ -115,6 +115,7 @@ class TestPeerUpdateApi(unittest.TestCase):
         mock_requests_post.assert_called_once_with(
             "http://100.64.0.10:8765/update",
             json={},
+            headers={"X-Networkat-Actor": "client"},
             timeout=(2, 180)
         )
 
@@ -221,6 +222,7 @@ class TestPeerUpdateApi(unittest.TestCase):
         mock_requests_put.assert_called_once_with(
             "http://100.64.0.10:8765/update/config",
             json={"auto_update_enabled": True, "update_check_interval_seconds": 21600},
+            headers={"X-Networkat-Actor": "client"},
             timeout=(2, 10)
         )
 

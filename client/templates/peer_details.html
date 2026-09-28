@@ -4,7 +4,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/peer_details.css') }}">
-{% if not admin_view %}<link rel="stylesheet" href="{{ url_for('static', filename='css/system_logs.css') }}">{% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/system_logs.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -275,7 +275,6 @@
             </div>
 
             <!-- System logs: last 5 from the peer's system logs, live (peer_system_logs_widget.js) -->
-            {% if not admin_view %}
             <div class="sl-widget" id="sl-widget" data-peer-id="{{ peer_id }}"
                 data-peer-online="{{ 'true' if is_online else 'false' }}" style="margin-top: 2rem;">
                 <h3 class="card-title sl-widget-title">
@@ -284,7 +283,11 @@
                         <span class="sl-live" id="sl-live" data-state="connecting" title="Live updates" hidden>
                             <span class="sl-live-dot"></span><span id="sl-live-text">Connecting</span>
                         </span>
+                        {% if admin_view %}
+                        <a href="{{ url_for('admin.admin_view_peer_system_logs', customer_id=admin_customer_id, peer_id=peer_id, name=peer_name) }}" class="sl-view-all">View all &rarr;</a>
+                        {% else %}
                         <a href="{{ url_for('client.peer_system_logs', peer_id=peer_id, name=peer_name) }}" class="sl-view-all">View all &rarr;</a>
+                        {% endif %}
                     </span>
                 </h3>
                 <ul class="sl-widget-list" id="sl-widget-list" hidden></ul>
@@ -293,27 +296,6 @@
                     <span class="sl-state-title">Loading</span>
                 </div>
             </div>
-            {% else %}
-            <div class="under-dev-section" style="margin-top: 2rem;">
-                <h3 class="card-title">
-                    <i class="fas fa-list-ul"></i> System logs
-                </h3>
-                <div class="under-dev-wrapper">
-                    <div class="under-dev-overlay">
-                        <div class="under-dev-badge">
-                            <i class="fas fa-tools"></i>
-                            <span>under development</span>
-                        </div>
-                    </div>
-                    <div class="under-dev-content">
-                        <div class="graph-placeholder" style="height: 140px; border-style: dotted;">
-                            <i class="fas fa-file-alt fa-2x" style="opacity: 0.3;"></i>
-                            <span style="font-size: 0.85rem;">No recent log events reported from agent.</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
         </div>
 
         <!-- Service Settings Modal -->
@@ -530,10 +512,8 @@
 
     {% block extra_scripts %}
     <script src="{{ url_for('static', filename='js/peer_details.js') }}"></script>
-    {% if not admin_view %}
     <script src="{{ url_for('static', filename='js/system_logs_common.js') }}"></script>
     <script src="{{ url_for('static', filename='js/peer_system_logs_widget.js') }}"></script>
-    {% endif %}
     <script>
         window.API_BASE = {{ (api_base or '')| tojson }};
         window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};

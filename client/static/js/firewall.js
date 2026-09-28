@@ -149,10 +149,71 @@ function openEditModal(ruleId) {
     document.getElementById('addModal').classList.add('active');
 }
 
+function openViewRuleModal(ruleId) {
+    const rule = currentRules.find(r => r.id === ruleId);
+    if (!rule) return;
+
+    editingRuleId = ruleId;
+    const form = document.getElementById('addRuleForm');
+    if (form) form.reset();
+    clearAllFieldErrors();
+
+    // Populate form
+    const commentVal = rule.rule_name || '';
+    document.getElementById('ruleName').value = commentVal;
+    const charCounter = document.getElementById('ruleName-counter');
+    if (charCounter) {
+        const len = commentVal.length;
+        charCounter.textContent = `${len} / 200`;
+        charCounter.className = 'char-counter';
+    }
+
+    const actLower = (rule.action || '').toLowerCase();
+    document.getElementById('ruleAction').value = (actLower === 'accept' || actLower === 'allow') ? 'accept' : 'drop';
+    document.getElementById('ruleProtocol').value = rule.protocol || 'any';
+    document.getElementById('ruleInterface').value = rule.interface || 'lan';
+    document.getElementById('srcIp').value = rule.src_ip === 'Any' ? '' : resolveAliasIdToName(rule.src_ip || '');
+    document.getElementById('dstIp').value = rule.dst_ip === 'Any' ? '' : resolveAliasIdToName(rule.dst_ip || '');
+    document.getElementById('srcPort').value = rule.src_port || '';
+    document.getElementById('dstPort').value = rule.dst_port || '';
+
+    toggleProtocolFields();
+
+    updateAddressMultiBtnState('srcIp');
+    updateAddressMultiBtnState('dstIp');
+
+    // Disable all inputs in form for view mode
+    if (form) {
+        form.querySelectorAll('input, select, textarea').forEach(el => {
+            el.disabled = true;
+        });
+    }
+
+    // Update modal title and hide submit button
+    const titleEl = document.querySelector('#addModal h2');
+    if (titleEl) titleEl.textContent = 'Rule details';
+    const submitBtn = document.getElementById('btn-submit-rule');
+    if (submitBtn) submitBtn.style.display = 'none';
+
+    // Hide Place Before row
+    const orderRow = document.getElementById('place-before-row');
+    if (orderRow) orderRow.style.display = 'none';
+
+    document.getElementById('addModal').classList.add('active');
+}
+
 function closeAddModal() {
     document.getElementById('addModal').classList.remove('active');
     editingRuleId = null;
     clearAllFieldErrors();
+    const form = document.getElementById('addRuleForm');
+    if (form) {
+        form.querySelectorAll('input, select, textarea').forEach(el => {
+            el.disabled = false;
+        });
+    }
+    const submitBtn = document.getElementById('btn-submit-rule');
+    if (submitBtn) submitBtn.style.display = '';
 }
 
 let lastFirewallManualRefreshTime = 0;
@@ -496,7 +557,13 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         tdActions.style.textAlign = 'center';
 
         if (_adminView) {
-            tdActions.innerHTML = `<span style="opacity: 0.4;">—</span>`;
+            tdActions.innerHTML = `
+                <div style="display: inline-flex; align-items: center; justify-content: center;">
+                    <button class="btn-delete" onclick="openViewRuleModal(${rule.id})" title="View details" style="color: var(--nk-blue-primary, #0078d4);">
+                        <i class="far fa-eye" style="font-size: 16px;"></i>
+                    </button>
+                </div>
+            `;
         } else {
             tdActions.innerHTML = `
                     <div style="display: inline-flex; align-items: center; justify-content: center;">

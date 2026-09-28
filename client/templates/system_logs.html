@@ -9,13 +9,32 @@
 
 {% block content %}
 {% set ns = namespace(name=request.args.get('name') or 'Device') %}{% for p in (sidebar_peers or []) if p.id == peer_id %}{% set ns.name = p.name %}{% endfor %}
+{% if admin_view %}
+<div
+    style="display:flex;align-items:center;gap:0.75rem;background: #f1f5f9;padding:0.6rem 1.1rem;margin-bottom:1.25rem;font-size:0.82rem;border-bottom: 1px solid var(--sb-border);">
+    <span
+        style="background: #0284c7;color:#fff;border-radius:6px;padding:0.2rem 0.6rem;font-weight:600;letter-spacing:.04em;">Admin
+        View</span>
+    <span style="color:#000000;">Viewing <strong style="color:#0284c7;">{{ customer_name }}</strong> &mdash;
+        read-only</span>
+    <a href="{{ url_for('admin.customer_details', customer_id=admin_customer_id) }}"
+        style="margin-left:auto;color:#818cf8;text-decoration:none;font-weight:500;"><i class="fas fa-arrow-left"
+            style="margin-right:0.3rem;"></i>Back to Customer</a>
+</div>
+{% endif %}
 <div class="details-container sl-page" id="system-logs-page" data-peer-id="{{ peer_id }}"
-    data-details-url="{{ url_for('client.peer_details', peer_id=peer_id) }}"
-    data-readonly="{{ 'true' if is_readonly_subscription else 'false' }}">
+    data-details-url="{{ url_for('admin.admin_view_peer_details', customer_id=admin_customer_id, peer_id=peer_id) if admin_view else url_for('client.peer_details', peer_id=peer_id) }}"
+    data-readonly="{{ 'true' if (is_readonly_subscription or admin_view) else 'false' }}">
 
+    {% if admin_view %}
+    <a href="{{ url_for('admin.admin_view_peer_details', customer_id=admin_customer_id, peer_id=peer_id) }}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to {{ ns.name }}
+    </a>
+    {% else %}
     <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link">
         <i class="fas fa-arrow-left"></i> Back to {{ ns.name }}
     </a>
+    {% endif %}
 
     <div class="header-section sl-header">
         <div class="title-area">
@@ -165,6 +184,10 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+    window.API_BASE = {{ (api_base or '')|tojson }};
+    window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};
+</script>
 <script src="{{ url_for('static', filename='js/system_logs_common.js') }}"></script>
 <script src="{{ url_for('static', filename='js/system_logs.js') }}"></script>
 {% endblock %}

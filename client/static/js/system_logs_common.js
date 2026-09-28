@@ -55,6 +55,10 @@
     }
 
     function base(peerId) {
+        const apiBase = window.API_BASE || '';
+        if (apiBase) {
+            return `${apiBase}/api/peers/${encodeURIComponent(peerId)}/logs/system`;
+        }
         return `/api/v2/client/peers/${encodeURIComponent(peerId)}/logs/system`;
     }
 

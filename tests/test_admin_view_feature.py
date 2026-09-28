@@ -184,8 +184,26 @@ def test_template_rendering_admin_view(admin_app):
         assert 'sidebar-peer-test-peer-123' in html4
         assert 'sidebar-peer-test-peer-456' in html4
 
+        # 5. System logs
+        html5 = render_template(
+            'system_logs.html',
+            customer_name='Acme Corp',
+            peer_id='test-peer-123',
+            is_readonly_subscription=True,
+            admin_view=True,
+            admin_customer_id='00000000-0000-0000-0000-000000000001',
+            api_base='/admin/view/00000000-0000-0000-0000-000000000001',
+            sidebar_peers=sidebar_peers_data,
+            sidebar_online_count=1,
+            sidebar_offline_count=1,
+        )
+        assert 'Admin View' in html5
+        assert 'System logs' in html5
+        assert 'system-logs-page' in html5
+
+
 def test_template_rendering_client_view(client_app):
-    """Test that all 4 templates render without issues in standard client mode (admin_view=False)."""
+    """Test that all 5 templates render without issues in standard client mode (admin_view=False)."""
     with client_app.test_request_context():
         # 1. Peer Details
         html1 = render_template(
@@ -254,3 +272,16 @@ def test_template_rendering_client_view(client_app):
         )
         assert 'Admin View' not in html4
         assert 'id="add-list-btn"' in html4
+
+        # 5. System logs
+        html5 = render_template(
+            'system_logs.html',
+            customer_name='Acme Corp',
+            peer_id='test-peer-123',
+            is_readonly_subscription=False,
+            admin_view=False,
+            api_base='',
+        )
+        assert 'Admin View' not in html5
+        assert 'System logs' in html5
+

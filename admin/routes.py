@@ -6,7 +6,10 @@ import requests
 from datetime import datetime
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
+from flask import (
+    Blueprint, render_template, request, redirect, url_for, session,
+    flash, jsonify, current_app, Response, stream_with_context
+)
 
 from extensions import db, limiter
 from models import Client
@@ -1231,6 +1234,27 @@ def admin_view_peer_aliases(customer_id, peer_id=None):
     )
 
 
+@admin_bp.route('/admin/view/<uuid:customer_id>/peers/<peer_id>/logs/system')
+@login_required
+def admin_view_peer_system_logs(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        flash("Peer not found or does not belong to this customer.", "error")
+        return redirect(url_for('admin.customer_details', customer_id=customer_id))
+
+    return render_template(
+        'system_logs.html',
+        peer_id=peer_id,
+        customer_name=customer.client_name,
+        admin_view=True,
+        admin_customer_id=customer_id,
+        api_base=_admin_api_base(customer_id),
+        is_readonly_subscription=True,
+        **_admin_get_sidebar_context(customer_id),
+    )
+
+
 # ----------------------------------------------------------------------
 # Read-Only API Proxy Routes
 # ----------------------------------------------------------------------
@@ -1595,3 +1619,100 @@ def admin_view_api_peer_update_config(customer_id, peer_id):
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except Exception:
         return jsonify({"error": "Device unreachable"}), 503
+
+
+def _admin_system_logs_reply(resp):
+    """Relay an agent /logs/system reply; a 404 with no `code` means the agent has no such route."""
+    if resp.status_code == 404:
+        try:
+            body = resp.json()
+        except ValueError:
+            body = None
+        if not (isinstance(body, dict) and body.get("code")):
+            return jsonify({"detail": "Update device", "code": "unsupported"}), 501
+    return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/logs/system', methods=['GET'])
+@login_required
+def admin_view_api_peer_system_logs(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"detail": "Device unreachable", "code": "offline"}), 503
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/logs/system/client", params=request.args, timeout=(5, 20))
+        return _admin_system_logs_reply(resp)
+    except requests.RequestException:
+        return jsonify({"detail": "Device offline", "code": "offline"}), 503
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/logs/system/categories', methods=['GET'])
+@login_required
+def admin_view_api_peer_system_logs_categories(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"detail": "Device unreachable", "code": "offline"}), 503
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/logs/system/categories", params={"audience": "client"}, timeout=(5, 10))
+        return _admin_system_logs_reply(resp)
+    except requests.RequestException:
+        return jsonify({"detail": "Device offline", "code": "offline"}), 503
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/logs/system/config', methods=['GET'])
+@login_required
+def admin_view_api_peer_system_logs_config(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"detail": "Device unreachable", "code": "offline"}), 503
+    peer_ip = peer_data.get("ip")
+    try:
+        resp = requests.get(f"http://{peer_ip}:8765/logs/system/config", timeout=(5, 10))
+        return _admin_system_logs_reply(resp)
+    except requests.RequestException:
+        return jsonify({"detail": "Device offline", "code": "offline"}), 503
+
+
+@admin_bp.route('/admin/view/<uuid:customer_id>/api/peers/<peer_id>/logs/system/stream', methods=['GET'])
+@login_required
+def admin_view_api_peer_system_logs_stream(customer_id, peer_id):
+    customer_id = str(customer_id)
+    customer, peer_data = _admin_verify_peer(customer_id, peer_id)
+    if not customer:
+        return jsonify({"error": "Unauthorized"}), 403
+    if not peer_data or not peer_data.get("ip"):
+        return jsonify({"detail": "Device unreachable", "code": "offline"}), 503
+    peer_ip = peer_data.get("ip")
+
+    def generate():
+        try:
+            with requests.get(
+                f"http://{peer_ip}:8765/logs/system/client/stream",
+                params=request.args,
+                stream=True,
+                timeout=(5, 60),
+                headers={"Accept": "text/event-stream"}
+            ) as r:
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk:
+                        yield chunk
+        except Exception:
+            return
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
+
