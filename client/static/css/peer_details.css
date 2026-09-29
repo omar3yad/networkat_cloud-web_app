@@ -266,6 +266,7 @@
     background: #f8fafc;
     transition: var(--nk-transition);
     text-align: center;
+    position: relative;
 }
 
 .action-card i {
@@ -1245,7 +1246,7 @@ input:disabled + .slider {
     font-size: 0.72rem;
     cursor: pointer;
     position: relative;
-    top: -4px;
+    /* top: -4px; */
     margin-left: 4px;
     padding: 0;
     line-height: 1;
@@ -1259,6 +1260,7 @@ input:disabled + .slider {
     color: #b45309;
     transform: scale(1.15);
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.45);
+    font-size: 10px;
 }
 
 .version-update-lamp i {

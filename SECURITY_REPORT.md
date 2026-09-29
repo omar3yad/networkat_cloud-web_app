@@ -83,7 +83,7 @@ def hash_password(password):
 
 ### 6. كلمة مرور بريد إلكتروني حقيقية مكتوبة صراحة في الكود (في موضعين)
 ```python
-MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "bePositive\"2006\"")
+MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "****************")
 ```
 موجودة في **موضعين مستقلين**: `config/settings.py` و`utils/email.py:29` (نفس القيمة بالضبط، لمستخدم `no_reply@networkat.net`، `email.py:27`). كلمة مرور فعلية تبدو حقيقية (وليست placeholder) مستخدمة كقيمة احتياطية، متتبّعة في تاريخ git. أي شخص برؤية الكود أو تاريخ الـ commits يملك بيانات دخول هذا البريد.
 

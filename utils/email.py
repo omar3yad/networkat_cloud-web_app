@@ -26,7 +26,7 @@ def _get_smtp_config():
     if not smtp_username:
         smtp_username = os.getenv("MAIL_USERNAME", "no_reply@networkat.net")
     if not smtp_password:
-        smtp_password = os.getenv("MAIL_PASSWORD", "bePositive\"2006\"")
+        smtp_password = os.getenv("MAIL_PASSWORD")
 
     return smtp_server, smtp_port, smtp_username, smtp_password
 

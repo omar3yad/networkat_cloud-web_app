@@ -58,6 +58,7 @@ class SystemLogsResponse(BaseModel):
     last_id: Optional[int] = None
     is_gated: bool = False
     gated_count: int = 0
+    trial_log_limit: Optional[int] = None
 
 
 class LogCategoryConfigUpdate(BaseModel):

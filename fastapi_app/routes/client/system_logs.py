@@ -53,6 +53,7 @@ def list_logs(
     if not is_paid_client(session.customer_id):
         entries = res.get("entries") or []
         res["is_gated"] = True
+        res["trial_log_limit"] = trial_log_limit
         if len(entries) > trial_log_limit:
             res["gated_count"] = len(entries) - trial_log_limit
             masked_entries = []
@@ -71,6 +72,7 @@ def list_logs(
     else:
         res["is_gated"] = False
         res["gated_count"] = 0
+        res["trial_log_limit"] = None
 
     return res
 

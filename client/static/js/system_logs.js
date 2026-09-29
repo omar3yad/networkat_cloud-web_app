@@ -193,6 +193,23 @@
         S.rows.sort((a, b) => b.id - a.id);
     }
 
+    function enforceGating() {
+        if (!S.isGated) return;
+        const limit = S.trialLimit || 5;
+        let unmaskedCount = 0;
+        S.rows.forEach((r) => {
+            if (unmaskedCount < limit) {
+                if (r.code !== 'paid_only' && r.code !== 'premium_only') {
+                    unmaskedCount++;
+                }
+            } else {
+                r.code = 'paid_only';
+                r.message = 'Available on paid plans';
+                r.data = null;
+            }
+        });
+    }
+
     // One live entry: insert in place, flash it, bump its count.
     function onLiveEntry(e) {
         if (!e || typeof e.id !== 'number' || S.ids.has(e.id)) return;
@@ -205,15 +222,22 @@
             renderCounts();
         }
 
-        const body = $('sl-rows');
-        const idx = S.rows.indexOf(e);
-        const tpl = document.createElement('tbody');
-        tpl.innerHTML = rowHtml(e);
-        const tr = tpl.firstChild;
-        tr.classList.add('sl-row-new');
-        body.insertBefore(tr, body.children[idx] || null);
-        $('sl-table').hidden = false;
-        hideState();
+        if (S.isGated) {
+            enforceGating();
+            renderRows();
+            const firstRow = $('sl-rows')?.firstElementChild;
+            if (firstRow) firstRow.classList.add('sl-row-new');
+        } else {
+            const body = $('sl-rows');
+            const idx = S.rows.indexOf(e);
+            const tpl = document.createElement('tbody');
+            tpl.innerHTML = rowHtml(e);
+            const tr = tpl.firstChild;
+            tr.classList.add('sl-row-new');
+            body.insertBefore(tr, body.children[idx] || null);
+            $('sl-table').hidden = false;
+            hideState();
+        }
 
         if (isScrolledAway()) {
             S.pendingNew += 1;
@@ -288,6 +312,7 @@
             const data = await E.api.list(S.peerId, { ...filterParams(), limit: PAGE_SIZE });
             if (seq !== S.reloadSeq) return;
             S.isGated = !!data.is_gated;
+            S.trialLimit = data.trial_log_limit || 5;
             addEntries(data.entries || []);
             if (data.last_id && data.last_id > S.topId) S.topId = data.last_id;
             S.hasMore = !!(data.page && data.page.has_more);
