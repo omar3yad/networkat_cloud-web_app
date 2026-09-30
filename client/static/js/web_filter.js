@@ -1,7 +1,8 @@
 const _apiBase = (window.API_BASE || "");
 const _adminView = !!(window.ADMIN_VIEW);
+const _featureWebFilter = window.WEB_FILTER_CONFIG ? (window.WEB_FILTER_CONFIG.featureWebFilter !== false) : true;
 const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
-    const isPeerOnline = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.isOnline : false;
+const isPeerOnline = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.isOnline : false;
 
     let activeTab = 'rules';
     let currentRules = [];
@@ -153,14 +154,16 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             const tdCheck = document.createElement('td');
             tdCheck.className = 'cell-check';
             tdCheck.style.textAlign = 'center';
-            tdCheck.innerHTML = _adminView ? '' : `<input type="checkbox" class="rule-row-checkbox" data-rule-id="${rule.id}" onchange="onRuleCheckboxChange()">`;
+            const isGated = !_featureWebFilter;
+            const checkDisabled = isGated ? 'disabled' : '';
+            tdCheck.innerHTML = _adminView ? '' : `<input type="checkbox" class="rule-row-checkbox" data-rule-id="${rule.id}" onchange="onRuleCheckboxChange()" ${checkDisabled}>`;
             tr.appendChild(tdCheck);
 
             // 2. Drag Handle
             const tdDrag = document.createElement('td');
             tdDrag.className = 'cell-drag';
             tdDrag.style.textAlign = 'center';
-            tdDrag.innerHTML = _adminView ? '' : `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>`;
+            tdDrag.innerHTML = (_adminView || isGated) ? '' : `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>`;
             tr.appendChild(tdDrag);
 
             // 3. Source
@@ -196,9 +199,11 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
             tdEnabled.className = 'cell-enabled';
             tdEnabled.style.textAlign = 'center';
             const isChecked = rule.enabled ? 'checked' : '';
+            const toggleDisabled = (_adminView || isGated) ? 'disabled' : '';
+            const toggleTitle = isGated ? 'Available on paid plans' : (rule.enabled ? 'Disable rule' : 'Enable rule');
             tdEnabled.innerHTML = `
-                <label class="toggle-switch">
-                    <input type="checkbox" ${isChecked} ${_adminView ? 'disabled' : ''} onchange="toggleRuleStatus('${rule.id}', this)">
+                <label class="toggle-switch" title="${toggleTitle}">
+                    <input type="checkbox" ${isChecked} ${toggleDisabled} onchange="toggleRuleStatus('${rule.id}', this)">
                     <span class="slider"></span>
                 </label>
             `;
@@ -214,11 +219,14 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                     </button>
                 `;
             } else {
+                const editTitle = isGated ? 'Available on paid plans' : 'Edit rule';
+                const deleteTitle = isGated ? 'Available on paid plans' : 'Delete rule';
+                const actionsDisabled = isGated ? 'disabled' : '';
                 tdActions.innerHTML = `
-                    <button class="btn-icon-action" onclick="openEditRuleModal('${rule.id}')" title="Edit rule">
+                    <button class="btn-icon-action" onclick="openEditRuleModal('${rule.id}')" ${actionsDisabled} title="${editTitle}">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-icon-action btn-delete" onclick="deleteSingleRule('${rule.id}')" title="Delete rule">
+                    <button class="btn-icon-action btn-delete" onclick="deleteSingleRule('${rule.id}')" ${actionsDisabled} title="${deleteTitle}">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 `;
@@ -232,7 +240,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     }
 
     function initSortable() {
-        if (_adminView) return;
+        if (_adminView || !_featureWebFilter) return;
         const tbody = document.getElementById('rules-tbody');
         if (!tbody || typeof Sortable === 'undefined') return;
 
@@ -275,6 +283,11 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
     // Toggle Single Rule Status
     async function toggleRuleStatus(ruleId, checkbox) {
+        if (!_featureWebFilter && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            checkbox.checked = !checkbox.checked;
+            return;
+        }
         const action = checkbox.checked ? 'enable' : 'disable';
         checkbox.disabled = true;
 
@@ -300,6 +313,10 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
     // Delete Single Rule
     async function deleteSingleRule(ruleId) {
+        if (!_featureWebFilter && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
         const ok = await nkConfirm('Are you sure you want to delete this web filter rule?', 'Delete Rule');
         if (!ok) return;
 
@@ -360,6 +377,10 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     }
 
     async function applyBulkAction(action) {
+        if (!_featureWebFilter && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
         const checkboxes = document.querySelectorAll('.rule-row-checkbox:checked');
         const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-rule-id'));
         if (ids.length === 0) return;
@@ -416,6 +437,10 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     // --------------------------------------------------------------------------
 
     function openAddRuleModal() {
+        if (!_featureWebFilter && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
         editingRuleId = null;
         document.getElementById('ruleModalTitle').textContent = 'Add Rule';
         const submitBtn = document.getElementById('btn-submit-rule');
@@ -436,6 +461,10 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
     }
 
     function openEditRuleModal(ruleId) {
+        if (!_featureWebFilter && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
         const rule = currentRules.find(r => r.id === ruleId);
         if (!rule) return;
 
@@ -755,6 +784,10 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
 
     async function submitRuleForm(e) {
         e.preventDefault();
+        if (!_featureWebFilter && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
         clearAllFieldErrors();
 
         const btn = document.getElementById('btn-submit-rule');

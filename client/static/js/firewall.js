@@ -1,5 +1,6 @@
 const _apiBase = (window.API_BASE || '');
 const _adminView = !!(window.ADMIN_VIEW);
+const _featureFirewall = window.FIREWALL_CONFIG ? (window.FIREWALL_CONFIG.featureFirewall !== false) : true;
 const peerId = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerId : "";
 const peerName = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.peerName : "";
 let isPeerOnline = window.FIREWALL_CONFIG ? window.FIREWALL_CONFIG.isOnline : false;
@@ -73,6 +74,10 @@ let editingRuleId = null;
 // Open/Close modal functions
 function openAddModal() {
     if (!isPeerOnline) return;
+    if (!_featureFirewall && !_adminView) {
+        if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+        return;
+    }
     editingRuleId = null;
     document.getElementById('addRuleForm').reset();
     clearAllFieldErrors();
@@ -107,6 +112,10 @@ function openAddModal() {
 
 function openEditModal(ruleId) {
     if (!isPeerOnline) return;
+    if (!_featureFirewall && !_adminView) {
+        if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+        return;
+    }
     const rule = currentRules.find(r => r.id === ruleId);
     if (!rule) return;
 
@@ -409,14 +418,16 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         const tdCheck = document.createElement('td');
         tdCheck.className = 'cell-check';
         tdCheck.style.textAlign = 'center';
-        tdCheck.innerHTML = _adminView ? '' : `<input type="checkbox" class="rule-row-checkbox" data-rule-idx="${rule.id}" onchange="onRuleCheckboxChange()">`;
+        const isGated = !_featureFirewall;
+        const checkDisabled = isGated ? 'disabled' : '';
+        tdCheck.innerHTML = _adminView ? '' : `<input type="checkbox" class="rule-row-checkbox" data-rule-idx="${rule.id}" onchange="onRuleCheckboxChange()" ${checkDisabled}>`;
         tr.appendChild(tdCheck);
 
         // Drag handle column
         const tdDrag = document.createElement('td');
         tdDrag.className = 'cell-drag';
         tdDrag.style.textAlign = 'center';
-        tdDrag.innerHTML = (isPeerOnline && isAgentOnline && !_adminView) ? `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>` : '';
+        tdDrag.innerHTML = (isPeerOnline && isAgentOnline && !_adminView && !isGated) ? `<i class="fas fa-grip-vertical drag-handle" title="Drag to reorder"></i>` : '';
         tr.appendChild(tdDrag);
 
         // Order column
@@ -427,7 +438,7 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         tdOrder.style.color = 'var(--nk-blue-primary)';
         tdOrder.style.padding = '2px';
 
-        const isOrderEditable = isPeerOnline && isAgentOnline && !_adminView;
+        const isOrderEditable = isPeerOnline && isAgentOnline && !_adminView && !isGated;
         if (isOrderEditable) {
             const ruleIdx = rules.findIndex(r => r.id === rule.id);
             const isFirst = ruleIdx === 0;
@@ -531,7 +542,8 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
         // Status Toggle Switch
         const tdStatus = document.createElement('td');
         tdStatus.className = 'cell-enabled';
-        const disabledAttr = (!isPeerOnline || !isAgentOnline || _adminView) ? 'disabled' : '';
+        const isStatusDisabled = (!isPeerOnline || !isAgentOnline || _adminView || isGated);
+        const disabledAttr = isStatusDisabled ? 'disabled' : '';
         const checkedAttr = rule.enabled ? 'checked' : '';
 
         // Show warning icon if DB states it's enabled but agent says it's not active
@@ -565,12 +577,15 @@ function renderRulesTable(rules, isAgentOnline, options = {}) {
                 </div>
             `;
         } else {
+            const editTitle = isGated ? 'Available on paid plans' : 'Edit rule';
+            const deleteTitle = isGated ? 'Available on paid plans' : 'Delete rule';
+            const actionsDisabled = (!isPeerOnline || !isAgentOnline || isGated) ? 'disabled' : '';
             tdActions.innerHTML = `
                     <div style="display: inline-flex; align-items: center; justify-content: center;">
-                       <button class="btn-delete" onclick="openEditModal(${rule.id})" ${disabledAttr} title="Edit rule" style="color: var(--nk-text-muted); margin-right: 4px;">
+                       <button class="btn-delete" onclick="openEditModal(${rule.id})" ${actionsDisabled} title="${editTitle}" style="color: var(--nk-text-muted); margin-right: 4px;">
                             <i class="far fa-edit" style="font-size: 16px;"></i>
                         </button>
-                        <button class="btn-delete" onclick="deleteRule(${rule.id})" ${disabledAttr} title="Delete rule">
+                        <button class="btn-delete" onclick="deleteRule(${rule.id})" ${actionsDisabled} title="${deleteTitle}">
                             <i class="far fa-trash-alt" style="font-size: 16px;"></i>
                         </button>
                     </div>
@@ -659,6 +674,11 @@ function checkOrderChanges() {
 
 // Submit the reordered rules as a bulk POST
 async function submitReorder() {
+    if (!isPeerOnline) return;
+    if (!_featureFirewall && !_adminView) {
+        if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+        return;
+    }
     const banner = document.getElementById('banner-reorder');
     const items = currentRules.map((rule, idx) => ({
         id: rule.id,
@@ -1269,6 +1289,10 @@ function initFirewallLiveValidation() {
 // Add Rule Form Submit with Comprehensive Frontend Guard
 async function submitAddRule(e) {
     e.preventDefault();
+    if (!_featureFirewall && !_adminView) {
+        if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+        return;
+    }
     clearAllFieldErrors();
 
     const btnSubmit = document.getElementById('btn-submit-rule');
@@ -1462,6 +1486,11 @@ async function toggleVpnOnly(checkbox) {
 
 // Toggle rule active status
 async function toggleRule(ruleId, checkbox) {
+    if (!_featureFirewall && !_adminView) {
+        if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+        checkbox.checked = !checkbox.checked;
+        return;
+    }
     const spinner = document.getElementById(`spinner-${ruleId}`);
     checkbox.disabled = true;
     spinner.style.display = 'block';
@@ -1494,6 +1523,10 @@ async function toggleRule(ruleId, checkbox) {
 
 // Delete Rule
 async function deleteRule(ruleId) {
+    if (!_featureFirewall && !_adminView) {
+        if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+        return;
+    }
     const ok = await nkConfirm('Are you sure you want to delete this firewall rule?', 'Delete Rule');
     if (!ok) {
         return;
@@ -1575,6 +1608,10 @@ function deselectAllRules() {
 
 // Send bulk action POST request to backend
 async function applyBulkAction(action) {
+    if (!_featureFirewall && !_adminView) {
+        if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+        return;
+    }
     const checkboxes = document.querySelectorAll('.rule-row-checkbox');
     const selectedIds = Array.from(checkboxes)
         .filter(cb => cb.checked)

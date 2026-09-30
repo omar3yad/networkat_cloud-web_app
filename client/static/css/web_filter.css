@@ -1191,3 +1191,50 @@
         background: #ef4444;
         color: #ffffff;
     }
+
+    .sl-premium-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.9rem 1.25rem;
+        margin-top: 0;
+        margin-bottom: 1.25rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+        border: 1px dashed #93c5fd;
+        border-radius: 10px;
+        color: #1e3a8a;
+        font-size: 0.85rem;
+    }
+
+    .sl-premium-banner-left {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+
+    .sl-premium-banner-left i {
+        font-size: 1.1rem;
+        color: #3b82f6;
+    }
+
+    .sl-premium-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 0.9rem;
+        background: #2563eb;
+        color: #ffffff;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-decoration: none;
+        transition: background 0.15s ease;
+        white-space: nowrap;
+    }
+
+    .sl-premium-btn:hover {
+        background: #1d4ed8;
+        color: #ffffff;
+    }
+

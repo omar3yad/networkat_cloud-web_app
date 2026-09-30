@@ -4,7 +4,7 @@ import requests
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
 from client.blueprint import client_bp
-from client.decorators import login_required, verify_peer_access, subscription_write_required
+from client.decorators import login_required, verify_peer_access, subscription_write_required, feature_required
 from utils.agent_actor import CLIENT_ACTOR_HEADERS
 from models import Client
 from services.netbird_service import (
@@ -126,6 +126,7 @@ def get_peer_blocked_services(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/adguard/blocked_services', methods=['POST', 'PUT'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def update_peer_blocked_services(peer_id):
     customer_id = session.get('client_customer_id')
@@ -167,6 +168,7 @@ def get_client_blocked_services_proxy(peer_id, client_name):
 
 @client_bp.route('/api/peers/<peer_id>/adguard/clients/<client_name>/blocked_services', methods=['POST', 'PUT'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def update_client_blocked_services_proxy(peer_id, client_name):
     customer_id = session.get('client_customer_id')
@@ -269,6 +271,7 @@ def _sanitize_web_filter_payload(payload: dict) -> dict:
 
 @client_bp.route('/api/peers/<peer_id>/web-filter/rules', methods=['POST'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def add_peer_web_filter_rule(peer_id):
     customer_id = session.get('client_customer_id')
@@ -296,6 +299,7 @@ def add_peer_web_filter_rule(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/web-filter/rules/<rule_id>', methods=['PUT'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def update_peer_web_filter_rule(peer_id, rule_id):
     customer_id = session.get('client_customer_id')
@@ -323,6 +327,7 @@ def update_peer_web_filter_rule(peer_id, rule_id):
 
 @client_bp.route('/api/peers/<peer_id>/web-filter/rules/<rule_id>', methods=['DELETE'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def delete_peer_web_filter_rule(peer_id, rule_id):
     customer_id = session.get('client_customer_id')
@@ -349,6 +354,7 @@ def delete_peer_web_filter_rule(peer_id, rule_id):
 
 @client_bp.route('/api/peers/<peer_id>/web-filter/rules/remove', methods=['POST'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def bulk_remove_peer_web_filter_rules(peer_id):
     customer_id = session.get('client_customer_id')
@@ -376,6 +382,7 @@ def bulk_remove_peer_web_filter_rules(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/web-filter/rules/enable', methods=['POST'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def enable_peer_web_filter_rules(peer_id):
     customer_id = session.get('client_customer_id')
@@ -403,6 +410,7 @@ def enable_peer_web_filter_rules(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/web-filter/rules/disable', methods=['POST'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def disable_peer_web_filter_rules(peer_id):
     customer_id = session.get('client_customer_id')
@@ -430,6 +438,7 @@ def disable_peer_web_filter_rules(peer_id):
 
 @client_bp.route('/api/peers/<peer_id>/web-filter/rules/reorder', methods=['POST'])
 @login_required
+@feature_required('feature.web_filter')
 @subscription_write_required
 def reorder_peer_web_filter_rules(peer_id):
     customer_id = session.get('client_customer_id')

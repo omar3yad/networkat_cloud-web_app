@@ -257,3 +257,27 @@ def inject_subscription_context():
             is_readonly_subscription=False
         )
 
+
+def inject_system_features():
+    try:
+        from services.settings_service import settings
+        return dict(
+            feature_aliases=settings.get_bool("feature.aliases", default=True),
+            feature_firewall=settings.get_bool("feature.firewall", default=True),
+            feature_web_filter=settings.get_bool("feature.web_filter", default=True),
+            feature_mpls_routing=settings.get_bool("feature.mpls_routing", default=True),
+            feature_system_logs=settings.get_bool("feature.system_logs", default=True),
+            contact_url=settings.get_str("billing.contact_url", default="/contact") or "/contact"
+        )
+    except Exception as exc:
+        logger.error(f"Error in system features context processor: {exc}")
+        return dict(
+            feature_aliases=True,
+            feature_firewall=True,
+            feature_web_filter=True,
+            feature_mpls_routing=True,
+            feature_system_logs=True,
+            contact_url="/contact"
+        )
+
+

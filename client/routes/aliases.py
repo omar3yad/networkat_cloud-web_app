@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import render_template, request, redirect, url_for, session, flash, jsonify, current_app
 
 from client.blueprint import client_bp
-from client.decorators import login_required, verify_peer_access, subscription_write_required
+from client.decorators import login_required, verify_peer_access, subscription_write_required, feature_required
 from utils.agent_actor import CLIENT_ACTOR_HEADERS
 from models import Client
 from services.netbird_service import (
@@ -194,6 +194,7 @@ def get_peer_address_lists_proxy(peer_id):
 @client_bp.route('/api/peers/<peer_id>/aliases', methods=['POST'])
 @login_required
 @subscription_write_required
+@feature_required('feature.aliases')
 def add_peer_address_list_proxy(peer_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -219,6 +220,7 @@ def add_peer_address_list_proxy(peer_id):
 @client_bp.route('/api/peers/<peer_id>/aliases/<slug>', methods=['PUT', 'DELETE', 'PATCH'])
 @login_required
 @subscription_write_required
+@feature_required('feature.aliases')
 def modify_peer_address_list_proxy(peer_id, slug):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -250,6 +252,7 @@ def modify_peer_address_list_proxy(peer_id, slug):
 @client_bp.route('/api/peers/<peer_id>/aliases/sync', methods=['POST'])
 @login_required
 @subscription_write_required
+@feature_required('feature.aliases')
 def sync_peer_address_lists_proxy(peer_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
@@ -292,6 +295,7 @@ def get_peer_resolver_config_proxy(peer_id):
 @client_bp.route('/api/peers/<peer_id>/resolver-config', methods=['PUT'])
 @login_required
 @subscription_write_required
+@feature_required('feature.aliases')
 def update_peer_resolver_config_proxy(peer_id):
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None

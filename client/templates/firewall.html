@@ -68,6 +68,17 @@
 
     <!-- Firewall Rules Content -->
     <div id="rules-tab-content">
+        {% if not admin_view and not feature_firewall %}
+        <div class="sl-premium-banner">
+            <div class="sl-premium-banner-left">
+                <i class="fas fa-lock"></i>
+                <span>To create and manage firewall rules, upgrade to a paid plan</span>
+            </div>
+            <a href="{{ contact_url|default('/contact') }}" class="sl-premium-btn">
+                <i class="fas fa-arrow-up-right-from-square"></i> Upgrade plan
+            </a>
+        </div>
+        {% endif %}
         <!-- Reorder Warning Banner -->
         <div id="banner-reorder" class="floating-save-bar" style="display: none;">
             <span class="save-bar-text">
@@ -76,8 +87,8 @@
             </span>
             <div style="width: 1px; height: 20px; background: var(--nk-border);"></div>
             <button class="btn-cancel" onclick="fetchRules()">Discard</button>
-            <button class="btn-apply" onclick="submitReorder()" {% if is_readonly_subscription %}disabled
-                title="Modifications locked in Read-Only mode" {% endif %}>
+            <button class="btn-apply" onclick="submitReorder()" {% if is_readonly_subscription or not feature_firewall %}disabled
+                title="{% if not feature_firewall %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                 Apply order
             </button>
         </div>
@@ -86,7 +97,7 @@
             <div class="control-actions" style="display: flex; gap: 0.5rem; align-items: center;">
                 {% if not admin_view %}
                 <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddModal()" {% if
-                    is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode" {% endif %}>
+                    is_readonly_subscription or not feature_firewall %}disabled title="{% if not feature_firewall %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
                 {% endif %}
@@ -441,7 +452,8 @@
         peerName: {{ peer_name|tojson }},
         isOnline: {{ 'true' if is_online else 'false' }},
         apiBase: {{ (api_base or '')|tojson }},
-        adminView: {{ 'true' if admin_view else 'false' }}
+        adminView: {{ 'true' if admin_view else 'false' }},
+        featureFirewall: {{ 'true' if feature_firewall else 'false' }}
     };
     window.API_BASE = {{ (api_base or '')|tojson }};
     window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};

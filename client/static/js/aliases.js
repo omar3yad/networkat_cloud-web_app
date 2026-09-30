@@ -1,11 +1,12 @@
 const _apiBase = (window.API_BASE || "");
 const _adminView = !!(window.ADMIN_VIEW);
+const _featureAliases = window.ALIASES_CONFIG ? (window.ALIASES_CONFIG.featureAliases !== false) : true;
 let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
-    let isPeerOnline = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.isOnline : false;
-    let currentPeerName = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerName : "";
-    let cachedAddressLists = [];
-    let originalSlug = "";
-    let cachedResolverConfig = null;
+let isPeerOnline = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.isOnline : false;
+let currentPeerName = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerName : "";
+let cachedAddressLists = [];
+let originalSlug = "";
+let cachedResolverConfig = null;
 
     document.addEventListener("DOMContentLoaded", function () {
         const urlParams = new URLSearchParams(window.location.search);
@@ -202,17 +203,20 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
                     </div>
                 `;
             } else {
-                const disabledAttr = !isPeerOnline ? 'disabled' : '';
+                const isGated = !_featureAliases;
+                const disabledAttr = (!isPeerOnline || isGated) ? 'disabled' : '';
+                const editTitle = isGated ? 'Available on paid plans' : 'Edit alias';
+                const deleteTitle = isGated ? 'Available on paid plans' : 'Delete alias';
                 const peerName = currentPeerName;
                 tdActions.innerHTML = `
                     <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
                         <a href="/peers/${currentPeerId}/filtering?name=${encodeURIComponent(peerName)}&scope=alias&alias=${list.slug}" class="btn-delete btn-edit-action" title="DNS Filter" style="display: flex;align-items: center;justify-content: center;text-decoration: none;display: none;">
                             <i class="fas fa-filter"></i>
                         </a>
-                        <button class="btn-delete btn-edit-action" onclick="openEditListModal('${list.slug}')" ${disabledAttr} title="Edit alias">
+                        <button class="btn-delete btn-edit-action" onclick="openEditListModal('${list.slug}')" ${disabledAttr} title="${editTitle}">
                             <i class="far fa-edit"></i>
                         </button>
-                        <button class="btn-delete" onclick="deleteAddressList('${list.slug}')" ${disabledAttr} title="Delete alias">
+                        <button class="btn-delete" onclick="deleteAddressList('${list.slug}')" ${disabledAttr} title="${deleteTitle}">
                             <i class="far fa-trash-alt"></i>
                         </button>
                     </div>
@@ -230,6 +234,10 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
     // Open Add Alias Modal
     function openAddListModal() {
         if (!isPeerOnline) return;
+        if (!_featureAliases && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
         document.getElementById('listModalTitle').textContent = 'Add alias';
         document.getElementById('listActionType').value = 'add';
         document.getElementById('btn-submit-list').textContent = 'Add alias';
@@ -901,6 +909,10 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
     // Delete Alias
     async function deleteAddressList(slug) {
+        if (!_featureAliases && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
         const listObj = cachedAddressLists.find(l => l.slug === slug);
         const displayName = listObj ? (listObj.name || slug) : slug;
         const ok = await nkConfirm(`Are you sure you want to delete alias "${displayName}"?`, 'Delete Alias');
@@ -927,6 +939,10 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
     // Sync address lists to config
     async function syncAddressLists() {
+        if (!_featureAliases && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
         const btnSync = document.getElementById('sync-lists-btn');
         if (btnSync) btnSync.disabled = true;
 
@@ -966,6 +982,10 @@ let currentPeerId = window.ALIASES_CONFIG ? window.ALIASES_CONFIG.peerId : "";
 
     function openResolverConfigModal() {
         if (!isPeerOnline) return;
+        if (!_featureAliases && !_adminView) {
+            if (window.showToast) window.showToast("Available on paid plans. Please upgrade.", "warning");
+            return;
+        }
 
         if (cachedResolverConfig) {
             populateResolverModal();

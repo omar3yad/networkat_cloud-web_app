@@ -109,6 +109,9 @@ class _SettingsService:
     def get_str(self, key: str, default: str = "") -> str:
         return self._raw(key) or default
 
+    def get_string(self, key: str, default: str = "") -> str:
+        return self.get_str(key, default)
+
     # ------------------------------------------------------------------ #
     # Write path (used by admin routes)                                    #
     # ------------------------------------------------------------------ #

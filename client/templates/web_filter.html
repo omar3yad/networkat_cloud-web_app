@@ -67,11 +67,22 @@
 
     <!-- Web Filter Rules Content -->
     <div id="rules-tab-content">
+        {% if not admin_view and not feature_web_filter %}
+        <div class="sl-premium-banner">
+            <div class="sl-premium-banner-left">
+                <i class="fas fa-lock"></i>
+                <span>To create and manage web filter rules, upgrade to a paid plan</span>
+            </div>
+            <a href="{{ contact_url|default('/contact') }}" class="sl-premium-btn">
+                <i class="fas fa-arrow-up-right-from-square"></i> Upgrade plan
+            </a>
+        </div>
+        {% endif %}
         <div class="control-bar">
             <div class="control-actions">
                 {% if not admin_view %}
                 <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddRuleModal()" {% if
-                    is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode" {% endif %}>
+                    is_readonly_subscription or not feature_web_filter %}disabled title="{% if not feature_web_filter %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
                 {% endif %}
@@ -321,7 +332,8 @@
         peerId: {{ peer_id|tojson }},
         isOnline: {{ 'true' if is_online else 'false' }},
         apiBase: {{ (api_base or '')|tojson }},
-        adminView: {{ 'true' if admin_view else 'false' }}
+        adminView: {{ 'true' if admin_view else 'false' }},
+        featureWebFilter: {{ 'true' if feature_web_filter else 'false' }}
     };
     window.API_BASE = {{ (api_base or '')|tojson }};
     window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};

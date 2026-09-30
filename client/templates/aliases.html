@@ -51,6 +51,17 @@
 
     <!-- Aliases Workspace -->
     <div id="aliases-workspace" style="display: none;">
+        {% if not admin_view and not feature_aliases %}
+        <div class="sl-premium-banner">
+            <div class="sl-premium-banner-left">
+                <i class="fas fa-lock"></i>
+                <span>To create and manage DNS aliases, upgrade to a paid plan</span>
+            </div>
+            <a href="{{ contact_url|default('/contact') }}" class="sl-premium-btn">
+                <i class="fas fa-arrow-up-right-from-square"></i> Upgrade plan
+            </a>
+        </div>
+        {% endif %}
         <!-- Control Bar -->
         <div class="control-bar">
             <div class="control-actions">
@@ -60,11 +71,11 @@
                 </button>
                 {% else %}
                 <button class="btn-action btn-primary" id="add-list-btn" onclick="openAddListModal()" {% if
-                    is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode" {% endif %}>
+                    is_readonly_subscription or not feature_aliases %}disabled title="{% if not feature_aliases %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                     <i class="fas fa-plus"></i> Add alias
                 </button>
                 <button class="btn-action" id="resolver-settings-btn" onclick="openResolverConfigModal()" {% if
-                    is_readonly_subscription %}disabled title="Modifications locked in Read-Only mode" {% endif %}>
+                    is_readonly_subscription or not feature_aliases %}disabled title="{% if not feature_aliases %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                     <i class="fas fa-cog"></i> Resolver Settings
                 </button>
                 {% endif %}
@@ -217,7 +228,8 @@
         isOnline: {{ 'true' if is_online else 'false' }},
         peerName: {{ (peer_name or 'Peer Device')|tojson }},
         apiBase: {{ (api_base or '')|tojson }},
-        adminView: {{ 'true' if admin_view else 'false' }}
+        adminView: {{ 'true' if admin_view else 'false' }},
+        featureAliases: {{ 'true' if feature_aliases else 'false' }}
     };
     window.API_BASE = {{ (api_base or '')|tojson }};
     window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};

@@ -55,3 +55,29 @@ def subscription_write_required(f):
                     }), 403
         return f(*args, **kwargs)
     return decorated_function
+
+
+def feature_required(feature_key: str):
+    """
+    Decorator to protect routes based on system settings (feature flags).
+    If feature is disabled, returns HTTP 403 for API requests or redirects with a flash message for HTML pages.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            from services.settings_service import settings as app_settings
+            if not app_settings.get_bool(feature_key, default=True):
+                from flask import request, flash, redirect, url_for, jsonify
+                if request.path.startswith('/api/') or request.is_json:
+                    return jsonify({
+                        "error": "Feature Disabled",
+                        "message": "This feature is currently disabled."
+                    }), 403
+                flash("This feature is currently disabled.", "warning")
+                peer_id = kwargs.get('peer_id')
+                if peer_id:
+                    return redirect(url_for('client.peer_details', peer_id=peer_id))
+                return redirect(url_for('client.dashboard'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
