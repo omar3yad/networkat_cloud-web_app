@@ -393,14 +393,9 @@
 
                         <div class="update-status-row">
                             <div class="update-version-info">
-                                <span class="version-label">Version:</span>
+                                <span class="version-label">version:</span>
                                 <span class="version-value-wrap">
                                     <span class="version-val" id="updates-installed-val">{{ peer_version or '—' }}</span>
-                                    <span class="version-update-arrow" id="updates-arrow" style="display: none;">
-                                        <i class="fas fa-arrow-right"></i>
-                                    </span>
-                                    <span class="version-val version-val-new" id="updates-available-val"
-                                        style="display: none;"></span>
                                 </span>
                             </div>
                             <div class="update-check-group">
@@ -417,6 +412,23 @@
                                     {% endif %}
                                 </div>
                                 <span class="updates-last-checked" id="updates-last-checked-text"></span>
+                            </div>
+                        </div>
+
+                        <!-- Dedicated New Version Available Card with Orange Border -->
+                        <div class="update-available-card" id="updates-available-card" style="display: none;margin-top: 4px;">
+                            <div class="update-available-main">
+                                <div class="update-available-title-row">
+                                    <span class="update-available-badge">
+                                        <i class="fas fa-arrow-alt-circle-up"></i> New version:
+                                    </span>
+                                    <span class="update-available-version" id="updates-available-val"></span>
+                                </div>
+                                <div class="update-available-meta" id="updates-available-meta" style="display: none;">
+                                    <i class="far fa-calendar-alt"></i>
+                                    <span>Released:</span>
+                                    <span class="update-release-date-val" id="updates-release-date-val"></span>
+                                </div>
                             </div>
                         </div>
                     </div>

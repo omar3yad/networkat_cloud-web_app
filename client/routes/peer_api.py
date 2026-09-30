@@ -696,6 +696,26 @@ def peer_health_api(peer_id):
         return jsonify({"error": "Device unreachable"}), 504
 
 
+_MANIFEST_CACHE = {}
+
+
+def get_channel_manifest_data(channel="beta"):
+    now = time.time()
+    cached = _MANIFEST_CACHE.get(channel)
+    if cached and (now - cached.get('ts', 0) < 300):
+        return cached.get('data', {})
+    try:
+        url = f"https://pkgs.networkat.cloud/{channel}/latest.json"
+        res = requests.get(url, timeout=(1, 3))
+        if res.status_code == 200:
+            data = res.json()
+            _MANIFEST_CACHE[channel] = {'ts': now, 'data': data}
+            return data
+    except Exception as e:
+        logger.warning(f"Failed to fetch manifest for channel {channel}: {e}")
+    return {}
+
+
 @client_bp.route('/api/peers/<peer_id>/update', methods=['GET', 'POST'])
 @login_required
 def peer_update_api(peer_id):
@@ -721,10 +741,28 @@ def peer_update_api(peer_id):
             payload = request.get_json(silent=True) or {}
             # Software apply can take up to 3 minutes for tarball download and engine apply
             resp = requests.post(agent_url, json=payload, headers=CLIENT_ACTOR_HEADERS, timeout=(2, 180))
+            return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
         else:
             resp = requests.get(agent_url, timeout=(2, 15))
-
-        return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
+            if resp.status_code == 200:
+                try:
+                    import json
+                    data = json.loads(resp.text)
+                    update_obj = data.get("update") if isinstance(data, dict) else None
+                    if isinstance(update_obj, dict):
+                        if not update_obj.get("released_at") and not update_obj.get("release_date"):
+                            channel = update_obj.get("channel") or "beta"
+                            manifest = get_channel_manifest_data(channel)
+                            if manifest.get("released_at"):
+                                update_obj["released_at"] = manifest["released_at"]
+                            elif channel != "stable":
+                                stable_manifest = get_channel_manifest_data("stable")
+                                if stable_manifest.get("version") == update_obj.get("available_version"):
+                                    update_obj["released_at"] = stable_manifest.get("released_at")
+                    return jsonify(data), resp.status_code
+                except Exception:
+                    pass
+            return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except requests.Timeout:
         return jsonify({"error": "Update operation timed out"}), 504
     except requests.RequestException:

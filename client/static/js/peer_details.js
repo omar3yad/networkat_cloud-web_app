@@ -972,6 +972,22 @@
         }
     }
 
+    function formatReleaseDate(dateStr) {
+        if (!dateStr) return "";
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        } catch (e) {
+            return dateStr;
+        }
+    }
+
     async function checkPeerUpdate(isManual) {
         if (isApplyingUpdate) return;
         if (isManual) manualCheckUsed = true;
@@ -980,8 +996,10 @@
         const btnCheckText = document.getElementById("btn-check-update-text");
         const btnApply = document.getElementById("btn-apply-update");
         const installedVal = document.getElementById("updates-installed-val");
-        const arrowEl = document.getElementById("updates-arrow");
+        const availableCard = document.getElementById("updates-available-card");
         const availableVal = document.getElementById("updates-available-val");
+        const metaEl = document.getElementById("updates-available-meta");
+        const releaseDateVal = document.getElementById("updates-release-date-val");
         const lastCheckedText = document.getElementById("updates-last-checked-text");
 
         if (btnCheck) {
@@ -992,9 +1010,6 @@
             if (icon) icon.className = "fas fa-spinner fa-spin";
         }
         clearUpdatesFeedback();
-        // Final state (icon/text/disabled) for the "Check" button is decided
-        // per branch below via setCheckButtonUpToDate — this spinner state
-        // is only the in-flight placeholder.
 
         try {
             const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update`);
@@ -1007,6 +1022,7 @@
             const state = update.state || "unknown";
             const installed = update.installed_version || "—";
             const available = update.available_version || "";
+            const releaseDate = update.released_at || update.release_date || update.release_time || "";
 
             if (installedVal) installedVal.textContent = installed;
 
@@ -1022,13 +1038,14 @@
             const dotBadge = document.getElementById("update-badge-dot");
 
             if (state === "update-available" && available && available !== installed) {
-                if (arrowEl) arrowEl.style.display = "";
-                if (availableVal) {
-                    availableVal.textContent = available;
-                    availableVal.style.display = "";
+                if (availableCard) availableCard.style.display = "flex";
+                if (availableVal) availableVal.textContent = available;
+                if (releaseDate && releaseDateVal && metaEl) {
+                    releaseDateVal.textContent = formatReleaseDate(releaseDate);
+                    metaEl.style.display = "flex";
+                } else if (metaEl) {
+                    metaEl.style.display = "none";
                 }
-                // Only swap the button slot when there's an apply button to
-                // swap to (client view) — admin (read-only) keeps "Check".
                 if (btnApply) {
                     btnApply.style.display = "";
                     if (btnCheck) btnCheck.style.display = "none";
@@ -1046,16 +1063,16 @@
                 if (dotBadge) dotBadge.style.display = "inline-block";
                 setCheckButtonUpToDate(false);
             } else if (state === "up-to-date") {
-                if (arrowEl) arrowEl.style.display = "none";
-                if (availableVal) { availableVal.style.display = "none"; availableVal.textContent = ""; }
+                if (availableCard) availableCard.style.display = "none";
+                if (availableVal) availableVal.textContent = "";
                 if (btnApply) btnApply.style.display = "none";
                 if (btnCheck) btnCheck.style.display = "";
                 if (versionBadge) versionBadge.style.display = "none";
                 if (dotBadge) dotBadge.style.display = "none";
                 setCheckButtonUpToDate(true);
             } else {
-                if (arrowEl) arrowEl.style.display = "none";
-                if (availableVal) { availableVal.style.display = "none"; availableVal.textContent = ""; }
+                if (availableCard) availableCard.style.display = "none";
+                if (availableVal) availableVal.textContent = "";
                 if (btnApply) btnApply.style.display = "none";
                 if (btnCheck) btnCheck.style.display = "";
                 if (versionBadge) versionBadge.style.display = "none";
@@ -1063,8 +1080,8 @@
                 setCheckButtonUpToDate(false);
             }
         } catch (err) {
-            if (arrowEl) arrowEl.style.display = "none";
-            if (availableVal) availableVal.style.display = "none";
+            if (availableCard) availableCard.style.display = "none";
+            if (availableVal) availableVal.textContent = "";
             if (btnApply) btnApply.style.display = "none";
             if (btnCheck) btnCheck.style.display = "";
             setCheckButtonUpToDate(false);

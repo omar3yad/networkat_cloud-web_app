@@ -1025,6 +1025,7 @@ const peerId = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.peerId : "";
                     e.preventDefault();
                     input.value = `@${list.name || list.slug}`;
                     dropdown.style.display = 'none';
+                    input.dispatchEvent(new Event('input'));
                     input.dispatchEvent(new Event('change'));
                 });
 

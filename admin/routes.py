@@ -1639,6 +1639,25 @@ def admin_view_api_peer_update(customer_id, peer_id):
     peer_ip = peer_data.get("ip")
     try:
         resp = requests.get(f"http://{peer_ip}:8765/update", timeout=(2, 15))
+        if resp.status_code == 200:
+            try:
+                import json
+                data = json.loads(resp.text)
+                update_obj = data.get("update") if isinstance(data, dict) else None
+                if isinstance(update_obj, dict):
+                    if not update_obj.get("released_at") and not update_obj.get("release_date"):
+                        from client.routes.peer_api import get_channel_manifest_data
+                        channel = update_obj.get("channel") or "beta"
+                        manifest = get_channel_manifest_data(channel)
+                        if manifest.get("released_at"):
+                            update_obj["released_at"] = manifest["released_at"]
+                        elif channel != "stable":
+                            stable_manifest = get_channel_manifest_data("stable")
+                            if stable_manifest.get("version") == update_obj.get("available_version"):
+                                update_obj["released_at"] = stable_manifest.get("released_at")
+                return jsonify(data), resp.status_code
+            except Exception:
+                pass
         return (resp.text, resp.status_code, {'Content-Type': 'application/json'})
     except Exception:
         return jsonify({"error": "Device unreachable"}), 503

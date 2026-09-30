@@ -80,7 +80,7 @@ class TestPeerUpdateApi(unittest.TestCase):
         data = resp.get_json()
         self.assertIn("update", data)
         self.assertEqual(data["update"]["state"], "update-available")
-        mock_requests_get.assert_called_once_with(
+        mock_requests_get.assert_any_call(
             "http://100.64.0.10:8765/update",
             timeout=(2, 15)
         )

@@ -1157,26 +1157,30 @@ function initFirewallLiveValidation() {
 
     const srcIp = document.getElementById('srcIp');
     if (srcIp) {
-        srcIp.addEventListener('input', () => {
+        const validateSrc = () => {
             const res = validateAddressInput(srcIp.value, 'Source Address');
             if (!res.valid) {
                 setFieldError('srcIp', res.error);
             } else {
                 clearFieldError('srcIp');
             }
-        });
+        };
+        srcIp.addEventListener('input', validateSrc);
+        srcIp.addEventListener('change', validateSrc);
     }
 
     const dstIp = document.getElementById('dstIp');
     if (dstIp) {
-        dstIp.addEventListener('input', () => {
+        const validateDst = () => {
             const res = validateAddressInput(dstIp.value, 'Destination Address');
             if (!res.valid) {
                 setFieldError('dstIp', res.error);
             } else {
                 clearFieldError('dstIp');
             }
-        });
+        };
+        dstIp.addEventListener('input', validateDst);
+        dstIp.addEventListener('change', validateDst);
     }
 
     const srcPort = document.getElementById('srcPort');
@@ -2496,9 +2500,10 @@ function renderAutocompleteOptions(input, dropdown, forceShow = false) {
     cachedAddressLists.forEach(list => {
         // web_domain aliases have no nft set - not valid as a firewall rule src/dst
         if (list.type === 'web_domain') return;
-        const slugMatch = list.slug.toLowerCase().includes(cleanFilter);
+        const nameMatch = list.name && list.name.toLowerCase().includes(cleanFilter);
+        const slugMatch = (list.slug || '').toLowerCase().includes(cleanFilter);
         const commentMatch = list.comment && list.comment.toLowerCase().includes(cleanFilter);
-        const isMatch = !filterText || slugMatch || commentMatch || forceShow;
+        const isMatch = !filterText || nameMatch || slugMatch || commentMatch || forceShow;
 
         if (isMatch) {
             count++;
@@ -2533,6 +2538,7 @@ function renderAutocompleteOptions(input, dropdown, forceShow = false) {
                 e.preventDefault(); // prevent blur
                 input.value = `@${list.name || list.slug}`; // Store as friendly name
                 dropdown.style.display = 'none';
+                input.dispatchEvent(new Event('input'));
                 input.dispatchEvent(new Event('change'));
             });
             dropdown.appendChild(item);
