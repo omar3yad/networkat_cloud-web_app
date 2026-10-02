@@ -67,7 +67,7 @@ class TestPeerUpdateApi(unittest.TestCase):
 
         mock_resp = MagicMock()
         mock_resp.status_code = 200
-        mock_resp.text = '{"update": {"state": "update-available", "installed_version": "1.0.0", "available_version": "1.1.0"}}'
+        mock_resp.text = '{"update": {"state": "update-available", "installed_version": "2.0.0", "available_version": "2.1.0"}}'
         mock_requests_get.return_value = mock_resp
 
         with self.client.session_transaction() as sess:
@@ -84,6 +84,35 @@ class TestPeerUpdateApi(unittest.TestCase):
             "http://100.64.0.10:8765/update",
             timeout=(2, 15)
         )
+
+    @patch('client.routes.peer_api.Client')
+    @patch('client.routes.peer_api.verify_peer_access')
+    @patch('client.routes.peer_api.get_cached_all_netbird_peers')
+    @patch('client.routes.peer_api.requests.get')
+    def test_get_peer_update_status_v1_unsupported(self, mock_requests_get, mock_peers, mock_verify, mock_client_cls):
+        mock_verify.return_value = True
+        mock_customer = MagicMock()
+        mock_customer.is_subscription_active = True
+        mock_customer.subscription_status = 'active'
+        mock_client_cls.query.get.return_value = mock_customer
+
+        mock_peers.return_value = [{"id": "peer-123", "ip": "100.64.0.10"}]
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = '{"update": {"state": "update-available", "installed_version": "1.7.1", "available_version": "2.0.1"}}'
+        mock_requests_get.return_value = mock_resp
+
+        with self.client.session_transaction() as sess:
+            sess['client_logged_in'] = True
+            sess['client_id'] = 'user-123'
+            sess['client_customer_id'] = 1
+
+        resp = self.client.get('/api/peers/peer-123/update')
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIn("update", data)
+        self.assertEqual(data["update"]["state"], "unsupported")
 
     @patch('client.routes.peer_api.Client')
     @patch('client.routes.peer_api.verify_peer_access')

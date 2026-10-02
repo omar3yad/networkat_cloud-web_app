@@ -752,11 +752,22 @@ def get_channel_manifest_data(channel="beta"):
         res = requests.get(url, timeout=(1, 3))
         if res.status_code == 200:
             data = res.json()
+            if not data.get("released_at") and not data.get("release_date"):
+                lm = res.headers.get("Last-Modified") or res.headers.get("Date")
+                if lm:
+                    data["released_at"] = lm
             _MANIFEST_CACHE[channel] = {'ts': now, 'data': data}
             return data
     except Exception as e:
         logger.warning(f"Failed to fetch manifest for channel {channel}: {e}")
     return {}
+
+
+def is_v1_version(version_str: str) -> bool:
+    if not version_str:
+        return False
+    clean = str(version_str).strip().lower().lstrip('v')
+    return clean.startswith('1.') or clean == '1'
 
 
 @client_bp.route('/api/peers/<peer_id>/update', methods=['GET', 'POST'])
@@ -793,6 +804,11 @@ def peer_update_api(peer_id):
                     data = json.loads(resp.text)
                     update_obj = data.get("update") if isinstance(data, dict) else None
                     if isinstance(update_obj, dict):
+                        installed_version = update_obj.get("installed_version") or ""
+                        if is_v1_version(installed_version):
+                            update_obj["state"] = "unsupported"
+                            update_obj["available_version"] = ""
+                            return jsonify(data), 200
                         if not update_obj.get("released_at") and not update_obj.get("release_date"):
                             channel = update_obj.get("channel") or "beta"
                             manifest = get_channel_manifest_data(channel)

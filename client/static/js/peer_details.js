@@ -822,8 +822,36 @@
         }
     }
 
+    function isV1Version(versionStr) {
+        if (!versionStr) return false;
+        const clean = String(versionStr).trim().toLowerCase().replace(/^v/, '');
+        return clean.startsWith('1.') || clean === '1';
+    }
+
+    function disableUpdatesForV1(ver) {
+        const btnCheck = document.getElementById("btn-check-update");
+        const btnCheckText = document.getElementById("btn-check-update-text");
+        const btnApply = document.getElementById("btn-apply-update");
+        const availableCard = document.getElementById("updates-available-card");
+        const badgeEl = document.getElementById("peer-version-badge");
+        const dotEl = document.getElementById("update-badge-dot");
+
+        if (btnCheck) {
+            btnCheck.disabled = true;
+            btnCheck.classList.remove("btn-check-updates-done");
+            if (btnCheckText) btnCheckText.textContent = "Updates disabled on v1.x";
+            const icon = btnCheck.querySelector("i");
+            if (icon) icon.className = "fas fa-ban";
+        }
+        if (btnApply) btnApply.style.display = "none";
+        if (availableCard) availableCard.style.display = "none";
+        if (badgeEl) badgeEl.style.display = "none";
+        if (dotEl) dotEl.style.display = "none";
+    }
+
     async function fetchPeerVersionSilent() {
         if (!peerId) return;
+        let detectedVersion = "";
         // 1. Fetch version directly from agent /health
         try {
             const hResp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/health`);
@@ -831,6 +859,7 @@
                 const hData = await hResp.json();
                 const healthVersion = hData.version || "";
                 if (healthVersion) {
+                    detectedVersion = healthVersion;
                     const versionEl = document.getElementById("peer-version-display");
                     if (versionEl) versionEl.textContent = healthVersion;
                     const updatesInstalledVal = document.getElementById("updates-installed-val");
@@ -849,6 +878,19 @@
             stopUptimeStopwatch();
         }
 
+        if (!detectedVersion) {
+            detectedVersion = document.getElementById("updates-installed-val")?.textContent?.trim() || "";
+        }
+
+        // If peer is on v1.x, completely skip update query & badges
+        if (isV1Version(detectedVersion)) {
+            const badgeEl = document.getElementById("peer-version-badge");
+            if (badgeEl) badgeEl.style.display = "none";
+            const dotEl = document.getElementById("update-badge-dot");
+            if (dotEl) dotEl.style.display = "none";
+            return;
+        }
+
         // 2. Fetch update discovery status
         try {
             const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update`);
@@ -862,6 +904,13 @@
                 if (versionEl) versionEl.textContent = installedVersion;
                 const updatesInstalledVal = document.getElementById("updates-installed-val");
                 if (updatesInstalledVal) updatesInstalledVal.textContent = installedVersion;
+            }
+            if (isV1Version(installedVersion)) {
+                const badgeEl = document.getElementById("peer-version-badge");
+                if (badgeEl) badgeEl.style.display = "none";
+                const dotEl = document.getElementById("update-badge-dot");
+                if (dotEl) dotEl.style.display = "none";
+                return;
             }
             if (update.state === "update-available" && availableVersion && availableVersion !== installedVersion) {
                 const badgeEl = document.getElementById("peer-version-badge");
@@ -887,6 +936,14 @@
         hideIntervalError();
         clearUpdatesFeedback();
         manualCheckUsed = false;
+
+        const curVer = document.getElementById("updates-installed-val")?.textContent?.trim() || document.getElementById("peer-version-display")?.textContent?.trim() || "";
+        if (isV1Version(curVer)) {
+            disableUpdatesForV1(curVer);
+            loadAutoUpdateConfig();
+            return;
+        }
+
         checkPeerUpdate(false);
         loadAutoUpdateConfig();
     }
@@ -1028,6 +1085,11 @@
 
     async function checkPeerUpdate(isManual) {
         if (isApplyingUpdate) return;
+        const curVer = document.getElementById("updates-installed-val")?.textContent?.trim() || document.getElementById("peer-version-display")?.textContent?.trim() || "";
+        if (isV1Version(curVer)) {
+            disableUpdatesForV1(curVer);
+            return;
+        }
         if (isManual) manualCheckUsed = true;
 
         const btnCheck = document.getElementById("btn-check-update");
@@ -1067,6 +1129,11 @@
             const infoVersion = document.getElementById("peer-version-display");
             if (infoVersion && installed !== "—") infoVersion.textContent = installed;
 
+            if (isV1Version(installed)) {
+                disableUpdatesForV1(installed);
+                return;
+            }
+
             if (lastCheckedText) {
                 const now = new Date();
                 lastCheckedText.textContent = `Checked at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
@@ -1078,11 +1145,12 @@
             if (state === "update-available" && available && available !== installed) {
                 if (availableCard) availableCard.style.display = "flex";
                 if (availableVal) availableVal.textContent = available;
-                if (releaseDate && releaseDateVal && metaEl) {
-                    releaseDateVal.textContent = formatReleaseDate(releaseDate);
+                const formattedDate = formatReleaseDate(releaseDate) || formatReleaseDate(new Date().toISOString());
+                if (releaseDateVal) {
+                    releaseDateVal.textContent = formattedDate;
+                }
+                if (metaEl) {
                     metaEl.style.display = "flex";
-                } else if (metaEl) {
-                    metaEl.style.display = "none";
                 }
                 if (btnApply) {
                     btnApply.style.display = "";
@@ -1129,6 +1197,11 @@
 
     async function applyPeerUpdate() {
         if (isApplyingUpdate) return;
+        const curVer = document.getElementById("updates-installed-val")?.textContent?.trim() || "";
+        if (isV1Version(curVer)) {
+            disableUpdatesForV1(curVer);
+            return;
+        }
 
         const availableVal = document.getElementById("updates-available-val");
         const targetVersion = availableVal ? availableVal.textContent : "";

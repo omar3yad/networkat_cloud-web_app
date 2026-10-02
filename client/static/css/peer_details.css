@@ -916,58 +916,58 @@ input:disabled + .slider {
 
 /* Dedicated new version card with orange border */
 .update-available-card {
-    margin-top: 0.9rem;
-    padding: 0.85rem 1rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
     background: #fffbeb;
     border: 1px solid #d97706;
     border-radius: var(--nk-radius-md);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.85rem;
+    flex-direction: column;
+    gap: 0.4rem;
     box-shadow: 0 1px 3px rgba(217, 119, 6, 0.08);
 }
 
-.update-available-main {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    min-width: 0;
-}
-
-.update-available-title-row {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    flex-wrap: wrap;
-}
-
-.update-available-badge {
+.update-available-header {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.82rem;
+    gap: 0.4rem;
+    font-size: 0.84rem;
     font-weight: 700;
     color: #d97706;
 }
 
+.update-available-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-left: 0.1rem;
+}
+
+.update-available-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    color: #78350f;
+}
+
+.update-available-row-label {
+    font-weight: 600;
+    color: #92400e;
+    min-width: 60px;
+}
+
 .update-available-version {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: #b45309;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.update-available-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.76rem;
-    color: #92400e;
-}
-
 .update-release-date-val {
     font-weight: 600;
+    color: #78350f;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .update-available-action {
