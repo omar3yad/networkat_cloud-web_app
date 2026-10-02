@@ -140,12 +140,38 @@
         return cidrRes;
     }
 
+    function cleanFriendlyError(err, defaultMsg = 'Failed to save') {
+        let msg = err && err.message ? err.message : (err || defaultMsg);
+        if (typeof msg !== 'string') {
+            try { msg = JSON.stringify(msg); } catch(e) { msg = defaultMsg; }
+        }
+        
+        if (msg.includes('{') && msg.includes('}')) {
+            try {
+                const start = msg.indexOf('{');
+                const end = msg.lastIndexOf('}') + 1;
+                const parsed = JSON.parse(msg.substring(start, end));
+                msg = parsed.message || parsed.detail || parsed.error || msg;
+            } catch(e) {}
+        }
+
+        msg = msg.replace(/NetBird\s*Error:\s*/gi, '');
+        msg = msg.replace(/NetBird\s*/gi, '');
+        msg = msg.replace(/route:\s*[a-zA-Z0-9_-]+\s*not found/gi, 'Route not found or expired');
+        msg = msg.replace(/peer:\s*[a-zA-Z0-9_-]+/gi, 'Device');
+        msg = msg.replace(/\b[a-zA-Z0-9]{15,}\b/g, '');
+        msg = msg.replace(/[:"'{}]/g, ' ').replace(/\s+/g, ' ').trim();
+
+        return msg || defaultMsg;
+    }
+
     function setFieldInlineError(field, errorMsg) {
         const inp = document.getElementById(`peer-${field}-input`);
         const errDiv = document.getElementById(`peer-${field}-error`);
+        const friendlyMsg = cleanFriendlyError(errorMsg);
         if (inp) inp.classList.add('is-invalid');
         if (errDiv) {
-            errDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${errorMsg}`;
+            errDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${friendlyMsg}`;
             errDiv.style.display = 'flex';
         }
     }
@@ -428,14 +454,26 @@
                     };
 
                     if (currentRouteId && currentRouteId !== 'null' && currentRouteId !== 'undefined') {
-                        const routeRes = await fetch(`${_apiBase}/api/v2/netbird/routes/${currentRouteId}`, {
+                        let routeRes = await fetch(`${_apiBase}/api/v2/netbird/routes/${currentRouteId}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(routeBody)
                         });
+                        if (routeRes.status === 404) {
+                            routeRes = await fetch(`${_apiBase}/api/v2/netbird/routes`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(routeBody)
+                            });
+                        }
                         if (!routeRes.ok) {
                             const errData = await routeRes.json().catch(() => ({}));
                             throw new Error(errData.detail || errData.message || errData.error || 'Failed to save');
+                        }
+                        const updatedData = await routeRes.json().catch(() => ({}));
+                        if (updatedData.id) {
+                            currentRouteId = updatedData.id;
+                            currentRouteNetworkId = updatedData.network_id || networkId;
                         }
                     } else {
                         const createRes = await fetch(`${_apiBase}/api/v2/netbird/routes`, {

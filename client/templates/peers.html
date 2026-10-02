@@ -84,7 +84,7 @@
 
 {% block extra_scripts %}
 <script>
-    window.MPLS_ALLOWED = {{ 'true' if is_mpls_allowed else 'false' }};
+    window.MPLS_ALLOWED = {{ 'true' if (is_mpls_allowed and feature_mpls_routing) else 'false' }};
 </script>
 <script src="{{ url_for('static', filename='js/peers.js') }}"></script>
 {% endblock %}

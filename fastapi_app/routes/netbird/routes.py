@@ -7,7 +7,10 @@ router = APIRouter(prefix="/api/v2/netbird/routes", tags=["NetBird Routes"])
 
 def handle_result(result):
     if isinstance(result, dict) and result.get("error"):
-        raise HTTPException(status_code=result["status_code"], detail=f"NetBird Error: {result['detail']}")
+        detail_msg = result.get('detail') or 'Operation failed'
+        if isinstance(detail_msg, str):
+            detail_msg = detail_msg.replace("NetBird Error: ", "").replace("NetBird Error:", "").strip()
+        raise HTTPException(status_code=result.get("status_code", 500), detail=detail_msg)
     return result
 
 @router.get("", response_model=List[NetBirdRouteResponse])

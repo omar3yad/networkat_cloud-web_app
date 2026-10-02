@@ -9,7 +9,7 @@ from sqlalchemy import or_
 
 from config.database import db
 from client.blueprint import client_bp
-from client.decorators import login_required, no_cache_json, verify_peer_access, subscription_write_required
+from client.decorators import login_required, no_cache_json, verify_peer_access, subscription_write_required, feature_required
 from utils.agent_actor import CLIENT_ACTOR_HEADERS
 from models import Client
 from services.netbird_service import (
@@ -163,6 +163,7 @@ def proxy_get_routes():
 
 @client_bp.route('/api/v2/netbird/routes', methods=['POST'])
 @login_required
+@feature_required('feature.mpls_routing')
 @subscription_write_required
 def proxy_post_route():
     headers = get_api_headers({"Content-Type": "application/json"})
@@ -227,8 +228,38 @@ def proxy_post_route():
         return jsonify({"error": str(e)}), 500
 
 
+def _sanitize_route_error(err_obj, default_msg="Failed to save network route") -> str:
+    raw = ""
+    if isinstance(err_obj, dict):
+        raw = err_obj.get("detail") or err_obj.get("message") or err_obj.get("error") or ""
+    elif isinstance(err_obj, str):
+        raw = err_obj
+    if not raw:
+        return default_msg
+    
+    if "{" in raw and "}" in raw:
+        try:
+            import json
+            start = raw.find("{")
+            end = raw.rfind("}") + 1
+            parsed = json.loads(raw[start:end])
+            raw = parsed.get("message") or parsed.get("detail") or parsed.get("error") or raw
+        except Exception:
+            pass
+
+    import re
+    msg = re.sub(r'NetBird\s*Error:\s*', '', str(raw), flags=re.IGNORECASE)
+    msg = re.sub(r'NetBird\s*', '', msg, flags=re.IGNORECASE)
+    msg = re.sub(r'route:\s*[a-zA-Z0-9_-]+\s*not found', 'Route not found or expired', msg, flags=re.IGNORECASE)
+    msg = re.sub(r'peer:\s*[a-zA-Z0-9_-]+', 'Device', msg, flags=re.IGNORECASE)
+    msg = re.sub(r'\b[a-zA-Z0-9]{15,}\b', '', msg)
+    msg = msg.strip(' :"{},')
+    return msg if msg else default_msg
+
+
 @client_bp.route('/api/v2/netbird/routes/<route_id>', methods=['PUT'])
 @login_required
+@feature_required('feature.mpls_routing')
 @subscription_write_required
 def proxy_put_route(route_id):
     headers = get_api_headers({"Content-Type": "application/json"})
@@ -269,19 +300,31 @@ def proxy_put_route(route_id):
 
         url = f"{get_api_base_url()}/api/v2/netbird/routes/{route_id}"
         response = requests.put(url, json=req_data, headers=headers, timeout=10)
+        
+        # If route was deleted or not found, automatically fallback to creating it
+        if response.status_code == 404:
+            create_url = f"{get_api_base_url()}/api/v2/netbird/routes"
+            response = requests.post(create_url, json=req_data, headers=headers, timeout=10)
+
         if response.status_code in [200, 201, 204]:
             peer_id = req_data.get("peer")
             network = req_data.get("network")
             if peer_id and network:
                 set_route_override(peer_id, network)
             clear_all_netbird_caches(customer_id)
-        return jsonify(response.json()), response.status_code
+            res_data = response.json() if (response.text and response.headers.get('Content-Type') == 'application/json') else {"success": True}
+            return jsonify(res_data), 200
+
+        err_body = response.json() if response.headers.get('Content-Type') == 'application/json' else {"error": response.text}
+        return jsonify({"error": _sanitize_route_error(err_body)}), response.status_code
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": _sanitize_route_error(str(e))}), 500
+
 
 
 @client_bp.route('/api/v2/netbird/routes/<route_id>', methods=['DELETE'])
 @login_required
+@feature_required('feature.mpls_routing')
 @subscription_write_required
 def proxy_delete_route(route_id):
     customer_id = session.get('client_customer_id')

@@ -158,6 +158,7 @@
                 </thead>
                 <tbody>
                 {% for s in items %}
+                {% if s.key != 'feature.system_logs' %}
                 <tr>
                     <td>
                         <div class="setting-label">{{ s.label }}</div>
@@ -201,6 +202,7 @@
                         </div>
                     </td>
                 </tr>
+                {% endif %}
                 {% endfor %}
                 </tbody>
             </table>
