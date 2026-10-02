@@ -18,7 +18,8 @@ class TestAntiAbuseRegistration(unittest.TestCase):
     def test_register_bypasses_phone_otp_when_whatsapp_unconfigured(self):
         """When WhatsApp token is unset, registration must not block customer and go to /verify-card."""
         ts = int(time.time())
-        with patch('client.routes.auth.is_whatsapp_configured', return_value=False):
+        with patch('client.routes.auth.is_whatsapp_configured', return_value=False), \
+             patch('client.routes.auth.send_verification_email', return_value=(True, None)):
             res = self.test_client.post('/register', data={
                 'username': f'autouser_{ts}',
                 'password': 'password123',
@@ -29,13 +30,13 @@ class TestAntiAbuseRegistration(unittest.TestCase):
             }, follow_redirects=False)
 
             self.assertEqual(res.status_code, 302)
-            self.assertIn('/verify-card', res.headers['Location'])
+            self.assertIn('/verify-email', res.headers['Location'])
 
             with self.test_client.session_transaction() as sess:
                 self.assertTrue(sess['reg_data']['phone_verified'])
 
     def test_phone_verification_success(self):
-        """Valid WhatsApp OTP code should verify phone and advance to /verify-card."""
+        """Valid WhatsApp OTP code should verify phone and advance to /verify-email."""
         with self.test_client.session_transaction() as sess:
             sess['reg_data'] = {
                 'username': 'antiabuse_user1',
@@ -56,7 +57,7 @@ class TestAntiAbuseRegistration(unittest.TestCase):
 
         res = self.test_client.post('/verify-phone', data={'code': '123456'}, follow_redirects=False)
         self.assertEqual(res.status_code, 302)
-        self.assertIn('/verify-card', res.headers['Location'])
+        self.assertIn('/verify-email', res.headers['Location'])
 
         with self.test_client.session_transaction() as sess:
             self.assertTrue(sess['reg_data']['phone_verified'])
@@ -102,65 +103,8 @@ class TestAntiAbuseRegistration(unittest.TestCase):
         self.assertEqual(res.status_code, 302)
         self.assertIn('/register', res.headers['Location'])
 
-    def test_verify_card_duplicate_fingerprint_rejected(self):
-        """Submitting a card whose fingerprint is already in the database must be rejected."""
-        from utils.stripe_service import verify_and_extract_card
-        card_info, _ = verify_and_extract_card('pm_card_duplicate_test')
-        dup_fingerprint = card_info['fingerprint']
-
-        with self.client_app.app_context():
-            # Check or create an existing client with this card fingerprint
-            existing = Client.query.filter(
-                (Client.username == 'cardholder_original') |
-                (Client.client_email == 'original_card@example.com') |
-                (Client.card_fingerprint == dup_fingerprint)
-            ).first()
-            if not existing:
-                existing = Client(
-                    username='cardholder_original',
-                    password_hashed='hashed',
-                    client_name='Original Cardholder',
-                    client_email='original_card@example.com',
-                    card_fingerprint=dup_fingerprint,
-                    is_trial=True
-                )
-                db.session.add(existing)
-            else:
-                existing.card_fingerprint = dup_fingerprint
-            db.session.commit()
-
-        with self.test_client.session_transaction() as sess:
-            sess['reg_data'] = {
-                'username': 'abuser_clone',
-                'password': 'password123',
-                'client_name': 'Abuser Clone',
-                'client_email': 'abuser@example.com',
-                'client_phone_number': '+201000000003',
-                'phone_verified': True
-            }
-
-        try:
-            res = self.test_client.post('/verify-card', data={'payment_method_id': 'pm_card_duplicate_test'}, follow_redirects=True)
-            self.assertEqual(res.status_code, 200)
-            self.assertIn(b'This payment card has already been used for another account.', res.data)
-
-            # Ensure reg_data does NOT have card_verified
-            with self.test_client.session_transaction() as sess:
-                self.assertFalse(sess['reg_data'].get('card_verified', False))
-        finally:
-            with self.client_app.app_context():
-                c = Client.query.filter_by(username='cardholder_original').first()
-                if c:
-                    db.session.delete(c)
-                    db.session.commit()
-
-    def test_verify_card_success_advances_to_email(self):
-        """A new unique card saves the fingerprint and advances to /verify-email."""
-        fresh_pm = f'pm_card_fresh_{int(time.time())}'
-        from utils.stripe_service import verify_and_extract_card
-        card_info, _ = verify_and_extract_card(fresh_pm)
-        expected_fp = card_info['fingerprint']
-
+    def test_verify_card_bypassed_redirects_to_email(self):
+        """Accessing /verify-card with verified phone directly redirects to /verify-email."""
         with self.test_client.session_transaction() as sess:
             sess['reg_data'] = {
                 'username': 'valid_trial_user',
@@ -171,17 +115,9 @@ class TestAntiAbuseRegistration(unittest.TestCase):
                 'phone_verified': True
             }
 
-        with patch('client.routes.auth.send_verification_email') as mock_email:
-            mock_email.return_value = (True, None)
-
-            res = self.test_client.post('/verify-card', data={'payment_method_id': fresh_pm}, follow_redirects=False)
-            self.assertEqual(res.status_code, 302)
-            self.assertIn('/verify-email', res.headers['Location'])
-
-        with self.test_client.session_transaction() as sess:
-            self.assertTrue(sess['reg_data'].get('card_verified'))
-            self.assertEqual(sess['reg_data'].get('card_fingerprint'), expected_fp)
-            self.assertIn('reg_verification', sess)
+        res = self.test_client.get('/verify-card', follow_redirects=False)
+        self.assertEqual(res.status_code, 302)
+        self.assertIn('/verify-email', res.headers['Location'])
 
     def test_paid_vs_trial_starter_client(self):
         """Verify is_paid property differentiates between paying Starter and unpaid Starter trial."""

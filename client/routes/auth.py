@@ -271,8 +271,21 @@ def register():
         if not is_whatsapp_configured():
             current_app.logger.info("WhatsApp credentials not set; bypassing phone OTP to prevent blocking customer registration.")
             session['reg_data']['phone_verified'] = True
-            flash("Please verify your payment method to continue.", "info")
-            return redirect(url_for('client.verify_card'))
+            email_code = str(secrets.randbelow(900000) + 100000)
+            session['reg_verification'] = {
+                'code': email_code,
+                'email': client_email,
+                'expires_at': time.time() + 600,
+                'attempts': 0
+            }
+            ok, err_email = send_verification_email(client_email, email_code)
+            if not ok:
+                current_app.logger.error(f"Failed to send email verification to {client_email}: {err_email}")
+                flash("Failed to send verification email. Please try again.", "error")
+                return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
+
+            flash("A verification code has been sent to your email. Please enter it below.", "success")
+            return redirect(url_for('client.verify_email'))
 
         session['reg_phone_verification'] = {
             'code': phone_code,
@@ -332,52 +345,7 @@ def verify_phone():
         session['reg_data'] = reg_data
         session.pop('reg_phone_verification', None)
 
-        flash("Phone verified. Please verify your payment method to continue.", "success")
-        return redirect(url_for('client.verify_card'))
-
-    mock_code = phone_verif.get('code') if not is_whatsapp_configured() else None
-    return render_template('verify_phone.html', phone=phone_verif.get('phone'), mock_code=mock_code)
-
-
-@client_bp.route('/verify-card', methods=['GET', 'POST'])
-@limiter.limit("10 per minute", methods=["POST"])
-def verify_card():
-    if session.get('client_logged_in'):
-        return redirect(url_for('client.dashboard'))
-
-    reg_data = session.get('reg_data')
-    if not reg_data or not reg_data.get('phone_verified'):
-        flash("Registration session expired or phone not verified. Please register again.", "error")
-        return redirect(url_for('client.register'))
-
-    pub_key, _ = get_stripe_keys()
-    mock_mode = is_stripe_mock_mode()
-
-    if request.method == 'POST':
-        payment_method_id = request.form.get('payment_method_id', '').strip()
-        if not payment_method_id:
-            flash("Please provide valid card details.", "error")
-            return redirect(url_for('client.verify_card'))
-
-        card_info, err = verify_and_extract_card(payment_method_id)
-        if err or not card_info:
-            current_app.logger.warning(f"Card extraction failed: {err}")
-            flash(err or "Unable to verify payment card. Please check your card info.", "error")
-            return redirect(url_for('client.verify_card'))
-
-        fingerprint = card_info.get('fingerprint')
-        if is_card_fingerprint_used(fingerprint):
-            current_app.logger.warning(f"Duplicate card fingerprint rejected: {fingerprint}")
-            flash("This payment card has already been used for another account.", "error")
-            return redirect(url_for('client.verify_card'))
-
-        # Card is unique and validated
-        reg_data['card_fingerprint'] = fingerprint
-        reg_data['stripe_payment_method_id'] = card_info.get('payment_method_id')
-        reg_data['card_verified'] = True
-        session['reg_data'] = reg_data
-
-        # Proceed to step 3: Email verification
+        # Proceed directly to email verification (bypassing verify_card)
         email_code = str(secrets.randbelow(900000) + 100000)
         session['reg_verification'] = {
             'code': email_code,
@@ -385,30 +353,26 @@ def verify_card():
             'expires_at': time.time() + 600,
             'attempts': 0
         }
-
         ok, err_email = send_verification_email(reg_data['client_email'], email_code)
         if not ok:
             current_app.logger.error(f"Failed to send email verification to {reg_data['client_email']}: {err_email}")
-            flash("Card verified! However, failed to send verification email. Please try again.", "error")
+            flash("Phone verified! However, failed to send verification email. Please try again.", "error")
             return redirect(url_for('client.verify_email'))
 
-        flash("Card verified successfully. A verification code has been sent to your email.", "success")
+        flash("Phone verified successfully. A verification code has been sent to your email.", "success")
         return redirect(url_for('client.verify_email'))
 
-    client_secret, customer_id, _ = create_setup_intent(
-        customer_name=reg_data.get('client_name'),
-        customer_email=reg_data.get('client_email')
-    )
-    if customer_id:
-        reg_data['stripe_customer_id'] = customer_id
-        session['reg_data'] = reg_data
+    mock_code = phone_verif.get('code') if not is_whatsapp_configured() else None
+    return render_template('verify_phone.html', phone=phone_verif.get('phone'), mock_code=mock_code)
 
-    return render_template(
-        'verify_card.html',
-        publishable_key=pub_key or 'pk_test_placeholder',
-        client_secret=client_secret or '',
-        is_mock_mode=mock_mode
-    )
+
+@client_bp.route('/verify-card', methods=['GET', 'POST'])
+def verify_card():
+    # Card verification bypassed temporarily
+    reg_data = session.get('reg_data')
+    if reg_data and reg_data.get('phone_verified'):
+        return redirect(url_for('client.verify_email'))
+    return redirect(url_for('client.register'))
 
 
 @client_bp.route('/resend-phone-otp', methods=['POST'])
@@ -448,9 +412,6 @@ def verify_email():
 
     if not reg_data.get('phone_verified'):
         return redirect(url_for('client.verify_phone'))
-
-    if not reg_data.get('card_verified'):
-        return redirect(url_for('client.verify_card'))
 
     if request.method == 'POST':
         entered_code = request.form.get('code', '').strip()

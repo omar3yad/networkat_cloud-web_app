@@ -22,6 +22,7 @@ class Config:
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "True") == "True"
     WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL", "")
     WHATSAPP_API_TOKEN = os.getenv("WHATSAPP_API_TOKEN", "")
+    WHATSAPP_INSTANCE_ID = os.getenv("WHATSAPP_INSTANCE_ID", "")
     STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
     STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
     SQLALCHEMY_DATABASE_URI = (
