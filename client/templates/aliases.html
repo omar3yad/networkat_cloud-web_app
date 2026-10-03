@@ -52,6 +52,13 @@
     <!-- Aliases Workspace -->
     <div id="aliases-workspace" style="display: none;">
         {% if not admin_view and not feature_aliases %}
+        <div class="sl-premium-banner" style="border-left: 4px solid var(--nk-text-muted, #8c959f);">
+            <div class="sl-premium-banner-left">
+                <i class="fas fa-ban" style="color: var(--nk-text-muted, #8c959f);"></i>
+                <span>Aliases management is currently disabled by administrator</span>
+            </div>
+        </div>
+        {% elif not admin_view and trial_restricted_aliases %}
         <div class="sl-premium-banner">
             <div class="sl-premium-banner-left">
                 <i class="fas fa-lock"></i>
@@ -71,11 +78,11 @@
                 </button>
                 {% else %}
                 <button class="btn-action btn-primary" id="add-list-btn" onclick="openAddListModal()" {% if
-                    is_readonly_subscription or not feature_aliases %}disabled title="{% if not feature_aliases %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
+                    is_readonly_subscription or not feature_aliases or trial_restricted_aliases %}disabled title="{% if not feature_aliases %}Disabled by administrator{% elif trial_restricted_aliases %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                     <i class="fas fa-plus"></i> Add alias
                 </button>
                 <button class="btn-action" id="resolver-settings-btn" onclick="openResolverConfigModal()" {% if
-                    is_readonly_subscription or not feature_aliases %}disabled title="{% if not feature_aliases %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
+                    is_readonly_subscription or not feature_aliases or trial_restricted_aliases %}disabled title="{% if not feature_aliases %}Disabled by administrator{% elif trial_restricted_aliases %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                     <i class="fas fa-cog"></i> Resolver Settings
                 </button>
                 {% endif %}

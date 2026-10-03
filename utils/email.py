@@ -1,9 +1,11 @@
-# /opt/networkat_sdwan/core/web_app/utils/email.py
 import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from dotenv import load_dotenv
 from flask import current_app
+
+load_dotenv(override=True)
 
 def _get_smtp_config():
     try:

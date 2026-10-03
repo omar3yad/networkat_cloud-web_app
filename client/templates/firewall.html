@@ -69,6 +69,13 @@
     <!-- Firewall Rules Content -->
     <div id="rules-tab-content">
         {% if not admin_view and not feature_firewall %}
+        <div class="sl-premium-banner" style="border-left: 4px solid var(--nk-text-muted, #8c959f);">
+            <div class="sl-premium-banner-left">
+                <i class="fas fa-ban" style="color: var(--nk-text-muted, #8c959f);"></i>
+                <span>Firewall management is currently disabled by administrator</span>
+            </div>
+        </div>
+        {% elif not admin_view and trial_restricted_firewall %}
         <div class="sl-premium-banner">
             <div class="sl-premium-banner-left">
                 <i class="fas fa-lock"></i>
@@ -87,8 +94,8 @@
             </span>
             <div style="width: 1px; height: 20px; background: var(--nk-border);"></div>
             <button class="btn-cancel" onclick="fetchRules()">Discard</button>
-            <button class="btn-apply" onclick="submitReorder()" {% if is_readonly_subscription or not feature_firewall %}disabled
-                title="{% if not feature_firewall %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
+            <button class="btn-apply" onclick="submitReorder()" {% if is_readonly_subscription or not feature_firewall or trial_restricted_firewall %}disabled
+                title="{% if not feature_firewall %}Disabled by administrator{% elif trial_restricted_firewall %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                 Apply order
             </button>
         </div>
@@ -97,7 +104,7 @@
             <div class="control-actions" style="display: flex; gap: 0.5rem; align-items: center;">
                 {% if not admin_view %}
                 <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddModal()" {% if
-                    is_readonly_subscription or not feature_firewall %}disabled title="{% if not feature_firewall %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
+                    is_readonly_subscription or not feature_firewall or trial_restricted_firewall %}disabled title="{% if not feature_firewall %}Disabled by administrator{% elif trial_restricted_firewall %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
                 {% endif %}

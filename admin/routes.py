@@ -217,6 +217,154 @@ def dashboard():
     return render_template('dashboard.html', **data)
 
 
+# ── Subscription Plans Management (FastAPI Proxy) ──────────────────────────
+
+@admin_bp.route('/plans')
+@login_required
+@admin_required
+def plans():
+    from models import Client
+    from models.system_setting import SystemSetting
+    from sqlalchemy import func
+    all_plans = SubscriptionPlan.query.order_by(SubscriptionPlan.allowed_peers_count.asc()).all()
+    # Build customer count per plan
+    counts_q = db.session.query(Client.plan_id, func.count(Client.user_id)).group_by(Client.plan_id).all()
+    customer_counts = {str(plan_id): cnt for plan_id, cnt in counts_q if plan_id is not None}
+    total_customers = Client.query.count()
+
+    trial_days = 7
+    try:
+        st = SystemSetting.query.filter_by(key='trial.duration_days').first()
+        if st and st.value:
+            trial_days = int(st.value)
+    except Exception:
+        trial_days = 7
+
+    return render_template(
+        'plans.html',
+        plans=all_plans,
+        customer_counts=customer_counts,
+        total_customers=total_customers,
+        trial_days=trial_days
+    )
+
+
+@admin_bp.route('/api/plans/trial-duration', methods=['GET'])
+@login_required
+def api_plans_get_trial_duration():
+    try:
+        url = f"{_get_api_base_url()}/api/v2/plans/trial-duration"
+        response = requests.get(url, headers=_get_api_headers(), timeout=5)
+        return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        current_app.logger.error(f'Error proxying get trial duration: {e}')
+        return jsonify({'success': False, 'error': 'Failed to reach API server'}), 502
+
+
+@admin_bp.route('/api/plans/trial-duration', methods=['PUT'])
+@login_required
+@admin_required
+def api_plans_set_trial_duration():
+    try:
+        url = f"{_get_api_base_url()}/api/v2/plans/trial-duration"
+        response = requests.put(url, json=request.get_json() or {}, headers=_get_api_headers(), timeout=5)
+        if response.status_code == 422:
+            detail = response.json().get('detail')
+            msg = detail[0].get('msg') if isinstance(detail, list) and detail else str(detail)
+            return jsonify({'success': False, 'error': msg or 'Validation error'}), 400
+        if response.status_code >= 400:
+            err = response.json().get('detail', 'Failed to update trial duration')
+            return jsonify({'success': False, 'error': err}), response.status_code
+        return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        current_app.logger.error(f'Error proxying set trial duration: {e}')
+        return jsonify({'success': False, 'error': 'Failed to update trial duration'}), 502
+
+
+@admin_bp.route('/api/plans', methods=['GET'])
+@login_required
+def api_plans_list():
+    try:
+        url = f"{_get_api_base_url()}/api/v2/plans"
+        response = requests.get(url, headers=_get_api_headers(), timeout=5)
+        return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        current_app.logger.error(f'Error proxying plans list: {e}')
+        return jsonify({'success': False, 'error': 'Failed to reach API server'}), 502
+
+
+@admin_bp.route('/api/plans', methods=['POST'])
+@login_required
+@admin_required
+def api_plans_create():
+    try:
+        url = f"{_get_api_base_url()}/api/v2/plans"
+        response = requests.post(url, json=request.get_json() or {}, headers=_get_api_headers(), timeout=5)
+        if response.status_code == 422:
+            detail = response.json().get('detail')
+            msg = detail[0].get('msg') if isinstance(detail, list) and detail else str(detail)
+            return jsonify({'success': False, 'error': msg or 'Validation error'}), 400
+        if response.status_code >= 400:
+            err = response.json().get('detail', 'Failed to create plan')
+            return jsonify({'success': False, 'error': err}), response.status_code
+        return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        current_app.logger.error(f'Error proxying plan create: {e}')
+        return jsonify({'success': False, 'error': 'Failed to create plan'}), 502
+
+
+@admin_bp.route('/api/plans/<int:plan_id>', methods=['PUT'])
+@login_required
+@admin_required
+def api_plans_update(plan_id):
+    try:
+        url = f"{_get_api_base_url()}/api/v2/plans/{plan_id}"
+        response = requests.put(url, json=request.get_json() or {}, headers=_get_api_headers(), timeout=5)
+        if response.status_code == 422:
+            detail = response.json().get('detail')
+            msg = detail[0].get('msg') if isinstance(detail, list) and detail else str(detail)
+            return jsonify({'success': False, 'error': msg or 'Validation error'}), 400
+        if response.status_code >= 400:
+            err = response.json().get('detail', 'Failed to update plan')
+            return jsonify({'success': False, 'error': err}), response.status_code
+        return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        current_app.logger.error(f'Error proxying plan update: {e}')
+        return jsonify({'success': False, 'error': 'Failed to update plan'}), 502
+
+
+@admin_bp.route('/api/plans/<int:plan_id>', methods=['DELETE'])
+@login_required
+@admin_required
+def api_plans_delete(plan_id):
+    try:
+        url = f"{_get_api_base_url()}/api/v2/plans/{plan_id}"
+        response = requests.delete(url, headers=_get_api_headers(), timeout=5)
+        if response.status_code >= 400:
+            err = response.json().get('detail', 'Failed to delete plan')
+            return jsonify({'success': False, 'error': err}), response.status_code
+        return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        current_app.logger.error(f'Error proxying plan delete: {e}')
+        return jsonify({'success': False, 'error': 'Failed to delete plan'}), 502
+
+
+@admin_bp.route('/api/plans/<int:plan_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def api_plans_toggle(plan_id):
+    try:
+        url = f"{_get_api_base_url()}/api/v2/plans/{plan_id}/toggle"
+        response = requests.post(url, headers=_get_api_headers(), timeout=5)
+        if response.status_code >= 400:
+            err = response.json().get('detail', 'Failed to toggle plan')
+            return jsonify({'success': False, 'error': err}), response.status_code
+        return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        current_app.logger.error(f'Error proxying plan toggle: {e}')
+        return jsonify({'success': False, 'error': 'Failed to toggle plan'}), 502
+
+
 @admin_bp.route('/customers')
 @login_required
 def customers():
@@ -660,35 +808,99 @@ def send_customer_renewal_reminder(customer_id):
 # ----------------------------------------------------------------------
 # System Settings (Feature Flags & Limits)
 # ----------------------------------------------------------------------
+# System Settings & Feature Controls
+# ----------------------------------------------------------------------
 
 @admin_bp.route('/settings')
 @admin_required
 def system_settings():
+    return render_template('settings.html')
+
+
+@admin_bp.route('/settings/<string:category>')
+@admin_required
+def system_settings_category(category):
     from services.settings_service import settings as app_settings
-    from models.system_setting import SystemSetting
     by_category = app_settings.all_by_category()
-    return render_template('settings.html', settings_by_category=by_category)
+
+    # Match category case-insensitively
+    cat_match = None
+    for cat in by_category.keys():
+        if cat.lower() == category.lower():
+            cat_match = cat
+            break
+
+    if not cat_match:
+        # Fallback to Title case
+        cat_match = category.title()
+        items = []
+    else:
+        items = by_category.get(cat_match, [])
+
+    return render_template(
+        'settings_category.html',
+        category=cat_match,
+        settings=items
+    )
 
 
 @admin_bp.route('/api/settings', methods=['PATCH', 'POST'])
 @admin_required
 def update_settings():
-    from services.settings_service import settings as app_settings
     data = request.get_json() or {}
     if not data:
         return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+    # Proxy to FastAPI if available, else fallback
+    try:
+        url = f"{_get_api_base_url()}/api/v2/settings"
+        response = requests.patch(url, json=data, headers=_get_api_headers(), timeout=5)
+        if response.status_code == 200:
+            return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception as e:
+        current_app.logger.warning("FastAPI settings proxy error (using direct fallback): %s", e)
+
+    # Fallback to in-app settings_service
+    from services.settings_service import settings as app_settings
     actor = session.get('admin_username', 'admin')
     try:
         app_settings.set_many(data, updated_by=actor)
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'message': 'Settings updated successfully'})
     except Exception as exc:
         current_app.logger.error("Settings update error: %s", exc)
         return jsonify({'success': False, 'error': 'Update failed'}), 500
 
 
+@admin_bp.route('/api/settings/category/<string:category>', methods=['GET'])
+@login_required
+def get_category_settings_api(category):
+    try:
+        url = f"{_get_api_base_url()}/api/v2/settings/category/{category}"
+        response = requests.get(url, headers=_get_api_headers(), timeout=5)
+        if response.status_code == 200:
+            return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception:
+        pass
+
+    from services.settings_service import settings as app_settings
+    by_category = app_settings.all_by_category()
+    for cat, items in by_category.items():
+        if cat.lower() == category.lower():
+            return jsonify({'success': True, 'category': cat, 'settings': items})
+    return jsonify({'success': False, 'error': 'Category not found'}), 404
+
+
 @admin_bp.route('/api/settings/<string:key>', methods=['GET'])
 @login_required
 def get_setting(key):
+    try:
+        url = f"{_get_api_base_url()}/api/v2/settings/key/{key}"
+        response = requests.get(url, headers=_get_api_headers(), timeout=5)
+        if response.status_code == 200:
+            return (response.text, response.status_code, {'Content-Type': 'application/json'})
+    except Exception:
+        pass
+
     from services.settings_service import settings as app_settings
     val = app_settings.get(key)
     if val is None:

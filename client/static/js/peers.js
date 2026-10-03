@@ -463,9 +463,15 @@
     }
 
     function enablePeerRouteEditMode(peerId) {
-        if (window.MPLS_ALLOWED === false) {
+        if (window.FEATURE_MPLS_ROUTING === false) {
             if (window.showToast) {
-                window.showToast("MPLS trial expired. Please upgrade.", "error");
+                window.showToast("Network route management is currently disabled by administrator", "error");
+            }
+            return;
+        }
+        if (window.IS_TRIAL && (window.TRIAL_RESTRICTED_MPLS || window.IS_MPLS_ALLOWED === false)) {
+            if (window.showToast) {
+                window.showToast("To configure network routes, upgrade to a paid plan", "error");
             }
             return;
         }

@@ -68,6 +68,13 @@
     <!-- Web Filter Rules Content -->
     <div id="rules-tab-content">
         {% if not admin_view and not feature_web_filter %}
+        <div class="sl-premium-banner" style="border-left: 4px solid var(--nk-text-muted, #8c959f);">
+            <div class="sl-premium-banner-left">
+                <i class="fas fa-ban" style="color: var(--nk-text-muted, #8c959f);"></i>
+                <span>Web filter management is currently disabled by administrator</span>
+            </div>
+        </div>
+        {% elif not admin_view and trial_restricted_web_filter %}
         <div class="sl-premium-banner">
             <div class="sl-premium-banner-left">
                 <i class="fas fa-lock"></i>
@@ -82,7 +89,7 @@
             <div class="control-actions">
                 {% if not admin_view %}
                 <button class="btn-action btn-primary" id="add-rule-btn" onclick="openAddRuleModal()" {% if
-                    is_readonly_subscription or not feature_web_filter %}disabled title="{% if not feature_web_filter %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
+                    is_readonly_subscription or not feature_web_filter or trial_restricted_web_filter %}disabled title="{% if not feature_web_filter %}Disabled by administrator{% elif trial_restricted_web_filter %}Available on paid plans{% else %}Modifications locked in Read-Only mode{% endif %}" {% endif %}>
                     <i class="fas fa-plus"></i> Add Rule
                 </button>
                 {% endif %}

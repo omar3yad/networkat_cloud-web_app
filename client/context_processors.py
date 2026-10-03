@@ -261,12 +261,36 @@ def inject_subscription_context():
 def inject_system_features():
     try:
         from services.settings_service import settings
+        from flask import session
+        from models.client import Client
+
+        cid = session.get('client_customer_id') or session.get('client_user_id')
+        client = Client.query.get(cid) if cid else None
+        is_trial = bool(client and client.is_trial)
+
+        # Global system flags
+        feat_aliases = settings.get_bool("feature.aliases", default=True)
+        feat_firewall = settings.get_bool("feature.firewall", default=True)
+        feat_web_filter = settings.get_bool("feature.web_filter", default=True)
+        feat_mpls_routing = settings.get_bool("feature.mpls_routing", default=True)
+        feat_system_logs = settings.get_bool("feature.system_logs", default=True)
+
+        # Trial-specific feature flags
+        trial_allow_aliases = settings.get_bool("trial.allow_aliases", default=True)
+        trial_allow_firewall = settings.get_bool("trial.allow_firewall", default=True)
+        trial_allow_web_filter = settings.get_bool("trial.allow_web_filter", default=True)
+        trial_allow_mpls = settings.get_bool("trial.allow_mpls", default=True)
+
         return dict(
-            feature_aliases=settings.get_bool("feature.aliases", default=True),
-            feature_firewall=settings.get_bool("feature.firewall", default=True),
-            feature_web_filter=settings.get_bool("feature.web_filter", default=True),
-            feature_mpls_routing=settings.get_bool("feature.mpls_routing", default=True),
-            feature_system_logs=settings.get_bool("feature.system_logs", default=True),
+            feature_aliases=feat_aliases,
+            feature_firewall=feat_firewall,
+            feature_web_filter=feat_web_filter,
+            feature_mpls_routing=feat_mpls_routing,
+            feature_system_logs=feat_system_logs,
+            trial_restricted_aliases=bool(is_trial and not trial_allow_aliases),
+            trial_restricted_firewall=bool(is_trial and not trial_allow_firewall),
+            trial_restricted_web_filter=bool(is_trial and not trial_allow_web_filter),
+            trial_restricted_mpls=bool(is_trial and not trial_allow_mpls),
             contact_url=settings.get_str("billing.contact_url", default="/contact") or "/contact"
         )
     except Exception as exc:
@@ -277,6 +301,10 @@ def inject_system_features():
             feature_web_filter=True,
             feature_mpls_routing=True,
             feature_system_logs=True,
+            trial_restricted_aliases=False,
+            trial_restricted_firewall=False,
+            trial_restricted_web_filter=False,
+            trial_restricted_mpls=False,
             contact_url="/contact"
         )
 

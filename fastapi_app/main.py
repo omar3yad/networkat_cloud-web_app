@@ -11,6 +11,8 @@ from fastapi_app.routes.controller import commands as controller_commands
 from fastapi_app.routes import auth as client_auth
 from fastapi_app.routes.client import system_logs as client_system_logs
 from fastapi_app.services.client.system_logs_service import SystemLogsError
+from fastapi_app.routes import plans as plans_routes
+from fastapi_app.routes import settings as settings_routes
 from fastapi_app.routes.netbird import (
     setup_keys as netbird_setup_keys,
     routes as netbird_routes,
@@ -59,6 +61,8 @@ _SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts
 app.mount("/scripts", StaticFiles(directory=_SCRIPTS_DIR), name="scripts")
 
 # ── Protected routers — require Bearer token ──────────────────────────────────
+app.include_router(settings_routes.router,       dependencies=_auth)
+app.include_router(plans_routes.router,          dependencies=_auth)
 app.include_router(adguard_dns.router,          dependencies=_auth)
 app.include_router(netbird_peers.router,        dependencies=_auth)
 app.include_router(netbird_users.router,        dependencies=_auth)

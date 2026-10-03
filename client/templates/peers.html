@@ -84,7 +84,10 @@
 
 {% block extra_scripts %}
 <script>
-    window.MPLS_ALLOWED = {{ 'true' if (is_mpls_allowed and feature_mpls_routing) else 'false' }};
+    window.FEATURE_MPLS_ROUTING = {{ 'true' if feature_mpls_routing else 'false' }};
+    window.IS_TRIAL = {{ 'true' if is_trial else 'false' }};
+    window.TRIAL_RESTRICTED_MPLS = {{ 'true' if trial_restricted_mpls else 'false' }};
+    window.IS_MPLS_ALLOWED = {{ 'true' if is_mpls_allowed else 'false' }};
 </script>
 <script src="{{ url_for('static', filename='js/peers.js') }}"></script>
 {% endblock %}

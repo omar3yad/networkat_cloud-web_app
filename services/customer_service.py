@@ -271,7 +271,17 @@ class CustomerService:
             client.is_trial = data.get('is_trial', True)
             if client.is_trial:
                 client.trial_started_at = datetime.utcnow()
-                client.trial_expires_at = datetime.utcnow() + timedelta(days=30)
+                trial_days = 7
+                try:
+                    from models.system_setting import SystemSetting
+                    st = SystemSetting.query.filter_by(key='trial.duration_days').first()
+                    if st and st.value:
+                        trial_days = int(st.value)
+                except Exception:
+                    trial_days = 7
+                client.trial_expires_at = datetime.utcnow() + timedelta(days=trial_days)
+                if not renewal_date_val:
+                    client.renewal_date = client.trial_expires_at
             client.phone_verified = data.get('phone_verified', False)
             if data.get('card_fingerprint'):
                 client.card_fingerprint = data.get('card_fingerprint')
