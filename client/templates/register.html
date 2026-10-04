@@ -455,12 +455,12 @@
                     <i class="fas fa-key" style="color: #0078d4;"></i> Account Credentials
                 </div>
 
-                <div class="form-group">
+                <div class="form-group-full">
                     <label for="username">Username *</label>
                     <input type="text" id="username" name="username" placeholder="e.g. omar-ahmed"
                         value="{{ request.form.get('username', '') }}" required autocomplete="username">
                     <div id="usernameFeedback" class="field-feedback hint">
-                        Letters, numbers, hyphens (-) only.
+                        3–32 characters (letters, numbers, hyphens, and underscores).
                     </div>
                 </div>
 
@@ -473,11 +473,11 @@
                     </div>
                 </div>
 
-                <div class="form-group-full">
+                <div class="form-group">
                     <label for="confirm_password">Confirm Password *</label>
                     <input type="password" id="confirm_password" name="confirm_password" placeholder="Repeat your password"
                         value="{{ request.form.get('confirm_password', '') }}" required autocomplete="new-password">
-                    <div id="confirmPasswordFeedback" class="field-feedback" style="display: none;"></div>
+                    <div id="confirmPasswordFeedback" class="field-feedback hint" style="display: none;"></div>
                 </div>
 
                 <!-- Section 2: Client Info -->
@@ -713,16 +713,17 @@
             }
         });
 
-        // 1. Live Username Validation
-        function validateUsername() {
-            const val = usernameInput.value;
+        // 1. Username Validation
+        function validateUsername(isBlur = false) {
+            const val = usernameInput.value.trim();
             if (!val) {
                 usernameInput.classList.remove('is-invalid', 'is-valid');
                 usernameFeedback.className = 'field-feedback hint';
-                usernameFeedback.innerHTML = 'Letters, numbers, hyphens (-) only ';
+                usernameFeedback.innerHTML = '3–32 characters (letters, numbers, hyphens, and underscores).';
                 return false;
             }
 
+            // Real-time check: Invalid characters
             const invalidCharMatch = val.match(/[^a-zA-Z0-9_-]/g);
             if (invalidCharMatch) {
                 const uniqueInvalid = Array.from(new Set(invalidCharMatch)).join(' ');
@@ -733,14 +734,16 @@
                 return false;
             }
 
-            if (val.length < 3) {
+            // Real-time check: Must start with alphanumeric (not - or _)
+            if (/^[-_]/.test(val)) {
                 usernameInput.classList.add('is-invalid');
                 usernameInput.classList.remove('is-valid');
                 usernameFeedback.className = 'field-feedback error';
-                usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Username must be at least 3 characters.`;
+                usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Username cannot start with a hyphen (-) or underscore (_).`;
                 return false;
             }
 
+            // Real-time check: Max length
             if (val.length > 32) {
                 usernameInput.classList.add('is-invalid');
                 usernameInput.classList.remove('is-valid');
@@ -749,6 +752,35 @@
                 return false;
             }
 
+            // While typing (not blur yet)
+            if (!isBlur) {
+                // If it ends with - or _ or is less than 3 chars, keep neutral hint without premature error or valid
+                if (val.length < 3 || /[-_]$/.test(val)) {
+                    usernameInput.classList.remove('is-invalid', 'is-valid');
+                    usernameFeedback.className = 'field-feedback hint';
+                    usernameFeedback.innerHTML = '3–32 characters (letters, numbers, hyphens, and underscores).';
+                    return false;
+                }
+            } else {
+                // On Blur: Check min length and trailing - or _
+                if (val.length < 3) {
+                    usernameInput.classList.add('is-invalid');
+                    usernameInput.classList.remove('is-valid');
+                    usernameFeedback.className = 'field-feedback error';
+                    usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Username must be at least 3 characters.`;
+                    return false;
+                }
+
+                if (/[-_]$/.test(val)) {
+                    usernameInput.classList.add('is-invalid');
+                    usernameInput.classList.remove('is-valid');
+                    usernameFeedback.className = 'field-feedback error';
+                    usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Username cannot end with a hyphen (-) or underscore (_).`;
+                    return false;
+                }
+            }
+
+            // Valid username
             usernameInput.classList.remove('is-invalid');
             usernameInput.classList.add('is-valid');
             usernameFeedback.className = 'field-feedback success';
@@ -756,45 +788,54 @@
             return true;
         }
 
-        usernameInput.addEventListener('input', validateUsername);
-        usernameInput.addEventListener('blur', validateUsername);
+        usernameInput.addEventListener('input', () => validateUsername(false));
+        usernameInput.addEventListener('blur', () => validateUsername(true));
 
         // 2. Phone Number Update and Live Normalization
-        function updateFullPhoneNumber() {
+        function updateFullPhoneNumber(isBlur = false) {
             const code = selectedCountry.dial.trim();
             let local = phoneLocalInput.value.trim();
-            // Remove non-digit characters
             local = local.replace(/\D/g, '');
-            // Strip leading zero if present (e.g. 01012345678 -> 1012345678)
             if (local.startsWith('0')) {
                 local = local.substring(1);
             }
-            
+
             if (local.length > 0) {
                 fullPhoneInput.value = code + local;
             } else {
                 fullPhoneInput.value = '';
             }
 
-            if (local.length > 0 && local.length < 6) {
-                customPhoneWrapper.classList.add('is-invalid');
-                phoneFeedback.className = 'field-feedback error';
-                phoneFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Please enter a complete phone number.`;
-            } else if (local.length >= 6) {
-                customPhoneWrapper.classList.remove('is-invalid');
-                phoneFeedback.className = 'field-feedback hint';
-                phoneFeedback.innerHTML = `Formatted: ${code}${local}`;
-            } else {
+            if (!local) {
                 customPhoneWrapper.classList.remove('is-invalid');
                 phoneFeedback.className = 'field-feedback hint';
                 phoneFeedback.innerHTML = 'Required for direct WhatsApp.';
+                return;
+            }
+
+            if (isBlur) {
+                if (local.length < 6) {
+                    customPhoneWrapper.classList.add('is-invalid');
+                    phoneFeedback.className = 'field-feedback error';
+                    phoneFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Please enter a complete phone number.`;
+                } else {
+                    customPhoneWrapper.classList.remove('is-invalid');
+                    phoneFeedback.className = 'field-feedback hint';
+                    phoneFeedback.innerHTML = `Formatted: ${code}${local}`;
+                }
+            } else {
+                // While typing, stay neutral without premature red error
+                customPhoneWrapper.classList.remove('is-invalid');
+                phoneFeedback.className = 'field-feedback hint';
+                phoneFeedback.innerHTML = `Formatted: ${code}${local}`;
             }
         }
 
-        phoneLocalInput.addEventListener('input', updateFullPhoneNumber);
+        phoneLocalInput.addEventListener('input', () => updateFullPhoneNumber(false));
+        phoneLocalInput.addEventListener('blur', () => updateFullPhoneNumber(true));
 
         // 3. Confirm Password Match
-        function validatePasswordMatch() {
+        function validatePasswordMatch(isBlur = false) {
             const pwd = passwordInput.value;
             const confirm = confirmPasswordInput.value;
 
@@ -805,23 +846,33 @@
             }
 
             confirmPasswordFeedback.style.display = 'flex';
-            if (pwd !== confirm) {
-                confirmPasswordInput.classList.add('is-invalid');
-                confirmPasswordInput.classList.remove('is-valid');
-                confirmPasswordFeedback.className = 'field-feedback error';
-                confirmPasswordFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Passwords do not match.`;
-                return false;
-            } else {
+
+            if (pwd === confirm && pwd.length >= 6) {
                 confirmPasswordInput.classList.remove('is-invalid');
                 confirmPasswordInput.classList.add('is-valid');
                 confirmPasswordFeedback.className = 'field-feedback success';
                 confirmPasswordFeedback.innerHTML = `<i class="fas fa-check-circle"></i> Passwords match`;
                 return true;
             }
+
+            if (isBlur) {
+                confirmPasswordInput.classList.add('is-invalid');
+                confirmPasswordInput.classList.remove('is-valid');
+                confirmPasswordFeedback.className = 'field-feedback error';
+                confirmPasswordFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Passwords do not match.`;
+                return false;
+            } else {
+                confirmPasswordInput.classList.remove('is-invalid', 'is-valid');
+                confirmPasswordFeedback.className = 'field-feedback hint';
+                confirmPasswordFeedback.innerHTML = `Repeat your password.`;
+                return false;
+            }
         }
 
-        passwordInput.addEventListener('input', validatePasswordMatch);
-        confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+        passwordInput.addEventListener('input', () => validatePasswordMatch(false));
+        confirmPasswordInput.addEventListener('input', () => validatePasswordMatch(false));
+        confirmPasswordInput.addEventListener('blur', () => validatePasswordMatch(true));
+        passwordInput.addEventListener('blur', () => validatePasswordMatch(true));
 
         // 4. Form Submit Handler
         function showFormError(msg) {

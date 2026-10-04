@@ -606,10 +606,17 @@ def get_peers_status_api():
 @login_required
 @subscription_write_required
 def peer_vpn_only_proxy(peer_id):
+    from services.settings_service import settings as app_settings
+    if not app_settings.get_bool("feature.vpn_only", default=True):
+        return jsonify({"detail": "VPN-Only mode is currently disabled by administrator"}), 403
+
     customer_id = session.get('client_customer_id')
     customer = Client.query.get(customer_id) if customer_id else None
     if not customer or not verify_peer_access(customer, peer_id):
         return jsonify({"detail": "Unauthorized access"}), 403
+
+    if customer.is_trial and not app_settings.get_bool("trial.allow_vpn_only", default=True):
+        return jsonify({"detail": "To use VPN-Only mode, upgrade to a paid plan"}), 403
 
     peers_data = get_cached_all_netbird_peers(get_api_base_url(), get_api_headers())
     peer = next((p for p in peers_data if p.get("id") == peer_id), None)

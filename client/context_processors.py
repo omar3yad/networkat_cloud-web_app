@@ -272,25 +272,25 @@ def inject_system_features():
         feat_aliases = settings.get_bool("feature.aliases", default=True)
         feat_firewall = settings.get_bool("feature.firewall", default=True)
         feat_web_filter = settings.get_bool("feature.web_filter", default=True)
-        feat_mpls_routing = settings.get_bool("feature.mpls_routing", default=True)
+        feat_vpn_only = settings.get_bool("feature.vpn_only", default=True)
         feat_system_logs = settings.get_bool("feature.system_logs", default=True)
 
         # Trial-specific feature flags
         trial_allow_aliases = settings.get_bool("trial.allow_aliases", default=True)
         trial_allow_firewall = settings.get_bool("trial.allow_firewall", default=True)
         trial_allow_web_filter = settings.get_bool("trial.allow_web_filter", default=True)
-        trial_allow_mpls = settings.get_bool("trial.allow_mpls", default=True)
+        trial_allow_vpn_only = settings.get_bool("trial.allow_vpn_only", default=True)
 
         return dict(
             feature_aliases=feat_aliases,
             feature_firewall=feat_firewall,
             feature_web_filter=feat_web_filter,
-            feature_mpls_routing=feat_mpls_routing,
+            feature_vpn_only=feat_vpn_only,
             feature_system_logs=feat_system_logs,
             trial_restricted_aliases=bool(is_trial and not trial_allow_aliases),
             trial_restricted_firewall=bool(is_trial and not trial_allow_firewall),
             trial_restricted_web_filter=bool(is_trial and not trial_allow_web_filter),
-            trial_restricted_mpls=bool(is_trial and not trial_allow_mpls),
+            trial_restricted_vpn_only=bool(is_trial and not trial_allow_vpn_only),
             contact_url=settings.get_str("billing.contact_url", default="/contact") or "/contact"
         )
     except Exception as exc:
@@ -299,12 +299,12 @@ def inject_system_features():
             feature_aliases=True,
             feature_firewall=True,
             feature_web_filter=True,
-            feature_mpls_routing=True,
+            feature_vpn_only=True,
             feature_system_logs=True,
             trial_restricted_aliases=False,
             trial_restricted_firewall=False,
             trial_restricted_web_filter=False,
-            trial_restricted_mpls=False,
+            trial_restricted_vpn_only=False,
             contact_url="/contact"
         )
 

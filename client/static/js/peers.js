@@ -463,18 +463,6 @@
     }
 
     function enablePeerRouteEditMode(peerId) {
-        if (window.FEATURE_MPLS_ROUTING === false) {
-            if (window.showToast) {
-                window.showToast("Network route management is currently disabled by administrator", "error");
-            }
-            return;
-        }
-        if (window.IS_TRIAL && (window.TRIAL_RESTRICTED_MPLS || window.IS_MPLS_ALLOWED === false)) {
-            if (window.showToast) {
-                window.showToast("To configure network routes, upgrade to a paid plan", "error");
-            }
-            return;
-        }
         const tr = document.querySelector(`#peers-table-body tr[data-peer-id="${peerId}"]`);
         const routeView = document.getElementById(`peer-route-view-${peerId}`);
         const routeWrapper = document.getElementById(`route-input-wrapper-${peerId}`);
@@ -783,8 +771,15 @@
         const vpnOnlyChecked = peer.vpn_only ? 'checked' : '';
         const vpnOnlyText = peer.vpn_only ? 'ON' : 'OFF';
 
-        const isDisabled = !peer.is_online ? 'disabled' : '';
-        const disabledTitle = !peer.is_online ? 'title="Device is offline"' : '';
+        let isDisabled = !peer.is_online ? 'disabled' : '';
+        let disabledTitle = !peer.is_online ? 'title="Device is offline"' : '';
+        if (window.FEATURE_VPN_ONLY === false) {
+            isDisabled = 'disabled';
+            disabledTitle = 'title="Disabled by administrator"';
+        } else if (window.IS_TRIAL && window.TRIAL_RESTRICTED_VPN_ONLY) {
+            isDisabled = 'disabled';
+            disabledTitle = 'title="Available on paid plans"';
+        }
         const offlineCls = !peer.is_online ? ' is-offline' : '';
 
         // Manage is always available, regardless of peer online state
@@ -988,6 +983,20 @@
         const vpnText = document.getElementById(`vpn-only-text-${peerId}`);
         const desired = checkbox.checked;
         const orig = originalPeerState[peerId];
+
+        if (window.FEATURE_VPN_ONLY === false) {
+            checkbox.checked = !desired;
+            if (vpnText) vpnText.innerText = !desired ? 'ON' : 'OFF';
+            if (window.showError) window.showError("VPN-Only mode is currently disabled by administrator");
+            return;
+        }
+
+        if (window.IS_TRIAL && window.TRIAL_RESTRICTED_VPN_ONLY) {
+            checkbox.checked = !desired;
+            if (vpnText) vpnText.innerText = !desired ? 'ON' : 'OFF';
+            if (window.showError) window.showError("To use VPN-Only mode, upgrade to a paid plan");
+            return;
+        }
 
         if (vpnText) vpnText.innerText = desired ? 'ON' : 'OFF';
         checkbox.disabled = true;

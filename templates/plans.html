@@ -253,11 +253,6 @@
                                     onclick="handleEditClick(this)">
                                 <i class="fas fa-pen"></i>
                             </button>
-                            <button class="icon-btn danger" title="Delete plan"
-                                    data-id="{{ plan.id }}" data-name="{{ plan.display_name|e }}"
-                                    onclick="openDeleteModal({{ plan.id }}, this.getAttribute('data-name'))">
-                                <i class="fas fa-trash"></i>
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -367,11 +362,18 @@
                 <button class="toggle on" id="modal-active-toggle" onclick="toggleModalActive()"></button>
             </div>
         </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('plan-modal')">Cancel</button>
-            <button class="btn btn-primary" id="modal-save-btn" onclick="savePlan()">
-                <i class="fas fa-check"></i> Save plan
-            </button>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <button type="button" class="btn btn-danger" id="modal-delete-btn" style="display:none;" onclick="triggerDeleteFromModal()">
+                    <i class="fas fa-trash"></i> Delete plan
+                </button>
+            </div>
+            <div style="display:flex; gap:.6rem; align-items:center;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('plan-modal')">Cancel</button>
+                <button type="button" class="btn btn-primary" id="modal-save-btn" onclick="savePlan()">
+                    <i class="fas fa-check"></i> Save plan
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -442,6 +444,7 @@ function openCreateModal() {
     document.getElementById('plan-price-annual').value = '';
     document.getElementById('name-group').style.display = '';
     document.getElementById('modal-active-toggle-wrap').style.display = 'none';
+    document.getElementById('modal-delete-btn').style.display = 'none';
     document.getElementById('modal-save-btn').innerHTML = '<i class="fas fa-plus"></i> Create plan';
     openModal('plan-modal');
     setTimeout(() => document.getElementById('plan-display-name').focus(), 100);
@@ -471,8 +474,17 @@ function openEditModal(plan) {
     document.getElementById('name-group').style.display = 'none';
     document.getElementById('modal-active-toggle-wrap').style.display = '';
     document.getElementById('modal-active-toggle').classList.toggle('on', !!plan.is_active);
+    document.getElementById('modal-delete-btn').style.display = 'inline-flex';
     document.getElementById('modal-save-btn').innerHTML = '<i class="fas fa-check"></i> Save changes';
     openModal('plan-modal');
+}
+
+function triggerDeleteFromModal() {
+    const planId = document.getElementById('edit-plan-id').value;
+    const planName = document.getElementById('plan-display-name').value;
+    if (!planId) return;
+    closeModal('plan-modal');
+    openDeleteModal(parseInt(planId), planName);
 }
 
 function toggleModalActive() {

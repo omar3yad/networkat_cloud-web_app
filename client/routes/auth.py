@@ -217,8 +217,8 @@ def register():
             flash("All fields marked with * are required.", "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
-        if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', username):
-            flash("Username must be between 3 and 32 characters and can only contain letters, numbers, hyphens, and underscores.", "error")
+        if not re.match(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{1,30}[a-zA-Z0-9]$', username):
+            flash("Username must be 3-32 characters, starting and ending with a letter or number (hyphens and underscores allowed in between).", "error")
             return render_template('register.html', recaptcha_site_key=recaptcha_site_key)
 
         # Normalize phone number to international E.164 format
