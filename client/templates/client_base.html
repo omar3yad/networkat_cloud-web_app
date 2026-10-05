@@ -124,7 +124,7 @@
                                         {% else %}
                                             {% set click_handler = '' %}
                                             {% if request.endpoint == 'client.peer_system_logs' %}
-                                                {% set target_url = url_for('client.peer_system_logs', peer_id=p.id, name=p.name) %}
+                                                {% set target_url = url_for('client.peer_system_logs', peer_id=p.id) %}
                                             {% elif p.connected %}
                                                 {% if request.endpoint in ['client.peer_web_filter', 'client.peer_filtering'] %}
                                                     {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}
@@ -369,12 +369,15 @@
         function getSidebarPeerUrl(pid, isOnline) {
             const path = window.location.pathname;
             const base = window.API_BASE || '';
+            const logsMatch = path.match(/\/logs\/([a-z-]+)/);
             if (window.ADMIN_VIEW) {
+                if (logsMatch) return `${base}/peers/${pid}/logs/${logsMatch[1]}/`;
                 if (path.includes('/firewall')) return `${base}/peers/${pid}/firewall`;
                 if (path.includes('/web-filter') || path.includes('/filtering')) return `${base}/peers/${pid}/web-filter`;
                 if (path.includes('/aliases')) return `${base}/peers/${pid}/aliases`;
                 return `${base}/peers/${pid}`;
             }
+            if (logsMatch) return `/peers/${pid}/logs/${logsMatch[1]}/`;
             if (isOnline) {
                 if (path.includes('/firewall')) return `/peers/${pid}/firewall`;
                 if (path.includes('/web-filter') || path.includes('/filtering')) return `/peers/${pid}/web-filter`;

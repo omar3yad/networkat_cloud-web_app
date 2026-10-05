@@ -460,7 +460,7 @@
                     <input type="text" id="username" name="username" placeholder="e.g. omar-ahmed"
                         value="{{ request.form.get('username', '') }}" required autocomplete="username">
                     <div id="usernameFeedback" class="field-feedback hint">
-                        3–32 characters (letters, numbers, hyphens, and underscores).
+                        3–32 characters (letters, numbers only).
                     </div>
                 </div>
 
@@ -719,27 +719,27 @@
             if (!val) {
                 usernameInput.classList.remove('is-invalid', 'is-valid');
                 usernameFeedback.className = 'field-feedback hint';
-                usernameFeedback.innerHTML = '3–32 characters (letters, numbers, hyphens, and underscores).';
+                usernameFeedback.innerHTML = '3–32 characters (letters, numbers only).';
                 return false;
             }
 
-            // Real-time check: Invalid characters
-            const invalidCharMatch = val.match(/[^a-zA-Z0-9_-]/g);
+            // Real-time check: Invalid characters (disallow _ and other symbols)
+            const invalidCharMatch = val.match(/[^a-zA-Z0-9-]/g);
             if (invalidCharMatch) {
                 const uniqueInvalid = Array.from(new Set(invalidCharMatch)).join(' ');
                 usernameInput.classList.add('is-invalid');
                 usernameInput.classList.remove('is-valid');
                 usernameFeedback.className = 'field-feedback error';
-                usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Invalid character: "${uniqueInvalid}". Only letters, numbers, _ and - allowed.`;
+                usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Invalid character: "${uniqueInvalid}". Only letters, numbers, - allowed.`;
                 return false;
             }
 
-            // Real-time check: Must start with alphanumeric (not - or _)
-            if (/^[-_]/.test(val)) {
+            // Real-time check: Must start with alphanumeric (not -)
+            if (/^-/.test(val)) {
                 usernameInput.classList.add('is-invalid');
                 usernameInput.classList.remove('is-valid');
                 usernameFeedback.className = 'field-feedback error';
-                usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Username cannot start with a hyphen (-) or underscore (_).`;
+                usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Username cannot start with a hyphen (-).`;
                 return false;
             }
 
@@ -754,15 +754,15 @@
 
             // While typing (not blur yet)
             if (!isBlur) {
-                // If it ends with - or _ or is less than 3 chars, keep neutral hint without premature error or valid
-                if (val.length < 3 || /[-_]$/.test(val)) {
+                // If it ends with - or is less than 3 chars, keep neutral hint without premature error or valid
+                if (val.length < 3 || /-$/.test(val)) {
                     usernameInput.classList.remove('is-invalid', 'is-valid');
                     usernameFeedback.className = 'field-feedback hint';
-                    usernameFeedback.innerHTML = '3–32 characters (letters, numbers, hyphens, and underscores).';
+                    usernameFeedback.innerHTML = '3–32 characters (letters, numbers only).';
                     return false;
                 }
             } else {
-                // On Blur: Check min length and trailing - or _
+                // On Blur: Check min length and trailing -
                 if (val.length < 3) {
                     usernameInput.classList.add('is-invalid');
                     usernameInput.classList.remove('is-valid');
@@ -771,11 +771,11 @@
                     return false;
                 }
 
-                if (/[-_]$/.test(val)) {
+                if (/-$/.test(val)) {
                     usernameInput.classList.add('is-invalid');
                     usernameInput.classList.remove('is-valid');
                     usernameFeedback.className = 'field-feedback error';
-                    usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Username cannot end with a hyphen (-) or underscore (_).`;
+                    usernameFeedback.innerHTML = `<i class="fas fa-times-circle"></i> Username cannot end with a hyphen (-).`;
                     return false;
                 }
             }
@@ -893,7 +893,7 @@
             e.preventDefault();
 
             if (!validateUsername()) {
-                showFormError('Please choose a valid username (3-32 letters, numbers, _ or - only).');
+                showFormError('Please choose a valid username (3-32 letters, numbers, and hyphens only).');
                 usernameInput.focus();
                 return;
             }

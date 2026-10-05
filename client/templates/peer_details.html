@@ -41,11 +41,11 @@
         </div>
         <div>
             {% if is_online %}
-            <span class="badge-status badge-online">
+            <span class="badge-status badge-online" id="peer-status-badge-header">
                 <i class="fas fa-circle"></i> Connected
             </span>
             {% else %}
-            <span class="badge-status badge-offline">
+            <span class="badge-status badge-offline" id="peer-status-badge-header">
                 <i class="fas fa-circle"></i> Offline
             </span>
             {% endif %}
@@ -284,9 +284,9 @@
                             <span class="sl-live-dot"></span><span id="sl-live-text">Connecting</span>
                         </span>
                         {% if admin_view %}
-                        <a href="{{ url_for('admin.admin_view_peer_system_logs', customer_id=admin_customer_id, peer_id=peer_id, name=peer_name) }}" class="sl-view-all">View all &rarr;</a>
+                        <a href="{{ url_for('admin.admin_view_peer_system_logs', customer_id=admin_customer_id, peer_id=peer_id) }}" class="sl-view-all">View all &rarr;</a>
                         {% else %}
-                        <a href="{{ url_for('client.peer_system_logs', peer_id=peer_id, name=peer_name) }}" class="sl-view-all">View all &rarr;</a>
+                        <a href="{{ url_for('client.peer_system_logs', peer_id=peer_id) }}" class="sl-view-all">View all &rarr;</a>
                         {% endif %}
                     </span>
                 </h3>

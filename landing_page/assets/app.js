@@ -153,19 +153,36 @@
   }
 
   // copy install command
+  function fallbackCopy(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    done();
+  }
+
   document.querySelectorAll(".copy-btn").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var target = document.querySelector(btn.getAttribute("data-copy"));
       if (!target) return;
       var text = target.textContent.trim();
+      var isEN = document.body.dir === "ltr";
+      var old = isEN ? (btn.getAttribute("data-en") || "Copy") : (btn.getAttribute("data-ar") || "نسخ");
       var done = function () {
-        var isEN = document.body.dir === "ltr";
-        var old = btn.textContent;
         btn.textContent = isEN ? "Copied ✓" : "تم النسخ ✓";
         setTimeout(function () { btn.textContent = old; }, 1800);
       };
-      if (navigator.clipboard) { navigator.clipboard.writeText(text).then(done).catch(done); }
-      else { done(); }
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          fallbackCopy(text, done);
+        });
+      } else {
+        fallbackCopy(text, done);
+      }
     });
   });
 })();

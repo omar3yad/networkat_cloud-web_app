@@ -19,7 +19,11 @@
             <!-- <p>Manage your client details, organization settings, and credentials</p> -->
         </div>
         <div>
-            {% if client and client.active %}
+            {% if client and client.is_trial %}
+            <span class="badge-status badge-trial" style="background: rgba(234, 88, 12, 0.12); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.25);">
+                <i class="fas fa-clock"></i> Free Trial
+            </span>
+            {% elif client and client.active %}
             <span class="badge-status badge-online">
                 <i class="fas fa-check-circle"></i> Active Account
             </span>
@@ -60,7 +64,13 @@
 
         <div class="hero-stats">
             <div class="stat-box">
-                <span class="stat-num" style="text-transform: capitalize;">{{ subscription_info.plan_display if (subscription_info and subscription_info.plan_display) else (client.subscription if (client and client.subscription) else 'Starter') }}</span>
+                <span class="stat-num" style="text-transform: capitalize;">
+                    {% if client and client.is_trial %}
+                        Free Trial
+                    {% else %}
+                        {{ subscription_info.plan_display if (subscription_info and subscription_info.plan_display) else (client.subscription if (client and client.subscription) else 'Starter') }}
+                    {% endif %}
+                </span>
                 <span class="stat-label">Plan Tier</span>
             </div>
             <div class="stat-box">
@@ -73,17 +83,21 @@
             </div>
             <div class="stat-box">
                 <span class="stat-num">
-                    {% if subscription_info and subscription_info.renewal_date %}
+                    {% if client and client.is_trial and client.trial_expires_at %}
+                        {{ client.trial_expires_at.strftime('%Y-%m-%d') }}
+                    {% elif subscription_info and subscription_info.renewal_date %}
                         {{ subscription_info.renewal_date[:10] }}
                     {% elif client and client.renewal_date %}
-                        {{ client.renewal_date.strftime('%d %b %Y') }}
+                        {{ client.renewal_date.strftime('%Y-%m-%d') }}
                     {% elif client and client.created_at %}
-                        {{ client.created_at.strftime('%b %Y') }}
+                        {{ client.created_at.strftime('%Y-%m-%d') }}
                     {% else %}
                         —
                     {% endif %}
                 </span>
-                <span class="stat-label">{% if subscription_info and subscription_info.renewal_date %}Next Renewal{% else %}Member Since{% endif %}</span>
+                <span class="stat-label">
+                    {% if client and client.is_trial %}Trial Expires{% elif subscription_info and subscription_info.renewal_date %}Next Renewal{% else %}Member Since{% endif %}
+                </span>
             </div>
         </div>
     </div>
@@ -175,7 +189,11 @@
                 <h3 class="card-title" style="margin: 0; padding: 0; border: none;">
                     <i class="fas fa-file-invoice-dollar" style="color: var(--nk-blue-primary);"></i> Subscription Plan
                 </h3>
-                {% if subscription_info and subscription_info.status %}
+                {% if client and client.is_trial %}
+                <span class="badge-status-pill status-trial" style="background: rgba(234, 88, 12, 0.12); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.25); font-weight: 700;">
+                    <i class="fas fa-clock"></i> Free Trial
+                </span>
+                {% elif subscription_info and subscription_info.status %}
                 <span class="badge-status-pill status-{{ subscription_info.status }}">
                     {% if subscription_info.status == 'active' %}
                     <i class="fas fa-check-circle"></i>
@@ -193,6 +211,21 @@
 
             <div class="subscription-details-list">
                 <div class="sub-detail-row">
+                    <span class="sub-detail-label"><i class="fas fa-certificate"></i> Account Type</span>
+                    <span class="sub-detail-value" style="font-weight: 700;">
+                        {% if client and client.is_trial %}
+                        <span style="color: #ea580c; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i class="fas fa-clock"></i> Free Trial
+                        </span>
+                        {% else %}
+                        <span style="color: #107c10; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i class="fas fa-check-circle"></i> Paid Subscriber
+                        </span>
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="sub-detail-row">
                     <span class="sub-detail-label"><i class="fas fa-layer-group"></i> Current Plan</span>
                     <span class="sub-detail-value plan-name-badge">
                         {{ subscription_info.plan_display if (subscription_info and subscription_info.plan_display) else 'Starter Plan' }}
@@ -207,9 +240,11 @@
                 </div>
 
                 <div class="sub-detail-row">
-                    <span class="sub-detail-label"><i class="fas fa-hourglass-half"></i> Renewal Date</span>
+                    <span class="sub-detail-label"><i class="fas fa-hourglass-half"></i> {% if client and client.is_trial %}Trial Expiration{% else %}Renewal Date{% endif %}</span>
                     <span class="sub-detail-value">
-                        {% if subscription_info and subscription_info.renewal_date %}
+                        {% if client and client.is_trial and client.trial_expires_at %}
+                            {{ client.trial_expires_at.strftime('%Y-%m-%d') }}
+                        {% elif subscription_info and subscription_info.renewal_date %}
                             {{ subscription_info.renewal_date[:10] }}
                         {% elif client and client.renewal_date %}
                             {{ client.renewal_date.strftime('%Y-%m-%d') }}
@@ -251,6 +286,29 @@
                         <span><strong>{{ subscription_info.remaining_peers_count if subscription_info else 0 }}</strong> slots available</span>
                     </div>
                 </div>
+
+                {% if client and client.is_trial %}
+                <div style="background: rgba(234, 88, 12, 0.08); border: 1px solid rgba(234, 88, 12, 0.25); border-radius: 10px; padding: 1rem 1.25rem; margin-top: 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 38px; height: 38px; border-radius: 8px; background: rgba(234, 88, 12, 0.15); color: #ea580c; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                            <i class="fas fa-user-clock"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.9rem; font-weight: 700; color: #9a3412;">Free Trial Active</div>
+                            <div style="font-size: 0.8rem; color: #c2410c; margin-top: 0.15rem;">
+                                {% if client.trial_expires_at %}
+                                    Expires on {{ client.trial_expires_at.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                    Full trial access enabled
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ contact_url|default('/contact') }}" class="btn-primary" style="background: #ea580c; border-color: #ea580c; color: white; padding: 0.45rem 1rem; font-size: 0.82rem; text-decoration: none; border-radius: 7px; display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <i class="fas fa-arrow-circle-up"></i> Upgrade to Paid Plan
+                    </a>
+                </div>
+                {% endif %}
 
                 {% if is_readonly_subscription %}
                 <div class="readonly-notice-banner" style="margin-top: 1.25rem; margin-bottom: 0;">

@@ -408,6 +408,10 @@
 /* ── Settings modal ─────────────────────────────────────────────────────── */
 
 .sl-settings-card {
+    --sl-ctl: 22px;                              /* pause button diameter = switch height */
+    --sl-thumb: calc(var(--sl-ctl) - 6px);
+    --sl-pad: 1.5rem;
+    --sl-paused: #d97706;
     max-width: 640px;
     max-height: 90vh;
     display: flex;
@@ -416,37 +420,219 @@
 
 .sl-settings-card .modal-body {
     overflow-y: auto;
+    padding: 0 var(--sl-pad) 0.75rem;
 }
 
 .sl-service-row {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0;
+    padding-top: 1.1rem;
 }
 
+/* Switch: size follows --sl-ctl so it always matches the pause button. */
+.sl-settings-card .switch {
+    width: calc(var(--sl-ctl) * 1.7);
+    height: var(--sl-ctl);
+}
+
+.sl-settings-card .slider {
+    border-radius: 9999px;
+}
+
+.sl-settings-card .slider:before {
+    width: var(--sl-thumb);
+    height: var(--sl-thumb);
+    left: 3px;
+    bottom: 3px;
+}
+
+.sl-settings-card input:checked + .slider:before {
+    transform: translateX(calc(var(--sl-ctl) * 0.7));
+}
+
+.sl-settings-card input:not(:checked) + .slider {
+    box-shadow: inset 0 0 0 1px #94a3b8;
+}
+
+/* Paused: switch reads "off" in the pause colour; flipping it resumes. */
+.sl-set-row.is-paused .slider {
+    background-color: var(--sl-paused);
+}
+
+.sl-set-row.is-paused input:checked + .slider:before {
+    transform: none;
+}
+
+.sl-sw-pause,
+.sl-sw-lock {
+    position: absolute;
+    top: 3px;
+    width: var(--sl-thumb);
+    height: var(--sl-thumb);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    line-height: 1;
+    font-size: calc(var(--sl-thumb) * 0.5);
+}
+
+.sl-sw-pause {
+    left: 3px;
+    display: flex;
+    opacity: 0;
+    color: var(--sl-paused);
+    transition: opacity 0.1s;
+}
+
+/* Fades in only after the ball has settled (the slider moves for 0.25s); hides at once. */
+.sl-set-row.is-paused .sl-sw-pause {
+    opacity: 1;
+    transition: opacity 0.15s ease 0.25s;
+}
+
+.sl-sw-lock {
+    display: flex;
+    left: calc(3px + var(--sl-ctl) * 0.7);
+    color: var(--nk-blue-primary);
+}
+
+/* Sticky "Expand all" bar. The tint and divider show only once scrolled. */
+.sl-lower {
+    position: relative;
+    margin-inline: calc(var(--sl-pad) * -1);
+}
+
+.sl-lower-in {
+    padding-inline: var(--sl-pad);
+    transition: opacity 0.2s, filter 0.2s;
+}
+
+.sl-bar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    justify-content: flex-start;
+    margin-inline: calc(var(--sl-pad) * -1);
+    padding: 0.4rem var(--sl-pad);
+    background: #ffffff;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.15s;
+}
+
+.sl-bar.stuck {
+    border-bottom-color: var(--nk-border);
+}
+
+.sl-expand-all {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border: 0;
+    background: none;
+    color: var(--nk-blue-primary);
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.sl-expand-all:hover,
+.sl-bar.stuck .sl-expand-all {
+    background: color-mix(in srgb, var(--nk-blue-primary) 10%, #ffffff);
+}
+
+.sl-expand-all i {
+    font-size: 0.65rem;
+    transition: transform 0.2s;
+}
+
+.sl-expand-all.open i {
+    transform: rotate(180deg);
+}
+
+/* Main switch off: frosted veil over the list. */
+.sl-veil {
+    display: none;
+}
+
+.sl-off .sl-lower-in {
+    filter: blur(1px) grayscale(0.5);
+    opacity: 0.55;
+    pointer-events: none;
+    user-select: none;
+}
+
+.sl-off .sl-veil {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    align-items: flex-start;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.45);
+}
+
+.sl-veil span {
+    position: sticky;
+    top: 60px;
+    margin-top: 60px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 34px;
+    padding: 0 0.9rem;
+    border: 1px solid var(--nk-border);
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.sl-veil i {
+    color: var(--nk-text-muted);
+}
+
+/* Category rows: one line each, fields open on click. */
 .sl-settings-list {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
 }
 
 .sl-set-row {
-    border: 1px solid var(--nk-border);
-    border-radius: var(--nk-radius-md);
-    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--nk-border);
 }
 
-.sl-set-head {
+.sl-set-row:last-of-type {
+    border-bottom: 0;
+}
+
+.sl-set-top {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.7rem;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.75rem 0;
+}
+
+.sl-set-main {
+    flex: 1;
+    min-width: 0;
+    cursor: pointer;
 }
 
 .sl-set-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: var(--sl-ctl);
     font-weight: 700;
     font-size: 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .sl-set-name > i:first-child {
@@ -455,35 +641,446 @@
     text-align: center;
 }
 
-.sl-lock {
-    color: var(--nk-text-muted);
+.sl-chev {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    transition: transform 0.2s;
+}
+
+.sl-set-row.open .sl-chev {
+    transform: rotate(180deg);
+}
+
+.sl-sum {
+    display: flex;
+    align-items: center;
+    height: 1.4em;
+    margin: 2px 0 0 1.5rem;
     font-size: 0.75rem;
+    color: var(--nk-text-muted);
 }
 
-.sl-set-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+.sl-vals {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sl-ps {
+    flex: none;
+    display: inline-flex;
+    white-space: nowrap;
+}
+
+.sl-sep {
+    white-space: pre;
+}
+
+.sl-edit-pause {
+    position: relative;
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    line-height: inherit;
+    font-weight: 600;
+    color: var(--sl-paused);
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+.sl-edit-pause:hover {
+    text-decoration-style: solid;
+}
+
+.sl-edit-pause::after {
+    content: "";
+    position: absolute;
+    inset: -8px -4px;
+}
+
+.sl-pause {
+    flex: none;
+    width: var(--sl-ctl);
+    height: var(--sl-ctl);
+    padding: 0;
+    display: inline-grid;
+    place-items: center;
+    border: 1.5px solid var(--nk-border);
+    border-radius: 50%;
+    background: #ffffff;
+    color: var(--nk-text-muted);
+    font-size: calc(var(--sl-ctl) * 0.4);
+    cursor: pointer;
+    transition: var(--nk-transition);
+}
+
+.sl-pause:hover:not(:disabled) {
+    border-color: var(--sl-paused);
+    color: var(--sl-paused);
+}
+
+.sl-pause:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.sl-set-row.is-paused .sl-pause {
+    display: none;
+}
+
+.sl-set-edit {
+    display: none;
+    grid-template-columns: 88px 112px 132px;
+    justify-content: start;
     gap: 0.6rem;
+    padding: 0 0 0.9rem 1.5rem;
 }
 
-.sl-field {
+.sl-set-row.open .sl-set-edit {
+    display: grid;
+}
+
+.sl-fld {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
-    font-size: 0.75rem;
+    min-width: 0;
+    font-size: 0.7rem;
     font-weight: 600;
     color: var(--nk-text-muted);
 }
 
-.sl-field .sl-input,
-.sl-field .sl-select {
+.sl-set-edit .sl-input,
+.sl-lv-btn {
+    box-sizing: border-box;
     width: 100%;
+    height: 30px;
+    padding: 0 0.55rem;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
 }
 
-.sl-field .sl-select:disabled,
-.sl-field .sl-input:disabled {
-    background: #f8fafc;
+.sl-lv-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    text-align: left;
+    font-family: inherit;
+    color: var(--nk-text-main);
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    background: #ffffff;
+    cursor: pointer;
+    transition: var(--nk-transition);
+}
+
+.sl-lv-btn:focus-visible,
+.sl-lv-btn.open {
+    outline: none;
+    border-color: var(--nk-blue-primary);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.sl-lv-btn i {
+    font-size: 0.6rem;
     color: var(--nk-text-muted);
+}
+
+.sl-lv-btn:disabled {
+    cursor: default;
+    background: #f8fafc;
+}
+
+.sl-lv-btn:disabled .sl-level {
+    opacity: 0.75;
+}
+
+.sl-lv-btn:disabled i {
+    color: #94a3b8;
+}
+
+/* Popover menu: pause durations and min level. */
+.sl-menu {
+    position: fixed;
+    z-index: 2600;
+    min-width: 120px;
+    padding: 2px;
+    border: 1px solid var(--nk-border);
+    border-radius: 10px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+
+.sl-menu > div {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.sl-menu > div:hover,
+.sl-menu > div.sel {
+    background: var(--nk-bg);
+}
+
+.sl-menu > div + div {
+    border-top: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.sl-menu > div:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.sl-menu > div:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+.sl-menu > div:only-child {
+    border-radius: 8px;
+}
+
+/* Custom pause modal. */
+.sl-pause-card {
+    position: relative;
+    max-width: 380px;
+}
+
+.sl-pz-clock {
+    position: absolute;
+    top: 1.15rem;
+    right: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--nk-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.sl-pz-clock i {
+    font-size: 0.7rem;
+}
+
+/* Date shows as YYYY-MM-DD like the rest of the site; the native picker sits invisibly on top. */
+.sl-date {
+    position: relative;
+    display: block;
+}
+
+.sl-date .sl-input {
+    padding-right: 1.7rem;
+    cursor: pointer;
+}
+
+.sl-date > i {
+    position: absolute;
+    right: 0.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    color: var(--nk-text-muted);
+    pointer-events: none;
+}
+
+.sl-date input[type="date"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.sl-date:focus-within .sl-input {
+    border-color: var(--nk-blue-primary);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.sl-pause-card .modal-body {
+    padding: 1.1rem 1.1rem 0.5rem;
+}
+
+.sl-pause-title {
+    margin: 0 0 0.15rem;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.sl-pause-sub i {
+    width: 1rem;
+    margin-right: 0.15rem;
+    text-align: center;
+}
+
+.sl-pause-sub {
+    margin: 0 0 0.9rem;
+    font-size: 0.75rem;
+    color: var(--nk-text-muted);
+}
+
+.sl-seg {
+    display: flex;
+    margin-bottom: 0.9rem;
+    padding: 3px;
+    border-radius: 9px;
+    background: var(--nk-bg);
+}
+
+.sl-seg button {
+    flex: 1;
+    padding: 0.4rem;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--nk-text-muted);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.sl-seg button.on {
+    background: #ffffff;
+    color: var(--nk-text-main);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.sl-trio {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.sl-trio label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--nk-text-muted);
+}
+
+.sl-trio-until {
+    grid-template-columns: 1fr 4.2rem 4.2rem;
+}
+
+.sl-trio .sl-input {
+    width: 100%;
+    height: 34px;
+    box-sizing: border-box;
+    padding: 0 0.5rem;
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Both tabs share one grid cell, so the modal keeps the taller tab's height. */
+.sl-pz-panels {
+    display: grid;
+}
+
+.sl-pz-panels > div {
+    grid-area: 1 / 1;
+    align-self: start;
+}
+
+.sl-pz-panels > div.off {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* `.sl-input` animates `all`, which would also fade the inherited visibility. */
+.sl-pz-panels,
+.sl-pz-panels * {
+    transition: none;
+}
+
+.sl-pz-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.65rem;
+}
+
+.sl-pz-chips button {
+    padding: 0.25rem 0.65rem;
+    border: 1px solid var(--nk-border);
+    border-radius: 9999px;
+    background: none;
+    color: var(--nk-text-muted);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.sl-pz-chips button:hover {
+    border-color: var(--sl-paused, #d97706);
+    color: var(--sl-paused, #d97706);
+}
+
+.sl-pz-range {
+    margin: 0.55rem 0 0;
+    font-size: 0.72rem;
+    color: var(--nk-text-muted);
+}
+
+.sl-pz-chips button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.sl-pz-chips button:disabled:hover {
+    border-color: var(--nk-border);
+    color: var(--nk-text-muted);
+}
+
+.sl-pz-prev {
+    min-height: 1.1rem;
+    margin: 0.9rem 0 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #d97706;
+}
+
+.sl-pz-prev.err {
+    color: #e11d48;
+}
+
+.btn-action.btn-pause {
+    background: #d97706;
+    border-color: #d97706;
+    color: #ffffff;
+}
+
+.btn-action.btn-pause:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+@media (max-width: 520px) {
+    .sl-settings-card {
+        --sl-ctl: 24px;
+        --sl-pad: 1rem;
+    }
+
+    .sl-set-edit {
+        grid-template-columns: minmax(0, 80px) minmax(0, 100px) minmax(0, 1fr);
+        padding-left: 0;
+    }
+
+    .sl-sum {
+        margin-left: 0;
+    }
+
+    .sl-settings-card .modal-footer .btn-action {
+        flex: 1;
+    }
 }
 
 .sl-set-error {

@@ -173,12 +173,18 @@ let cachedResolverConfig = null;
             tdAddresses.innerHTML = `<div style="display: flex; flex-wrap: wrap; align-items: center;">${previewHtml}${moreHtml}</div>`;
             tr.appendChild(tdAddresses);
 
+            const pad2 = (n) => String(n).padStart(2, '0');
+            const formatIso = (v) => {
+                if (!v) return '-';
+                const d = new Date(v);
+                return isNaN(d.getTime()) ? '-' : `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+            };
             // Created
             const tdCreated = document.createElement('td');
             tdCreated.className = 'cell-created';
             tdCreated.style.color = 'var(--nk-text-muted)';
             tdCreated.style.fontSize = '0.85rem';
-            tdCreated.textContent = list.created ? new Date(list.created).toLocaleString('en-GB') : '-';
+            tdCreated.textContent = formatIso(list.created);
             tr.appendChild(tdCreated);
 
             // Updated
@@ -186,7 +192,7 @@ let cachedResolverConfig = null;
             tdUpdated.className = 'cell-updated';
             tdUpdated.style.color = 'var(--nk-text-muted)';
             tdUpdated.style.fontSize = '0.85rem';
-            tdUpdated.textContent = list.updated ? new Date(list.updated).toLocaleString('en-GB') : '-';
+            tdUpdated.textContent = formatIso(list.updated);
             tr.appendChild(tdUpdated);
 
             // Actions Column
@@ -807,13 +813,15 @@ let cachedResolverConfig = null;
             return;
         }
 
+        const origSubmitHtml = btnSubmit.innerHTML;
         btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
         const isNewAgent = cachedAddressLists.length > 0 && cachedAddressLists.some(l => l.id !== undefined);
 
-        if (actionType === 'edit') {
-            if (isNewAgent) {
-                try {
+        try {
+            if (actionType === 'edit') {
+                if (isNewAgent) {
                     // 1. Update name/comment via PATCH
                     const patchResp = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
                         method: 'PATCH',
@@ -840,20 +848,13 @@ let cachedResolverConfig = null;
                     fetchAddressLists();
                     if (window.showSuccess) window.showSuccess('Saved');
                     else alert('Saved successfully');
-                } catch (err) {
-                    if (window.showError) window.showError(err.message || 'Failed to save');
-                    else alert(err.message || 'Failed to save');
-                } finally {
-                    btnSubmit.disabled = false;
-                }
-            } else {
-                // Backward compatibility: Old Agent PUT structure
-                const payload = {
-                    slug: originalSlug,
-                    comment: comment,
-                    list: entries
-                };
-                try {
+                } else {
+                    // Backward compatibility: Old Agent PUT structure
+                    const payload = {
+                        slug: originalSlug,
+                        comment: comment,
+                        list: entries
+                    };
                     const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases/${originalSlug}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -867,24 +868,17 @@ let cachedResolverConfig = null;
                     fetchAddressLists();
                     if (window.showSuccess) window.showSuccess('Saved');
                     else alert('Saved successfully');
-                } catch (err) {
-                    if (window.showError) window.showError(err.message || 'Failed to save');
-                    else alert(err.message || 'Failed to save');
-                } finally {
-                    btnSubmit.disabled = false;
                 }
-            }
-        } else {
-            // Create New Alias
-            const payload = {
-                name: slug,
-                slug: slug,
-                comment: comment,
-                type: listType,
-                list: entries
-            };
+            } else {
+                // Create New Alias
+                const payload = {
+                    name: slug,
+                    slug: slug,
+                    comment: comment,
+                    type: listType,
+                    list: entries
+                };
 
-            try {
                 const response = await fetch(`${_apiBase}/api/peers/${currentPeerId}/aliases`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -898,12 +892,13 @@ let cachedResolverConfig = null;
                 fetchAddressLists();
                 if (window.showSuccess) window.showSuccess('Saved');
                 else alert('Saved successfully');
-            } catch (err) {
-                if (window.showError) window.showError(err.message || 'Failed to save');
-                else alert(err.message || 'Failed to save');
-            } finally {
-                btnSubmit.disabled = false;
             }
+        } catch (err) {
+            if (window.showError) window.showError(err.message || 'Failed to save');
+            else alert(err.message || 'Failed to save');
+        } finally {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = origSubmitHtml;
         }
     }
 

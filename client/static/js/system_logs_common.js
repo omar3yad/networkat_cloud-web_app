@@ -10,17 +10,15 @@
     const CATEGORY_LABELS = {
         wan: 'Internet links',
         vpn: 'Private network',
-        firewall: 'Firewall',
-        web_filter: 'Web filter',
         system: 'Device',
+        service: 'Services',
         audit: 'Changes',
     };
     const CATEGORY_ICONS = {
         wan: 'fa-globe',
         vpn: 'fa-project-diagram',
-        firewall: 'fa-shield-alt',
-        web_filter: 'fa-filter',
         system: 'fa-microchip',
+        service: 'fa-layer-group',
         audit: 'fa-user-edit',
     };
     const ACTOR_LABELS = {
@@ -111,7 +109,7 @@
     }
 
     function categoryLabel(name) {
-        return CATEGORY_LABELS[name] || name;
+        return CATEGORY_LABELS[name] || String(name).replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
     }
 
     function actorLabel(actor) {
@@ -126,28 +124,18 @@
         return String(n).padStart(2, '0');
     }
 
-    // Local time: "14:05:09" today, "Sep 25, 14:05" this year, else "Sep 25, 2025".
+    // Local time in ISO 8601 format: "YYYY-MM-DD HH:MM:SS"
     function shortTime(iso) {
         const d = new Date(iso);
         if (isNaN(d.getTime())) return '—';
-        const now = new Date();
-        const clock = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-        if (d.toDateString() === now.toDateString()) return clock;
-        const month = d.toLocaleString('en-US', { month: 'short' });
-        if (d.getFullYear() === now.getFullYear()) {
-            return `${month} ${d.getDate()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        }
-        return `${month} ${d.getDate()}, ${d.getFullYear()}`;
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
-    // Full local time for hover.
+    // Full local time for hover in ISO 8601 format: "YYYY-MM-DD HH:MM:SS"
     function fullTime(iso) {
         const d = new Date(iso);
         if (isNaN(d.getTime())) return '';
-        return d.toLocaleString('en-US', {
-            year: 'numeric', month: 'short', day: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-        });
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
     function levelBadge(level) {

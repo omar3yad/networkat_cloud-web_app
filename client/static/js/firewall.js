@@ -1377,7 +1377,9 @@ async function submitAddRule(e) {
         return;
     }
 
+    const origSubmitHtml = btnSubmit.innerHTML;
     btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
     try {
         let url = `/api/peers/${peerId}/firewall/rules`;
@@ -1443,6 +1445,7 @@ async function submitAddRule(e) {
         showFriendlyError(err);
     } finally {
         btnSubmit.disabled = false;
+        btnSubmit.innerHTML = origSubmitHtml;
     }
 }
 
@@ -1866,12 +1869,18 @@ function renderAddressListsTable(lists) {
         tdAddresses.innerHTML = `<div style="display: flex; flex-wrap: wrap; align-items: center;">${previewHtml}${moreHtml}</div>`;
         tr.appendChild(tdAddresses);
 
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const formatIso = (v) => {
+            if (!v) return '-';
+            const d = new Date(v);
+            return isNaN(d.getTime()) ? '-' : `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+        };
         // Created
         const tdCreated = document.createElement('td');
         tdCreated.className = 'cell-created';
         tdCreated.style.color = 'var(--nk-text-muted)';
         tdCreated.style.fontSize = '0.85rem';
-        tdCreated.textContent = list.created ? new Date(list.created).toLocaleString('en-GB') : '-';
+        tdCreated.textContent = formatIso(list.created);
         tr.appendChild(tdCreated);
 
         // Updated
@@ -1879,7 +1888,7 @@ function renderAddressListsTable(lists) {
         tdUpdated.className = 'cell-updated';
         tdUpdated.style.color = 'var(--nk-text-muted)';
         tdUpdated.style.fontSize = '0.85rem';
-        tdUpdated.textContent = list.updated ? new Date(list.updated).toLocaleString('en-GB') : '-';
+        tdUpdated.textContent = formatIso(list.updated);
         tr.appendChild(tdUpdated);
 
         // Actions Column

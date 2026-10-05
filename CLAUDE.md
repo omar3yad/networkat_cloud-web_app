@@ -63,6 +63,7 @@ Only `tests/test_dns.py` is a real pytest suite — it exercises `fastapi_app/se
 ## Reference docs in the repo
 
 - `PROJECT_ARCHITECTURE.md` — a long-form master reference for client routes, services, templates, and static assets. Consult it before large client-portal changes; keep it roughly in sync when you add client routes/services.
+- `DESIGN_PRINCIPLES.md` — how UI/design work is done here: show samples first and implement only on an explicit go, the visual taste (minimal, 24h/ISO time, shared popover menus, layout never jumps), behavior and mobile rules, and CSS gotchas. **Read it before any client-portal UI or design work** (new screens, modals, controls, icons), and run its section 8 pre-flight checklist before showing or shipping anything; section 9 logs corrections already made so they are not repeated.
 - `README.md` — setup/onboarding narrative.
 - `scheduler/HEARTBEAT_JOB.ar.md` / `HEARTBEAT_CHANGES.ar.md` — rationale for the peers-heartbeat job (Arabic).
 

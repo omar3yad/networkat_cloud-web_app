@@ -7,7 +7,7 @@ from client.decorators import login_required
 # Render only. The page loads its data from FastAPI in the browser
 # (/api/v2/client/peers/<peer_id>/logs/system/..., fastapi_app/routes/client/system_logs.py),
 # which also checks that the peer is the client's.
-@client_bp.route('/peers/<peer_id>/logs/system')
+@client_bp.route('/peers/<peer_id>/logs/system/', strict_slashes=False)
 @login_required
 def peer_system_logs(peer_id):
     return render_template(

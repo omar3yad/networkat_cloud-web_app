@@ -850,7 +850,7 @@
     }
 
     async function fetchPeerVersionSilent() {
-        if (!peerId) return;
+        if (!peerId || isApplyingUpdate) return;
         let detectedVersion = "";
         // 1. Fetch version directly from agent /health
         try {
@@ -1072,12 +1072,14 @@
         try {
             const d = new Date(dateStr);
             if (isNaN(d.getTime())) return dateStr;
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const pad = (n) => String(n).padStart(2, '0');
             const year = d.getFullYear();
-            const hours = String(d.getHours()).padStart(2, '0');
-            const minutes = String(d.getMinutes()).padStart(2, '0');
-            return `${day}/${month}/${year} ${hours}:${minutes}`;
+            const month = pad(d.getMonth() + 1);
+            const day = pad(d.getDate());
+            const hours = pad(d.getHours());
+            const minutes = pad(d.getMinutes());
+            const seconds = pad(d.getSeconds());
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         } catch (e) {
             return dateStr;
         }
@@ -1136,7 +1138,8 @@
 
             if (lastCheckedText) {
                 const now = new Date();
-                lastCheckedText.textContent = `Checked at ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                const pad = (n) => String(n).padStart(2, '0');
+                lastCheckedText.textContent = `Checked at ${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
             }
 
             const versionBadge = document.getElementById("peer-version-badge");
@@ -1204,9 +1207,7 @@
         }
 
         const availableVal = document.getElementById("updates-available-val");
-        const targetVersion = availableVal ? availableVal.textContent : "";
-        const confirmMsg = targetVersion ? `Update to ${targetVersion} now?` : "Update now?";
-        if (!window.confirm(confirmMsg)) return;
+        const targetVersion = availableVal ? availableVal.textContent.trim() : "";
 
         isApplyingUpdate = true;
 
@@ -1218,14 +1219,17 @@
 
         if (btnApply) {
             btnApply.disabled = true;
-            btnApply.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            btnApply.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Installing update...';
         }
         if (btnCheck) btnCheck.disabled = true;
         if (btnSave) btnSave.disabled = true;
         if (btnCloseModal) btnCloseModal.style.visibility = "hidden";
         if (btnCancelModal) btnCancelModal.disabled = true;
 
-        showUpdatesFeedback("Software update in progress. This may take up to 2 minutes, please do not close the window.", "info");
+        showUpdatesFeedback("Installing update. Please wait...", "info");
+
+        // Shield sidebar & background sync during update
+        window.peersPollingActive = true;
 
         try {
             const resp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/update`, {
@@ -1240,18 +1244,103 @@
                 throw new Error(errorMsg);
             }
 
-            showUpdatesFeedback("Update completed successfully! Peer is running the latest version.", "success");
-            if (window.showSuccess) window.showSuccess("Update completed successfully");
+            // Daemon is now applying new binary and restarting services
+            if (btnApply) {
+                btnApply.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reconnecting...';
+            }
+            showUpdatesFeedback("Restarting service and establishing stable connection...", "info");
 
-            setTimeout(() => {
-                checkPeerUpdate(false);
-            }, 3000);
+            // Initial buffer: wait 7 seconds for daemon to cleanly reload
+            await new Promise(r => setTimeout(r, 7000));
+
+            // Multi-pass verification: require 3 consecutive successful health checks
+            const pollStart = Date.now();
+            const maxPollTimeMs = 90000;
+            let consecutivePasses = 0;
+            const REQUIRED_PASSES = 3;
+            let peerIsBack = false;
+            let finalVersion = targetVersion || "";
+
+            while (Date.now() - pollStart < maxPollTimeMs) {
+                try {
+                    const hResp = await fetch(`${_apiBase}/api/peers/${encodeURIComponent(peerId)}/health`);
+                    if (hResp.ok) {
+                        const hData = await hResp.json().catch(() => ({}));
+                        if (hData && (hData.status === 'healthy' || hData.status === 'ok' || hData.version)) {
+                            consecutivePasses++;
+                            if (hData.version) finalVersion = hData.version;
+                            if (typeof hData.uptime === 'number') {
+                                startUptimeStopwatch(hData.uptime);
+                            }
+                            if (consecutivePasses >= REQUIRED_PASSES) {
+                                peerIsBack = true;
+                                break;
+                            }
+                        } else {
+                            consecutivePasses = 0;
+                        }
+                    } else {
+                        consecutivePasses = 0;
+                    }
+                } catch {
+                    consecutivePasses = 0;
+                }
+                await new Promise(r => setTimeout(r, 2500));
+            }
+
+            if (peerIsBack) {
+                isPeerOnline = true;
+
+                if (finalVersion) {
+                    const versionEl = document.getElementById("peer-version-display");
+                    if (versionEl) versionEl.textContent = finalVersion;
+                    const updatesInstalledVal = document.getElementById("updates-installed-val");
+                    if (updatesInstalledVal) updatesInstalledVal.textContent = finalVersion;
+                }
+
+                // Update header status badge and sidebar to Connected
+                const headerBadge = document.getElementById("peer-status-badge-header");
+                if (headerBadge) {
+                    headerBadge.className = "badge-status badge-online";
+                    headerBadge.innerHTML = '<i class="fas fa-circle"></i> Connected';
+                }
+                const sidebarDot = document.getElementById(`sidebar-dot-${peerId}`);
+                if (sidebarDot) {
+                    sidebarDot.className = "peer-status-dot online";
+                    sidebarDot.title = "Connected";
+                }
+                const sidebarItem = document.getElementById(`sidebar-peer-${peerId}`);
+                if (sidebarItem) {
+                    sidebarItem.setAttribute("data-sidebar-online", "true");
+                }
+
+                // Hide update available card & badges
+                const availableCard = document.getElementById("updates-available-card");
+                if (availableCard) availableCard.style.display = "none";
+                const badgeEl = document.getElementById("peer-version-badge");
+                if (badgeEl) badgeEl.style.display = "none";
+                const dotEl = document.getElementById("update-badge-dot");
+                if (dotEl) dotEl.style.display = "none";
+
+                if (btnApply) btnApply.style.display = "none";
+                if (btnCheck) {
+                    btnCheck.style.display = "";
+                    btnCheck.disabled = false;
+                }
+
+                showUpdatesFeedback("Updated successfully! Peer is online and stable.", "success");
+                if (window.showSuccess) window.showSuccess("Updated successfully");
+            } else {
+                showUpdatesFeedback("Update applied. Peer is continuing startup in the background.", "info");
+                if (window.showInfo) window.showInfo("Update applied");
+            }
         } catch (err) {
             showUpdatesFeedback(err.message || "Failed to apply update", "error");
             if (window.showError) window.showError(err.message || "Failed to apply update");
         } finally {
             isApplyingUpdate = false;
-            if (btnApply) {
+            window.peersPollingActive = false;
+            if (btnApply && btnApply.style.display !== "none") {
                 btnApply.disabled = false;
                 btnApply.innerHTML = '<i class="fas fa-download"></i> Update now';
             }

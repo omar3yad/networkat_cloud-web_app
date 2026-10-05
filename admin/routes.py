@@ -786,7 +786,7 @@ def send_customer_renewal_reminder(customer_id):
         return jsonify({'success': False, 'error': 'Customer does not have an email address configured'}), 400
 
     plan_name = customer.plan.name.capitalize() if customer.plan else (customer.subscription or 'Starter').capitalize()
-    renewal_str = customer.renewal_date.strftime('%d %b %Y') if customer.renewal_date else 'Soon'
+    renewal_str = customer.renewal_date.strftime('%Y-%m-%d') if customer.renewal_date else 'Soon'
 
     sent = send_renewal_reminder_email(
         to_email=to_email,
@@ -812,35 +812,35 @@ def send_customer_renewal_reminder(customer_id):
 # ----------------------------------------------------------------------
 
 @admin_bp.route('/settings')
-@admin_required
-def system_settings():
-    return render_template('settings.html')
-
-
 @admin_bp.route('/settings/<string:category>')
 @admin_required
-def system_settings_category(category):
+def system_settings(category=None):
     from services.settings_service import settings as app_settings
     by_category = app_settings.all_by_category()
 
-    # Match category case-insensitively
-    cat_match = None
-    for cat in by_category.keys():
-        if cat.lower() == category.lower():
-            cat_match = cat
-            break
+    # Filter out hidden or internal settings (like feature.system_logs and unused categories)
+    filtered = {}
+    for cat, items in by_category.items():
+        if cat.lower() == 'subscription':
+            continue
+        clean_items = [s for s in items if s.get('key') != 'feature.system_logs']
+        if clean_items:
+            filtered[cat] = clean_items
 
-    if not cat_match:
-        # Fallback to Title case
-        cat_match = category.title()
-        items = []
-    else:
-        items = by_category.get(cat_match, [])
+    # Match initial active category
+    active_cat = None
+    if category:
+        for cat in filtered.keys():
+            if cat.lower() == category.lower():
+                active_cat = cat
+                break
+    if not active_cat:
+        active_cat = list(filtered.keys())[0] if filtered else 'Features'
 
     return render_template(
-        'settings_category.html',
-        category=cat_match,
-        settings=items
+        'settings.html',
+        categories=filtered,
+        active_category=active_cat
     )
 
 
@@ -927,8 +927,8 @@ def staff():
             'role': getattr(u, 'role', 'admin') or 'admin',
             'is_active': bool(u.is_active),
             'is_2fa_enabled': bool(getattr(u, 'is_2fa_enabled', False)),
-            'last_login': u.last_login.strftime('%Y-%m-%d %H:%M') if getattr(u, 'last_login', None) else None,
-            'created_at': u.created_at.strftime('%Y-%m-%d') if getattr(u, 'created_at', None) else None
+            'last_login': u.last_login.strftime('%Y-%m-%d %H:%M:%S') if getattr(u, 'last_login', None) else None,
+            'created_at': u.created_at.strftime('%Y-%m-%d %H:%M:%S') if getattr(u, 'created_at', None) else None
         })
     return render_template('staff.html', staff_members=users_data)
 
@@ -1315,7 +1315,7 @@ def admin_view_peer_details(customer_id, peer_id):
                 try:
                     clean_str = peer_last_seen.replace('Z', '+00:00')
                     dt = datetime.fromisoformat(clean_str)
-                    peer_last_seen = dt.strftime("%d/%m/%Y %H:%M:%S")
+                    peer_last_seen = dt.strftime("%Y-%m-%d %H:%M:%S")
                 except Exception:
                     pass
         except Exception as e:
@@ -1495,7 +1495,7 @@ def admin_view_peer_aliases(customer_id, peer_id=None):
     )
 
 
-@admin_bp.route('/admin/view/<uuid:customer_id>/peers/<peer_id>/logs/system')
+@admin_bp.route('/admin/view/<uuid:customer_id>/peers/<peer_id>/logs/system/', strict_slashes=False)
 @login_required
 def admin_view_peer_system_logs(customer_id, peer_id):
     customer_id = str(customer_id)

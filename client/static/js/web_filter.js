@@ -844,7 +844,9 @@ const isPeerOnline = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.isOnlin
             return;
         }
 
+        const origBtnHtml = btn.innerHTML;
         btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
         // Construct payload
         let domainParts = domainsRaw.split(',').map(p => p.trim()).filter(Boolean);
@@ -915,6 +917,7 @@ const isPeerOnline = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.isOnlin
             showError(err.message || 'Failed to save');
         } finally {
             btn.disabled = false;
+            btn.innerHTML = origBtnHtml;
         }
     }
 
@@ -1610,7 +1613,9 @@ const isPeerOnline = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.isOnlin
             return;
         }
 
+        const origAliasBtnHtml = btn.innerHTML;
         btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
         try {
             if (actionType === 'add') {
@@ -1674,6 +1679,7 @@ const isPeerOnline = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.isOnlin
             else alert(err.message || 'Failed to save');
         } finally {
             btn.disabled = false;
+            btn.innerHTML = origAliasBtnHtml;
         }
     }
 

@@ -108,7 +108,7 @@ class CustomerService:
                 'billing_cycle': c.billing_cycle or 'monthly',
                 'renewal_date': c.renewal_date.strftime('%Y-%m-%d') if c.renewal_date else None,
                 'created_at': c.created_at.strftime('%Y-%m-%d %H:%M:%S') if c.created_at else None,
-                'created_date': c.created_at.strftime('%b %d, %Y') if c.created_at else None,
+                'created_date': c.created_at.strftime('%Y-%m-%d') if c.created_at else None,
                 'tokens_count': tokens_count,
                 'peers_count': peers_count,
                 'edges_count': peers_count,

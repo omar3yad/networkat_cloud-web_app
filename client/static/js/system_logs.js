@@ -417,6 +417,7 @@
     function overlayClose(event, which) {
         if (event.target !== event.currentTarget) return;
         if (which === 'settings') closeSettings();
+        else if (which === 'pause') closePause();
         else closeClear();
     }
 
@@ -438,11 +439,32 @@
     }
 
     function closeSettings() {
+        closeMenu();
         closeModal('sl-settings-modal');
     }
 
     function pausedLabel(iso) {
-        return iso ? `Paused until ${E.shortTime(iso)}` : '';
+        if (!iso) return '';
+        const t = E.shortTime(iso);
+        return `Paused until ${t.length >= 16 ? t.slice(0, 16) : t}`;
+    }
+
+    // ── Settings rows ────────────────────────────────────────────────────────
+
+    const LEVEL_LIST = E.LEVELS || ['info', 'notice', 'warning', 'error', 'critical'];
+
+    function levelPill(level) {
+        return `<span class="sl-level sl-level-${E.esc(level)}">${E.esc(E.levelLabel(level))}</span>`;
+    }
+
+    function summaryText(c) {
+        return `${c.retention_days} days · ${Number(c.max_entries).toLocaleString()} max · ${E.esc(E.levelLabel(c.min_level))}+`;
+    }
+
+    function levelField(c, levels, locked, dis) {
+        const lock = locked ? 'disabled title="Always on"' : (dis ? 'disabled' : '');
+        return `<button type="button" class="sl-lv-btn" data-field="min_level" data-value="${E.esc(c.min_level)}" ${lock}>
+            ${levelPill(c.min_level)}<i class="fas ${locked ? 'fa-lock' : 'fa-chevron-down'}"></i></button>`;
     }
 
     function renderSettings() {
@@ -452,58 +474,474 @@
         const dis = S.readonly ? 'disabled' : '';
         const rd = bounds.retention_days || [1, 365];
         const me = bounds.max_entries || [1000, 200000];
-        const levels = bounds.min_level || E.LEVELS;
+        const levels = bounds.min_level || LEVEL_LIST;
+        S.levels = levels;
 
         const toggle = $('sl-service-toggle');
         toggle.checked = !!cfg.enabled;
         toggle.disabled = S.readonly;
+        setLowerOff(!cfg.enabled);
 
-        const names = CATEGORY_ORDER.filter((n) => cfg.categories && cfg.categories[n])
-            .concat(Object.keys(cfg.categories || {}).filter((n) => !CATEGORY_ORDER.includes(n)));
+        const known = CATEGORY_ORDER.filter((n) => cfg.categories && cfg.categories[n]);
+        const unknown = Object.keys(cfg.categories || {}).filter((n) => !CATEGORY_ORDER.includes(n));
+        const names = known.filter((n) => n !== 'audit').concat(unknown, known.filter((n) => n === 'audit'));
 
         $('sl-settings-list').innerHTML = names.map((name) => {
             const c = cfg.categories[name];
             const locked = alwaysOn.includes(name);
-            const pauseOpts = [`<option value="">${c.paused_until ? E.esc(pausedLabel(c.paused_until)) : 'Not paused'}</option>`]
-                .concat(c.paused_until ? ['<option value="0">Resume now</option>'] : [])
-                .concat(PAUSE_OPTIONS.map(([m, l]) => `<option value="${m}">Pause ${l}</option>`)).join('');
+            const paused = !!c.paused_until;
             return `
-            <div class="sl-set-row" data-category="${E.esc(name)}">
-                <div class="sl-set-head">
-                    <span class="sl-set-name"><i class="fas ${E.CATEGORY_ICONS[name] || 'fa-circle'}"></i> ${E.esc(E.categoryLabel(name))}
-                        ${locked ? '<i class="fas fa-lock sl-lock" title="Always on"></i>' : ''}</span>
+            <div class="sl-set-row ${paused ? 'is-paused' : ''}" data-category="${E.esc(name)}" data-pause="">
+                <div class="sl-set-top">
+                    <div class="sl-set-main" data-act="expand">
+                        <span class="sl-set-name"><i class="fas ${E.CATEGORY_ICONS[name] || 'fa-circle'}"></i> ${E.esc(E.categoryLabel(name))}
+                            <i class="fas fa-chevron-down sl-chev"></i></span>
+                        <div class="sl-sum"><span class="sl-vals">${summaryText(c)}</span><span class="sl-ps">${paused ? '<span class="sl-sep"> · </span><button type="button" class="sl-edit-pause" data-act="edit-pause"></button>' : ''}</span></div>
+                    </div>
+                    ${locked ? '<span></span>' : `<button type="button" class="sl-pause" data-act="pause" title="Pause" ${dis || (c.enabled ? '' : 'disabled')}><i class="fas fa-pause"></i></button>`}
                     <label class="switch" title="${locked ? 'Always on' : 'Show'}">
                         <input type="checkbox" data-field="enabled" ${c.enabled ? 'checked' : ''} ${locked || S.readonly ? 'disabled' : ''}>
                         <span class="slider"></span>
+                        <i class="fas fa-pause sl-sw-pause"></i>
+                        ${locked ? '<i class="fas fa-lock sl-sw-lock"></i>' : ''}
                     </label>
                 </div>
-                <div class="sl-set-grid">
-                    <label class="sl-field"><span>Keep (days)</span>
+                <div class="sl-set-edit">
+                    <label class="sl-fld">Keep (days)
                         <input type="number" class="sl-input" data-field="retention_days" min="${rd[0]}" max="${rd[1]}" step="1" value="${c.retention_days}" ${dis}>
                     </label>
-                    <label class="sl-field"><span>Max entries</span>
+                    <label class="sl-fld">Max entries
                         <input type="number" class="sl-input" data-field="max_entries" min="${me[0]}" max="${me[1]}" step="1000" value="${c.max_entries}" ${dis}>
                     </label>
-                    <label class="sl-field"><span>Min level</span>
-                        <select class="sl-select" data-field="min_level" ${dis}>
-                            ${levels.map((l) => `<option value="${l}" ${l === c.min_level ? 'selected' : ''}>${E.levelLabel(l)}</option>`).join('')}
-                        </select>
-                    </label>
-                    ${locked ? '' : `<label class="sl-field"><span>Pause</span>
-                        <select class="sl-select" data-field="pause_minutes" ${dis || (c.enabled ? '' : 'disabled')}>${pauseOpts}</select>
-                    </label>`}
+                    <div class="sl-fld">Min level ${levelField(c, levels, locked, dis)}</div>
                 </div>
                 <div class="inline-error-msg sl-set-error" hidden></div>
             </div>`;
         }).join('');
 
-        $('sl-settings-list').querySelectorAll('input, select').forEach((el) => {
+        $('sl-settings-list').querySelectorAll('input').forEach((el) => {
             el.addEventListener('input', onSettingsChange);
             el.addEventListener('change', onSettingsChange);
         });
+        $('sl-settings-list').querySelectorAll('.sl-set-row').forEach(syncRow);
+        $('sl-settings-list').onclick = onListClick;
+        closeMenu();
+        syncExpandAll();
         $('sl-settings-warn').hidden = true;
         const save = $('sl-settings-save');
         if (save) save.disabled = true;
+    }
+
+    // Paused, with any unsaved change applied over the saved value.
+    function rowPaused(row) {
+        const p = row.dataset.pause;
+        if (p === '0') return false;
+        if (p) return true;
+        return !!(S.config.categories[row.dataset.category] || {}).paused_until;
+    }
+
+    function rowPausedIso(row) {
+        if (row.dataset.pause && row.dataset.pause !== '0') return new Date(Number(row.dataset.pauseTs)).toISOString();
+        return (S.config.categories[row.dataset.category] || {}).paused_until || '';
+    }
+
+    function rowEnabled(row) {
+        return row.querySelector('[data-field="enabled"]').checked;
+    }
+
+    function syncRow(row) {
+        const paused = rowPaused(row);
+        row.classList.toggle('is-paused', paused);
+        const btn = row.querySelector('.sl-pause');
+        if (btn) btn.disabled = S.readonly || S.serviceOff || !rowEnabled(row);
+        const ps = row.querySelector('.sl-ps');
+        if (paused) {
+            if (!ps.firstChild) ps.innerHTML = '<span class="sl-sep"> · </span><button type="button" class="sl-edit-pause" data-act="edit-pause"></button>';
+            ps.querySelector('.sl-edit-pause').textContent = pausedLabel(rowPausedIso(row));
+        } else {
+            ps.innerHTML = '';
+        }
+        const c = S.config.categories[row.dataset.category];
+        const days = row.querySelector('[data-field="retention_days"]').value;
+        const max = row.querySelector('[data-field="max_entries"]').value;
+        const lv = row.querySelector('[data-field="min_level"]').dataset.value;
+        row.querySelector('.sl-vals').innerHTML = summaryText({
+            retention_days: days || c.retention_days,
+            max_entries: max || c.max_entries,
+            min_level: lv,
+        });
+    }
+
+    // ── Popover menu (pause + min level) ─────────────────────────────────────
+
+    function closeMenu() {
+        const m = $('sl-menu');
+        if (m) m.remove();
+        document.querySelectorAll('.sl-lv-btn.open').forEach((b) => b.classList.remove('open'));
+    }
+
+    function openMenu(anchor, html, onPick, align) {
+        closeMenu();
+        const menu = document.createElement('div');
+        menu.id = 'sl-menu';
+        menu.className = 'sl-menu';
+        menu.innerHTML = html;
+        menu.addEventListener('click', (ev) => {
+            const opt = ev.target.closest('[data-v]');
+            if (!opt) return;
+            ev.stopPropagation();
+            closeMenu();
+            onPick(opt.dataset.v);
+        });
+        $('sl-settings-modal').appendChild(menu);
+        const r = anchor.getBoundingClientRect();
+        if (align === 'fit') {
+            menu.style.minWidth = `${r.width}px`;
+            menu.style.left = `${r.left}px`;
+        } else {
+            menu.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+        }
+        const h = menu.offsetHeight;
+        const below = r.bottom + 6;
+        menu.style.top = `${below + h > window.innerHeight - 8 ? Math.max(8, r.top - h - 6) : below}px`;
+    }
+
+    function openPauseMenu(btn, row) {
+        const items = PAUSE_OPTIONS.filter(([m]) => m <= pauseBounds()[1]).map(([m, l]) => `<div data-v="${m}">${l}</div>`).join('') +
+            '<div data-v="custom" class="sl-menu-sep">Custom…</div>';
+        openMenu(btn, items, (v) => {
+            if (v === 'custom') { openPause(row, false); return; }
+            setRowPause(row, Number(v));
+        });
+    }
+
+    function openLevelMenu(btn, row) {
+        const cur = btn.dataset.value;
+        const items = (S.levels || LEVEL_LIST).map((l) =>
+            `<div data-v="${E.esc(l)}" class="${l === cur ? 'sel' : ''}">${levelPill(l)}</div>`).join('');
+        btn.classList.add('open');
+        openMenu(btn, items, (v) => {
+            btn.dataset.value = v;
+            btn.querySelector('.sl-level').outerHTML = levelPill(v);
+            syncRow(row);
+            onSettingsChange();
+        }, 'fit');
+    }
+
+    function setRowPause(row, minutes) {
+        row.dataset.pause = String(minutes);
+        row.dataset.pauseTs = String(Date.now() + minutes * 60000);
+        syncRow(row);
+        onSettingsChange();
+    }
+
+    function onListClick(ev) {
+        const t = ev.target;
+        const act = t.closest('[data-act]');
+        const lv = t.closest('.sl-lv-btn');
+        const row = t.closest('.sl-set-row');
+        if (!row) return;
+        if (lv && !lv.disabled) {
+            ev.stopPropagation();
+            if (lv.classList.contains('open')) closeMenu(); else openLevelMenu(lv, row);
+            return;
+        }
+        if (!act) return;
+        const kind = act.dataset.act;
+        if (kind === 'pause') {
+            ev.stopPropagation();
+            if (act.disabled) return;
+            openPauseMenu(act, row);
+        } else if (kind === 'edit-pause') {
+            ev.stopPropagation();
+            openPause(row, true);
+        } else if (kind === 'expand') {
+            row.classList.toggle('open');
+            syncExpandAll();
+        }
+    }
+
+    // ── Expand all + sticky bar ──────────────────────────────────────────────
+
+    function syncExpandAll() {
+        const rows = [...document.querySelectorAll('#sl-settings-list .sl-set-row')];
+        const all = rows.length > 0 && rows.every((r) => r.classList.contains('open'));
+        const btn = $('sl-expand-all');
+        btn.classList.toggle('open', all);
+        btn.querySelector('span').textContent = all ? 'Collapse all' : 'Expand all';
+    }
+
+    function toggleExpandAll() {
+        const rows = [...document.querySelectorAll('#sl-settings-list .sl-set-row')];
+        const open = !rows.every((r) => r.classList.contains('open'));
+        rows.forEach((r) => r.classList.toggle('open', open));
+        syncExpandAll();
+    }
+
+    function updateStuck() {
+        const body = document.querySelector('#sl-settings-modal .modal-body');
+        const bar = $('sl-bar');
+        if (!body || !bar) return;
+        bar.classList.toggle('stuck', body.scrollTop > 0 &&
+            bar.getBoundingClientRect().top <= body.getBoundingClientRect().top + 0.5);
+    }
+
+    // ── Main switch off: lower part is shaded and locked ─────────────────────
+
+    function setLowerOff(off) {
+        S.serviceOff = off;
+        $('sl-settings-modal').classList.toggle('sl-off', off);
+        $('sl-lower-in').inert = off;
+        closeMenu();
+        document.querySelectorAll('#sl-settings-list .sl-set-row').forEach(syncRow);
+    }
+
+    // ── Custom pause modal ───────────────────────────────────────────────────
+
+    const PZ = { row: null, mode: 'for', edit: false, clock: null, lastMin: null };
+
+    // [min, max] minutes from the device's bounds; 0 would mean "resume", so min is 1.
+    function pauseBounds() {
+        const b = (S.config && S.config.bounds && S.config.bounds.pause_minutes) || [1, 10080];
+        return [Math.max(1, b[0]), b[1]];
+    }
+
+    function fmtSpan(m) {
+        if (m % 1440 === 0) return `${m / 1440} day${m === 1440 ? '' : 's'}`;
+        if (m % 60 === 0) return `${m / 60} h`;
+        return `${m} min`;
+    }
+
+    function fmtDur(m) {
+        const d = Math.floor(m / 1440);
+        const h = Math.floor((m % 1440) / 60);
+        const min = m % 60;
+        return [d && `${d} d`, h && `${h} h`, (min || (!d && !h)) && `${min} min`].filter(Boolean).join(' ');
+    }
+
+    function fmtDT(d) {
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    // "Until" is a date plus 24-hour hour/minute fields, so no AM/PM.
+    function setUntil(d) {
+        $('sl-pz-date').value = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+        syncDateText();
+        $('sl-pz-hh').value = pad2(d.getHours());
+        $('sl-pz-mm').value = pad2(d.getMinutes());
+    }
+
+    function syncDateText() {
+        $('sl-pz-date-txt').value = $('sl-pz-date').value;
+    }
+
+    // Live clock in the corner while the modal is open.
+    function tickClock() {
+        const d = new Date();
+        $('sl-pz-clock').textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+        // The earliest allowed time moves with the clock, so re-check once a minute.
+        if (PZ.lastMin !== d.getMinutes()) {
+            PZ.lastMin = d.getMinutes();
+            if ($('sl-pause-modal').classList.contains('active')) pauseUpdate();
+        }
+    }
+
+    function startClock() {
+        stopClock();
+        tickClock();
+        PZ.clock = setInterval(tickClock, 1000);
+    }
+
+    function stopClock() {
+        clearInterval(PZ.clock);
+        PZ.clock = null;
+        PZ.lastMin = null;
+    }
+
+    function untilTime() {
+        const date = $('sl-pz-date').value;
+        const hh = $('sl-pz-hh').value.trim();
+        const mm = $('sl-pz-mm').value.trim();
+        const h = Number(hh);
+        const m = Number(mm);
+        if (!date || hh === '' || mm === '' || !Number.isInteger(h) || !Number.isInteger(m) ||
+            h < 0 || h > 23 || m < 0 || m > 59) return NaN;
+        return new Date(`${date}T${pad2(h)}:${pad2(m)}`).getTime();
+    }
+
+    function pauseMinutes() {
+        if (PZ.mode === 'for') {
+            const v = ['sl-pz-d', 'sl-pz-h', 'sl-pz-m'].map((id) => Number($(id).value));
+            if (!v.every((n) => Number.isInteger(n) && n >= 0)) return NaN;
+            return v[0] * 1440 + v[1] * 60 + v[2];
+        }
+        const t = untilTime();
+        return isNaN(t) ? NaN : Math.ceil((t - Date.now()) / 60000);
+    }
+
+    // Writes the other tab's fields from a valid end time, so both tabs agree.
+    function fillOtherTab(mins) {
+        if (PZ.mode === 'for') {
+            setUntil(new Date(Date.now() + mins * 60000));
+        } else {
+            $('sl-pz-d').value = Math.floor(mins / 1440);
+            $('sl-pz-h').value = Math.floor((mins % 1440) / 60);
+            $('sl-pz-m').value = mins % 60;
+        }
+    }
+
+    function pauseUpdate() {
+        applyPauseLimits();
+        const [lo, hi] = pauseBounds();
+        const mins = pauseMinutes();
+        const bad = !(mins >= lo && mins <= hi);
+        $('sl-pz-ok').disabled = bad;
+        const prev = $('sl-pz-prev');
+        if (bad) {
+            prev.classList.add('err');
+            const { minT, maxT } = untilLimits();
+            prev.textContent = PZ.mode === 'until'
+                ? `Pick from ${fmtDT(minT)} to ${fmtDT(maxT)}`
+                : `${fmtSpan(lo)} – ${fmtSpan(hi)}`;
+        } else {
+            prev.classList.remove('err');
+            fillOtherTab(mins);
+            // Each tab shows the other tab's value: For shows the end time, Until shows the duration.
+            prev.textContent = PZ.mode === 'for'
+                ? `Until ${fmtDT(new Date(Date.now() + mins * 60000))}`
+                : `For ${fmtDur(mins)}`;
+        }
+    }
+
+    // Earliest and latest end time, from the device's bounds (earliest rounded up to the minute).
+    function untilLimits() {
+        const [lo, hi] = pauseBounds();
+        const minT = new Date(Math.ceil((Date.now() + lo * 60000) / 60000) * 60000);
+        const maxT = new Date(Math.floor((Date.now() + hi * 60000) / 60000) * 60000);
+        return { minT, maxT };
+    }
+
+    // The pickers only offer values inside the range; hints and chips follow it.
+    function applyPauseLimits() {
+        const [lo, hi] = pauseBounds();
+        const { minT, maxT } = untilLimits();
+        const day = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+        const date = $('sl-pz-date').value;
+        const hh = $('sl-pz-hh');
+        const mm = $('sl-pz-mm');
+        $('sl-pz-date').min = day(minT);
+        $('sl-pz-date').max = day(maxT);
+        hh.min = date === day(minT) ? minT.getHours() : 0;
+        hh.max = date === day(maxT) ? maxT.getHours() : 23;
+        const h = Number(hh.value);
+        mm.min = date === day(minT) && h === minT.getHours() ? minT.getMinutes() : 0;
+        mm.max = date === day(maxT) && h === maxT.getHours() ? maxT.getMinutes() : 59;
+        $('sl-pz-range-for').textContent = `${fmtSpan(lo)} – ${fmtSpan(hi)}`;
+        document.querySelectorAll('#sl-pause-modal .sl-pz-chips button').forEach((b) => {
+            b.disabled = Number(b.dataset.d) * 1440 + Number(b.dataset.h) * 60 + Number(b.dataset.m) > hi;
+        });
+    }
+
+    // On commit (blur, Enter, spinner), pull a value that is out of range back to the nearest allowed one.
+    function clampPause() {
+        const [lo, hi] = pauseBounds();
+        if (PZ.mode === 'for') {
+            const v = ['sl-pz-d', 'sl-pz-h', 'sl-pz-m'].map((id) => Number($(id).value));
+            if (!v.every((n) => Number.isInteger(n) && n >= 0)) return;
+            const mins = v[0] * 1440 + v[1] * 60 + v[2];
+            const fix = mins < lo ? lo : mins > hi ? hi : mins;
+            if (fix !== mins) {
+                $('sl-pz-d').value = Math.floor(fix / 1440);
+                $('sl-pz-h').value = Math.floor((fix % 1440) / 60);
+                $('sl-pz-m').value = fix % 60;
+            }
+        } else {
+            const t = untilTime();
+            if (isNaN(t)) return;
+            const { minT, maxT } = untilLimits();
+            if (t < minT.getTime()) setUntil(minT);
+            else if (t > maxT.getTime()) setUntil(maxT);
+        }
+        pauseUpdate();
+    }
+
+    // Switching tabs carries the current end time across, so both show the same "Until".
+    function pauseMode(mode, sync = true) {
+        if (sync && mode !== PZ.mode) {
+            const mins = pauseMinutes();
+            const [lo, hi] = pauseBounds();
+            if (mins >= lo && mins <= hi) fillOtherTab(mins);
+        }
+        PZ.mode = mode;
+        document.querySelectorAll('#sl-pause-modal .sl-seg button').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
+        $('sl-pause-for').classList.toggle('off', mode !== 'for');
+        $('sl-pause-until').classList.toggle('off', mode !== 'until');
+        if (mode === 'until' && !$('sl-pz-date').value) setUntil(new Date(Date.now() + 2 * 3600e3));
+        applyPauseLimits();
+        pauseUpdate();
+    }
+
+    function openPause(row, edit) {
+        PZ.row = row;
+        PZ.edit = edit;
+        const cat = row.dataset.category;
+        $('sl-pause-cat').innerHTML = `<i class="fas ${E.CATEGORY_ICONS[cat] || 'fa-circle'}"></i> ${E.esc(E.categoryLabel(cat))}`;
+        $('sl-pz-ok').querySelector('span').textContent = edit ? 'Update' : 'Pause';
+        openModal('sl-pause-modal');
+        startClock();
+        if (edit) {
+            const iso = rowPausedIso(row);
+            if (iso) setUntil(new Date(iso));
+            pauseMode('until', false);
+            $('sl-pz-date').focus();
+        } else {
+            pauseMode('for', false);
+            $('sl-pz-h').focus();
+            $('sl-pz-h').select();
+        }
+    }
+
+    function closePause() {
+        stopClock();
+        closeModal('sl-pause-modal');
+    }
+
+    function confirmPause() {
+        const mins = pauseMinutes();
+        const [lo, hi] = pauseBounds();
+        if (!(mins >= lo && mins <= hi) || !PZ.row) return;
+        setRowPause(PZ.row, mins);
+        closePause();
+    }
+
+    function bindPauseModal() {
+        ['sl-pz-d', 'sl-pz-h', 'sl-pz-m', 'sl-pz-date', 'sl-pz-hh', 'sl-pz-mm'].forEach((id) => $(id).addEventListener('input', pauseUpdate));
+        const dateIn = $('sl-pz-date');
+        dateIn.addEventListener('change', syncDateText);
+        dateIn.addEventListener('input', syncDateText);
+        dateIn.addEventListener('click', () => {
+            if (dateIn.showPicker) { try { dateIn.showPicker(); } catch (e) { /* needs a user gesture */ } }
+        });
+        ['sl-pz-d', 'sl-pz-h', 'sl-pz-m', 'sl-pz-date', 'sl-pz-hh', 'sl-pz-mm'].forEach((id) => $(id).addEventListener('change', clampPause));
+        document.querySelectorAll('#sl-pause-modal .sl-pz-chips button').forEach((b) => {
+            b.addEventListener('click', () => {
+                $('sl-pz-d').value = b.dataset.d;
+                $('sl-pz-h').value = b.dataset.h;
+                $('sl-pz-m').value = b.dataset.m;
+                pauseUpdate();
+            });
+        });
+        document.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Escape') closeMenu();
+            if (ev.key === 'Enter' && $('sl-pause-modal').classList.contains('active') && !$('sl-pz-ok').disabled) confirmPause();
+        });
+        document.addEventListener('click', (ev) => {
+            if (!ev.target.closest('#sl-menu') && !ev.target.closest('.sl-lv-btn') && !ev.target.closest('.sl-pause')) closeMenu();
+        });
+        const body = document.querySelector('#sl-settings-modal .modal-body');
+        if (body) body.addEventListener('scroll', () => { updateStuck(); closeMenu(); }, { passive: true });
     }
 
     // Changed fields only, per category. Returns {changes, errors, shrinks}.
@@ -520,7 +958,7 @@
             let error = '';
             row.querySelectorAll('[data-field]').forEach((el) => {
                 const field = el.dataset.field;
-                if (el.disabled && field !== 'pause_minutes') return;
+                if (el.disabled) return;
                 if (field === 'enabled') {
                     if (el.checked !== !!cur.enabled) out.enabled = el.checked;
                 } else if (field === 'retention_days' || field === 'max_entries') {
@@ -537,11 +975,10 @@
                         if (v < cur[field]) shrinks = true;
                     }
                 } else if (field === 'min_level') {
-                    if (el.value !== cur.min_level) out.min_level = el.value;
-                } else if (field === 'pause_minutes') {
-                    if (!el.disabled && el.value !== '') out.pause_minutes = Number(el.value);
+                    if (el.dataset.value !== cur.min_level) out.min_level = el.dataset.value;
                 }
             });
+            if (row.dataset.pause !== '') out.pause_minutes = Number(row.dataset.pause);
             const errEl = row.querySelector('.sl-set-error');
             errEl.textContent = error;
             errEl.hidden = !error;
@@ -552,10 +989,18 @@
     }
 
     function onSettingsChange(ev) {
-        // Pause only applies while the category is shown.
-        if (ev && ev.target && ev.target.dataset.field === 'enabled') {
-            const pause = ev.target.closest('.sl-set-row').querySelector('[data-field="pause_minutes"]');
-            if (pause) pause.disabled = !ev.target.checked || S.readonly;
+        const t = ev && ev.target;
+        if (t && t.dataset && t.dataset.field === 'enabled') {
+            const row = t.closest('.sl-set-row');
+            // Flipping a paused switch resumes the category instead of turning it off.
+            if (rowPaused(row)) {
+                row.dataset.pause = '0';
+                t.checked = true;
+            }
+            syncRow(row);
+        } else if (t && t.closest) {
+            const row = t.closest('.sl-set-row');
+            if (row) syncRow(row);
         }
         const { changes, errors, shrinks } = collectSettings();
         $('sl-settings-warn').hidden = !shrinks;
@@ -592,7 +1037,10 @@
         const done = await setService(on);
         input.disabled = S.readonly;
         if (!done) input.checked = !on;
-        else if (S.config) S.config.enabled = on;
+        else {
+            if (S.config) S.config.enabled = on;
+            setLowerOff(!on);
+        }
     }
 
     async function setService(on) {
@@ -690,8 +1138,9 @@
     window.SystemLogsPage = {
         setCategory, applyFilters, onSearchInput, loadOlder, showNew,
         openSettings, closeSettings, saveSettings, toggleService,
+        toggleExpandAll, pauseMode, closePause, confirmPause,
         openClear, closeClear, confirmClear, overlayClose,
     };
 
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => { init(); bindPauseModal(); });
 })();

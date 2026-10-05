@@ -144,9 +144,19 @@
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <div class="sl-settings-list" id="sl-settings-list"></div>
-                    <div class="sl-settings-warn" id="sl-settings-warn" hidden>
-                        <i class="fas fa-exclamation-triangle"></i> Older entries deleted
+                    <div class="sl-lower" id="sl-lower">
+                        <div class="sl-veil"><span><i class="fas fa-lock"></i> System logs are off</span></div>
+                        <div class="sl-lower-in" id="sl-lower-in">
+                            <div class="sl-bar" id="sl-bar">
+                                <button type="button" class="sl-expand-all" id="sl-expand-all" onclick="SystemLogsPage.toggleExpandAll()">
+                                    <i class="fas fa-chevron-down"></i><span>Expand all</span>
+                                </button>
+                            </div>
+                            <div class="sl-settings-list" id="sl-settings-list"></div>
+                            <div class="sl-settings-warn" id="sl-settings-warn" hidden>
+                                <i class="fas fa-exclamation-triangle"></i> Older entries deleted
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -157,6 +167,57 @@
                     <i class="fas fa-save"></i> Save changes
                 </button>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom pause modal -->
+    <div class="modal-overlay" id="sl-pause-modal" onclick="SystemLogsPage.overlayClose(event, 'pause')">
+        <div class="modal-card sl-pause-card" role="dialog" aria-label="Custom pause">
+            <div class="sl-pz-clock" aria-label="Current time"><i class="fas fa-clock"></i> <span id="sl-pz-clock">--:--:--</span></div>
+            <div class="modal-body">
+                <h3 class="sl-pause-title">Custom pause</h3>
+                <p class="sl-pause-sub" id="sl-pause-cat"></p>
+                <div class="sl-seg">
+                    <button type="button" class="on" data-mode="for" onclick="SystemLogsPage.pauseMode('for')">For</button>
+                    <button type="button" data-mode="until" onclick="SystemLogsPage.pauseMode('until')">Until</button>
+                </div>
+                <div class="sl-pz-panels">
+                    <div id="sl-pause-for">
+                        <div class="sl-trio">
+                            <label>Days<input type="number" class="sl-input" id="sl-pz-d" min="0" step="1" value="0" inputmode="numeric"></label>
+                            <label>Hours<input type="number" class="sl-input" id="sl-pz-h" min="0" step="1" value="2" inputmode="numeric"></label>
+                            <label>Minutes<input type="number" class="sl-input" id="sl-pz-m" min="0" step="1" value="0" inputmode="numeric"></label>
+                        </div>
+                        <div class="sl-pz-chips">
+                            <button type="button" data-d="0" data-h="0" data-m="30">30 min</button>
+                            <button type="button" data-d="0" data-h="2" data-m="0">2 h</button>
+                            <button type="button" data-d="1" data-h="12" data-m="0">1 d 12 h</button>
+                            <button type="button" data-d="3" data-h="0" data-m="0">3 days</button>
+                        </div>
+                        <p class="sl-pz-range" id="sl-pz-range-for"></p>
+                    </div>
+                    <div id="sl-pause-until" class="off">
+                        <div class="sl-trio sl-trio-until">
+                            <label for="sl-pz-date">Date
+                                <span class="sl-date">
+                                    <input type="text" class="sl-input" id="sl-pz-date-txt" placeholder="YYYY-MM-DD" readonly tabindex="-1">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <input type="date" id="sl-pz-date">
+                                </span>
+                            </label>
+                            <label>Hour<input type="number" class="sl-input" id="sl-pz-hh" min="0" max="23" step="1" inputmode="numeric"></label>
+                            <label>Min<input type="number" class="sl-input" id="sl-pz-mm" min="0" max="59" step="1" inputmode="numeric"></label>
+                        </div>
+                    </div>
+                </div>
+                <p class="sl-pz-prev" id="sl-pz-prev"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-action btn-cancel" onclick="SystemLogsPage.closePause()">Cancel</button>
+                <button type="button" class="btn-action btn-pause" id="sl-pz-ok" onclick="SystemLogsPage.confirmPause()">
+                    <i class="fas fa-pause"></i> <span>Pause</span>
+                </button>
             </div>
         </div>
     </div>

@@ -1010,3 +1010,29 @@ body {
     background: linear-gradient(90deg, #ef4444, #f87171);
 }
 
+/* ==========================================================================
+   STANDARDIZED SPINNER & BUTTON ROTATION ANIMATION (0.75s Linear Infinite)
+   ========================================================================== */
+@keyframes nkFullSpin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.fa-spin,
+.is-spinning,
+.icon-spin,
+.btn-spinning i,
+.btn-spinning .fa-spinner,
+.btn-spinning .fa-circle-notch,
+.btn-spinning .fa-sync,
+.btn-spinning .fa-sync-alt,
+.btn-spinning .fa-redo {
+    animation: nkFullSpin 0.75s linear infinite !important;
+    display: inline-block;
+    transform-origin: 50% 50%;
+}
+

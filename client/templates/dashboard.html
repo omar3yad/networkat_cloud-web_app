@@ -40,8 +40,10 @@
         <div class="stat-card quota-devices">
             <div class="stat-info" style="width: 100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-                    <span class="stat-title">Peer Quota ({{ subscription_info.plan_display if subscription_info and subscription_info.plan_display else 'Plan' }})</span>
-                    {% if subscription_info and subscription_info.status %}
+                    <span class="stat-title">Peer Quota ({% if is_trial %}Free Trial{% else %}{{ subscription_info.plan_display if subscription_info and subscription_info.plan_display else 'Plan' }}{% endif %})</span>
+                    {% if is_trial %}
+                    <span class="badge-status-pill status-trial" style="background: rgba(234, 88, 12, 0.12); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.25); font-weight: 700;">Free Trial</span>
+                    {% elif subscription_info and subscription_info.status %}
                     <span class="badge-status-pill status-{{ subscription_info.status }}">{{ subscription_info.status }}</span>
                     {% endif %}
                 </div>

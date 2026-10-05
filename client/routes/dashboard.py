@@ -158,7 +158,7 @@ def peer_details(peer_id):
                 try:
                     clean_str = peer_last_seen.replace('Z', '+00:00')
                     dt = datetime.fromisoformat(clean_str)
-                    peer_last_seen = dt.strftime("%d/%m/%Y %H:%M:%S")
+                    peer_last_seen = dt.strftime("%Y-%m-%d %H:%M:%S")
                 except Exception as ex:
                     current_app.logger.error(f"Failed to format last seen '{peer_last_seen}': {ex}")
             if not request.args.get('name') and checked_peer.get('name'):
@@ -300,7 +300,7 @@ def get_customer_setup_keys():
                 "used_times": used_times,
                 "usage_limit": usage_limit,
                 "remaining_uses": remaining_uses,
-                "created_at": t.created_at.strftime("%d/%m/%Y %H:%M:%S") if t.created_at else "Unknown"
+                "created_at": t.created_at.strftime("%Y-%m-%d %H:%M:%S") if t.created_at else "Unknown"
             })
             
         return jsonify({"tokens": tokens_data}), 200
