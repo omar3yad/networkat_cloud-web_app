@@ -30,7 +30,7 @@
         let savedTimer = null;
 
         win.body.innerHTML = '<div class="ids-win-msg">Loading.</div>';
-        load();
+        const ready = load();   // settles when the first load is done (the shell loads the next section after it)
 
         // ── Data ────────────────────────────────────────────────────────────
 
@@ -46,6 +46,7 @@
             } catch (e) {
                 throw new Error('Network error');
             }
+            if (method !== 'GET') N.api.bust();   // a write: shared reads must be fetched again
             let data = null;
             try { data = await res.json(); } catch (e) { /* empty body */ }
             if (!res.ok) throw new Error(data && typeof data.detail === 'string' ? data.detail : 'Request failed');
@@ -53,10 +54,7 @@
         }
 
         async function loadAliases() {
-            const res = await fetch(`${window.API_BASE || ''}/api/peers/${encodeURIComponent(ctx.peerId)}/aliases`,
-                { credentials: 'same-origin', headers: { Accept: 'application/json' } });
-            const data = await res.json();
-            if (!res.ok) throw new Error('aliases');
+            const data = await N.api.aliases(ctx.peerId);
             return (data.lists || []).map((a) => ({
                 id: a.id || a.slug,
                 name: a.name || a.slug || a.id,
@@ -256,15 +254,27 @@
             drawFoot();
         }
 
+        // Add: a collapsed heading and plus; it opens the Add window.
         function drawAdd() {
-            if (ctx.readonly) { hostAdd.innerHTML = ''; return; }
-            const o = S.open;
-            hostAdd.innerHTML = `<section class="ids-sec ids-ww-add${o ? '' : ' ids-ww-shut'}">` +
-                `<button type="button" class="ids-ww-toggle" data-x="toggle" aria-expanded="${o}" title="${o ? 'Close' : 'Add'}">` +
-                `<span class="ids-sec-h">Add</span>${IdsIcon(o ? 'minus' : 'plus')}</button>` +
-                (o ? '<p class="ids-sec-help">A website or address alias, and how serious a hit is.</p>' +
-                    `<div class="ids-sec-body">${formHtml(S.add, true)}</div>` : '') +
-                '</section>';
+            if (ctx.readonly) { hostAdd.innerHTML = ''; drawAddOv(); return; }
+            hostAdd.innerHTML = '<section class="ids-sec ids-ww-add ids-ww-shut">' +
+                '<button type="button" class="ids-ww-toggle" data-x="toggle" title="Add">' +
+                `<span class="ids-sec-h">Add</span>${IdsIcon('plus')}</button></section>`;
+            drawAddOv();
+        }
+
+        // The Add window (a page modal, like Edit).
+        function drawAddOv() {
+            if (!S.open || ctx.readonly || !win.el.isConnected) {
+                if (ova) { ova.remove(); ova = null; }
+                return;
+            }
+            if (!ova) ova = mountOv();
+            ova.innerHTML = '<div class="ids-ww-ovcard" role="dialog" aria-modal="true">' +
+                '<div class="modal-header ids-ww-ovh"><h2>Add watchlist</h2><button type="button" class="modal-close" data-x="addclose" aria-label="Close">&times;</button></div>' +
+                `<div class="ids-ww-ovb">${formHtml(S.add, false)}</div>` +
+                '<div class="ids-ww-ovf"><button type="button" class="ids-btn" data-x="addclose">Cancel</button>' +
+                `<button type="button" class="ids-btn ids-btn-primary" data-x="add">${IdsIcon('plus')}Add</button></div></div>`;
         }
 
         const BADGE = {
@@ -340,27 +350,32 @@
         // ── Edit window (a copy of the Add section) ─────────────────────────
 
         let ov = null;
+        let ova = null;   // the Add window
+
+        // A page modal, one layer above the Lists window.
+        function mountOv() {
+            const el = document.createElement('div');
+            el.className = 'ids-win ids-ww-ov';
+            document.body.appendChild(el);
+            el.addEventListener('click', onClick);
+            el.addEventListener('input', onInput);
+            el.addEventListener('focusout', onFocusOut);
+            el.addEventListener('keydown', onKeydown);
+            el.addEventListener('mousedown', keepFocus);
+            el.addEventListener('mousedown', (ev) => { el.dataset.downOut = ev.target === el ? '1' : ''; });
+            return el;
+        }
 
         function ovDirty() {
             return !!S.edit && fsKey(S.edit.fs) !== S.edit.base;
         }
 
         function drawEdit() {
-            if (!S.edit) {
+            if (!S.edit || !win.el.isConnected) {
                 if (ov) { ov.remove(); ov = null; }
                 return;
             }
-            if (!ov) {
-                ov = document.createElement('div');
-                ov.className = 'ids-ww-ov';
-                win.card.appendChild(ov);
-                ov.addEventListener('click', onClick);
-                ov.addEventListener('input', onInput);
-                ov.addEventListener('focusout', onFocusOut);
-                ov.addEventListener('keydown', onKeydown);
-                ov.addEventListener('mousedown', keepFocus);
-                ov.addEventListener('mousedown', (ev) => { ov.dataset.downOut = ev.target === ov ? '1' : ''; });
-            }
+            if (!ov) ov = mountOv();
             ov.innerHTML = '<div class="ids-ww-ovcard" role="dialog" aria-modal="true">' +
                 '<div class="modal-header ids-ww-ovh"><h2>Edit watchlist</h2><button type="button" class="modal-close" data-x="ovclose" aria-label="Close">&times;</button></div>' +
                 `<div class="ids-ww-ovb">${formHtml(S.edit.fs, false)}</div>` +
@@ -418,9 +433,8 @@
             S.saved = false;
             S.err = '';
             S.add = newForm('add');
+            S.open = false;
             redraw();
-            const inp = hostAdd.querySelector('[data-f="value"]');
-            if (inp) inp.focus();
         }
 
         function discard() {
@@ -585,7 +599,7 @@
 
         function closeMenus() {
             let changed = false;
-            const forms = [[S.add, hostAdd], [S.edit && S.edit.fs, ov]];
+            const forms = [[S.add, ova], [S.edit && S.edit.fs, ov]];
             forms.forEach(([fs, root]) => {
                 if (!fs || !fs.dd) return;
                 fs.dd = false;
@@ -598,7 +612,8 @@
 
         function onClick(ev) {
             const b = ev.target.closest('button');
-            if (ev.target === ov && ov.dataset.downOut) { S.edit = null; drawEdit(); return; }
+            if (ov && ev.target === ov && ov.dataset.downOut) { S.edit = null; drawEdit(); return; }
+            if (ova && ev.target === ova && ova.dataset.downOut) { S.open = false; drawAddOv(); return; }
             if (!b) return;
             const x = b.dataset.x;
             const [fe, fs] = formOf(b);
@@ -614,10 +629,12 @@
                 if (fs.mode === 'edit') refreshEditBtn();
             } else if (x === 'add') doAdd();
             else if (x === 'toggle') {
-                S.open = !S.open;
-                drawAdd();
-                if (S.open) { const inp = hostAdd.querySelector('[data-f="value"]'); if (inp) inp.focus(); }
-            } else if (x === 'ovsave') doEdit();
+                S.open = true;
+                drawAddOv();
+                const inp = ova && ova.querySelector('[data-f="value"]');
+                if (inp) inp.focus();
+            } else if (x === 'addclose') { S.open = false; drawAddOv(); }
+            else if (x === 'ovsave') doEdit();
             else if (x === 'ovclose') { S.edit = null; drawEdit(); }
             else if (x === 'save') save();
             else if (x === 'discard') discard();
@@ -667,7 +684,7 @@
             const [fe, fs] = formOf(ev.target);
             if (f !== 'value' || !fs) return;
             const to = ev.relatedTarget;
-            if (to && to.closest && to.closest('.ids-ww-acwrap, .ids-ww-addbar, .ids-ww-ovf')) return;
+            if (to && to.closest && to.closest('.ids-ww-acwrap, .ids-ww-ovf')) return;
             if (fs.value.trim() && !fs.warn) {
                 fs.err = resolveAlias(fs).err || '';
                 fs.dd = false;
@@ -692,10 +709,13 @@
         function onEscape(ev) {
             if (!win.el.isConnected) { document.removeEventListener('keydown', onEscape, true); return; }
             if (ev.key !== 'Escape') return;
+            if (document.querySelector('#idsAcModal.active')) return;   // Create alias above: Escape is its own
             if (closeMenus()) { ev.stopPropagation(); return; }
             if (S.edit) { ev.stopPropagation(); S.edit = null; drawEdit(); return; }
+            if (S.open) { ev.stopPropagation(); S.open = false; drawAddOv(); return; }
             if (S.confirm) { ev.stopPropagation(); S.confirm = false; drawFoot(); }
         }
+        return ready;
     }
 
     IdsWin.register('watchlists', { title: 'Watchlists', icon: 'list-check', open });

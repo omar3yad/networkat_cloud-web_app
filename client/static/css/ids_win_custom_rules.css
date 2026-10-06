@@ -1,0 +1,493 @@
+/* IDS window: Custom rules (design D2). Fields, alias list, rows, badges and the edit window reuse
+   the Excluded devices classes (ids_win_excluded.css); dropdowns reuse ids-wm-dsel (ids_win_muted_rules.css). */
+
+.ids-win-custom [data-host="list"] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.ids-win-custom [data-host]:empty {
+    display: none;
+}
+
+/* One-line purpose under a label or heading. */
+.ids-wc-fh {
+    margin: -0.1rem 0 0.45rem;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: var(--nk-text-muted);
+}
+
+.ids-we-lbl + .ids-wc-fh {
+    margin-top: -0.15rem;
+}
+
+/* Name, with common rules */
+.ids-wc-nmw {
+    position: relative;
+}
+
+.ids-wc-nmw .ids-wc-name {
+    padding-right: 2.2rem;
+}
+
+.ids-wc-nmarrow {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--ids-ic);
+    cursor: pointer;
+}
+
+.ids-wc-nmarrow:hover {
+    background: var(--ids-ic-on-bg);
+    color: var(--ids-ic-on);
+}
+
+/* Menus: ours, never a native select. */
+.ids-wc-dsel .ids-wm-dbtn {
+    height: 34px;
+    min-width: 8rem;
+    font-size: 0.8rem;
+}
+
+.ids-wc-dsel.ids-wc-wide {
+    width: 100%;
+    margin-bottom: 0.4rem;
+}
+
+.ids-wc-wide .ids-wm-dbtn {
+    width: 100%;
+}
+
+.ids-wm-dbtn.ids-wc-ph {
+    color: #94a3b8;
+}
+
+.ids-wc-menu.ids-menu {
+    left: 0;
+    right: auto;
+    min-width: 100%;
+}
+
+.ids-wc-menu.ids-menu button {
+    white-space: normal;
+}
+
+.ids-wc-menu.ids-menu small {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--nk-text-muted);
+}
+
+.ids-wc-smenu.ids-menu {
+    top: 100%;
+    margin-top: 4px;
+    max-height: 260px;
+    padding-top: 0;
+}
+
+.ids-wc-nmw .ids-wc-smenu.ids-menu {
+    right: 0;
+}
+
+/* A category inside a menu: dark-blue bold with its icon, no band, no line; stays while the menu scrolls. */
+.ids-wc-cat {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.6rem 0.25rem;
+    background: #fff;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--ids-h1);
+}
+
+.ids-wc-cat .ids-i {
+    color: var(--ids-h1);
+}
+
+.ids-menu button.ids-wc-sub {
+    padding-left: 1.75rem;
+}
+
+.ids-menu .ids-wc-cat + button.ids-wc-sub {
+    border-top: 0;
+}
+
+/* Two controls on one line: a dropdown + its field. */
+.ids-wc-pair {
+    display: flex;
+    gap: 0.4rem;
+    align-items: flex-start;
+}
+
+.ids-wc-pair > .ids-wc-dsel {
+    flex: none;
+}
+
+.ids-wc-pair > .ids-we-inp,
+.ids-wc-pair > .ids-we-acwrap {
+    flex: 1;
+    min-width: 0;
+}
+
+/* The alias field has only the @ button (no + on the right). */
+.ids-we-main.ids-wc-al {
+    padding-right: 0.75rem;
+}
+
+/* Protocol + port */
+.ids-wc-or {
+    margin: 0.1rem 0 0.35rem;
+    font-size: 0.74rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-wc-pp {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.6rem;
+    align-items: flex-start;
+}
+
+.ids-wc-pp .ids-we-seg {
+    width: auto;
+    flex-wrap: nowrap;
+}
+
+.ids-we-inp.ids-wc-port {
+    width: 8rem;
+}
+
+/* "Alert when a device …": the blue words mirror the choice below. */
+.ids-we-lbl.ids-wc-sec {
+    margin-top: 1.35rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.ids-wc-hk {
+    position: relative;
+    padding: 0 0.15rem;
+    margin: 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    font: inherit;
+    color: var(--nk-blue-primary);
+    text-decoration: underline dotted;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+    cursor: pointer;
+}
+
+.ids-wc-hk:hover {
+    background: var(--nk-blue-soft);
+}
+
+/* The activity: stacked radio cards, the chosen one holds its fields. */
+.ids-wc-pre {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.ids-wc-pi {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: start;
+    border: 1.5px solid var(--nk-border);
+    border-radius: var(--nk-radius-md);
+    background: #fff;
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+}
+
+.ids-wc-pi:focus-visible {
+    outline: 2px solid var(--nk-blue-primary);
+    outline-offset: 2px;
+}
+
+.ids-wc-pi.ids-on {
+    border-color: var(--nk-blue-primary);
+    background: var(--nk-blue-soft);
+    cursor: default;
+}
+
+.ids-wc-rd {
+    width: 16px;
+    height: 16px;
+    margin-top: 0.15rem;
+    border-radius: 50%;
+    border: 1.5px solid #94a3b8;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.ids-wc-pi.ids-on .ids-wc-rd {
+    border: 5px solid var(--nk-blue-primary);
+}
+
+.ids-wc-pt {
+    min-width: 0;
+}
+
+.ids-wc-pn {
+    display: block;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.ids-wc-pd {
+    display: block;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: var(--nk-text-muted);
+}
+
+.ids-wc-cin {
+    margin-top: 0.55rem;
+}
+
+/* Optional: a dashed box with its tag. */
+.ids-wc-optbox {
+    position: relative;
+    margin-top: 1.5rem;
+    padding: 1rem 0.8rem 0.8rem;
+    border: 1.5px dashed #93c5fd;
+    border-radius: var(--nk-radius-md);
+    background: #f8fbff;
+}
+
+.ids-wc-optag {
+    position: absolute;
+    top: -0.65rem;
+    left: 0.7rem;
+    padding: 0.1rem 0.55rem;
+    border-radius: 9999px;
+    background: var(--nk-blue-primary);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.ids-wc-optt {
+    margin-bottom: 0.15rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.ids-wc-mchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.ids-wc-mchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 30px;
+    padding: 0 0.75rem;
+    border: 1px dashed var(--nk-border-hover, #cbd5e1);
+    border-radius: 9999px;
+    background: #fff;
+    font: inherit;
+    font-size: 0.78rem;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+}
+
+.ids-wc-mchip .ids-i {
+    font-size: 0.75rem;
+}
+
+.ids-wc-mchip.ids-on {
+    border: 1px solid var(--nk-blue-primary);
+    background: var(--nk-blue-soft);
+    color: var(--nk-blue-primary);
+    font-weight: 600;
+}
+
+.ids-wc-mchip:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* You'll see: the threat row as the list shows it. */
+.ids-wc-pvbox {
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-md);
+    background: #fbfdff;
+}
+
+.ids-wc-pvr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ids-wc-pvt {
+    min-width: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.ids-wc-pvt.ids-wc-ph {
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.ids-wc-pvd {
+    margin-top: 0.25rem;
+    font-size: 0.76rem;
+    color: var(--nk-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.ids-wc-dk {
+    flex: 1;
+    min-width: 0;
+}
+
+.ids-wc-xpl {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--nk-radius-sm);
+    background: var(--sl-notice-bg);
+    color: var(--sl-notice);
+    font-size: 0.76rem;
+    line-height: 1.55;
+}
+
+.ids-wc-xpl .ids-i {
+    margin-top: 0.2rem;
+    color: var(--sl-notice);
+}
+
+.ids-wc-xpl b {
+    position: relative;
+    font-weight: 700;
+}
+
+/* The form's parts sit a little apart. */
+.ids-wc-form .ids-we-lbl:not(.ids-we-first):not(.ids-wc-sec) {
+    margin-top: 0.95rem;
+}
+
+/* The Add / Edit window is a page modal, the same layer as Create alias: over the Lists window
+   (2500), under Create alias (2800), which it can open. */
+.ids-we-ov.ids-wc-ov {
+    position: fixed;
+    z-index: 2700;
+    background: rgba(15, 23, 42, 0.55);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+/* Add / Edit window: one form; the live hint sits above Cancel / Add (Update). */
+.ids-we-ovcard.ids-wc-ovcard {
+    max-width: 620px;
+}
+
+.ids-wc-ovcard .ids-we-ovh h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ids-wc-ovcard .ids-we-ovh h2 .ids-i {
+    color: var(--ids-ic-on);
+}
+
+.ids-we-ovf.ids-wc-ovf {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+    background: #fff;
+}
+
+.ids-wc-ovbtns {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* Rows */
+.ids-wc-isoff .ids-we-v {
+    color: var(--nk-text-muted);
+}
+
+/* A glow says "this is what changed": the chosen card, the heading words, the hint words. */
+@keyframes ids-wc-kglow {
+    0% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.55); }
+    35% { box-shadow: 0 0 0 6px rgba(14, 165, 233, 0.28); }
+    100% { box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+}
+
+.ids-wc-pi.ids-wc-glow {
+    animation: ids-wc-kglow 1.4s ease-out;
+}
+
+/* A short wave from the word, one colour, ending just past the word. */
+@keyframes ids-wc-wave {
+    0% { transform: scale(0.98); opacity: 1; }
+    45% { opacity: 0.9; }
+    100% { transform: scale(1.03); opacity: 0; }
+}
+
+.ids-wc-hk.ids-wc-glow::after,
+.ids-wc-xpl b.ids-wc-tglow::after {
+    content: "";
+    position: absolute;
+    inset: -1px -3px;
+    border-radius: 6px;
+    pointer-events: none;
+    background: rgba(14, 165, 233, 0.2);
+    animation: ids-wc-wave 1.2s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ids-wc-pi.ids-wc-glow,
+    .ids-wc-hk.ids-wc-glow::after,
+    .ids-wc-xpl b.ids-wc-tglow::after {
+        animation-duration: 0.01s;
+    }
+}
+
+@media (max-width: 520px) {
+    .ids-wc-pair {
+        flex-wrap: wrap;
+    }
+
+    .ids-wc-pair > .ids-we-inp,
+    .ids-wc-pair > .ids-we-acwrap {
+        flex-basis: 100%;
+    }
+
+    .ids-wc-optbox {
+        padding-left: 0.6rem;
+        padding-right: 0.6rem;
+    }
+}

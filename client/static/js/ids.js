@@ -697,7 +697,7 @@
             setV('ids-v-recording', days ? `${days} ${days === 1 ? 'day' : 'days'}` : '');
             setV('ids-v-rules', String((doc.rule_overrides || []).length));
         }).catch(() => { /* the links still open */ });
-        [['muted', 'ids-v-muted'], ['excluded', 'ids-v-excluded'], ['watchlists', 'ids-v-watchlists']].forEach(([name, id]) => {
+        [['muted', 'ids-v-muted'], ['excluded', 'ids-v-excluded'], ['watchlists', 'ids-v-watchlists'], ['custom-rules', 'ids-v-custom']].forEach(([name, id]) => {
             N.api.list(S.peerId, name).then((d) => setV(id, String((d.items || []).length))).catch(() => {});
         });
     }
@@ -793,7 +793,7 @@
         });
         if (window.IdsWin) {
             IdsWin.group('settings', { title: 'Settings', icon: 'gear', items: ['detection', 'inspection', 'networks', 'performance', 'recording'] });
-            IdsWin.group('lists', { title: 'Lists', icon: 'list', items: ['muted', 'excluded', 'watchlists', 'rules'] });
+            IdsWin.group('lists', { title: 'Lists', icon: 'list', items: ['muted', 'excluded', 'watchlists', 'custom', 'rules'] });
             IdsWin.setContext({
                 peerId: S.peerId, readonly: S.readonly, api: N.api, N, toast,
                 refreshSide: loadSide, refreshStatus,

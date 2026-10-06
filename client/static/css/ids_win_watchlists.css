@@ -433,23 +433,26 @@
     color: var(--sl-error);
 }
 
-/* Edit window: lies over the whole window card. */
+/* Add / Edit windows: page modals one layer above the Lists window (2500), under Create alias (2800). */
 .ids-ww-ov {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: 20;
+    z-index: 2700;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
-    padding: 1.2rem 0.75rem;
+    padding: 1rem;
     overflow: auto;
-    background: rgba(15, 23, 42, 0.4);
-    border-radius: inherit;
+    background: rgba(15, 23, 42, 0.55);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
 }
 
 .ids-ww-ovcard {
     width: 100%;
     max-width: 520px;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
     background: #fff;
     border: 1px solid var(--nk-border);
     border-radius: var(--nk-radius-lg);

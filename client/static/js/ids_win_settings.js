@@ -95,6 +95,7 @@
         } catch (e) {
             throw new Error('Couldn\'t save.');
         }
+        ctx.api.bust();   // settings changed: other windows must re-read them
         let data = null;
         try { data = await res.json(); } catch (e) { /* empty body */ }
         if (!res.ok) {

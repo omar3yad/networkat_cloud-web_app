@@ -433,16 +433,23 @@
     color: var(--sl-error);
 }
 
-/* Sub-windows (edit, many addresses): their own modal over the whole page. */
+/* Add / Edit / many-addresses windows: page modals one layer above the Lists window (2500) and under
+   Create alias (2800). A window opened from another (many addresses, from Add) sits above it. */
 .ids-we-ov {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: 30;
+    z-index: 2700;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    background: rgba(15, 23, 42, 0.45);
+    background: rgba(15, 23, 42, 0.55);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+.ids-we-ov.ids-we-ov-top {
+    z-index: 2750;
 }
 
 .ids-we-ovcard {
@@ -552,3 +559,93 @@
 .ids-we-mlb .ids-i { color: var(--ids-ic-on); }
 .ids-we-mlb:hover .ids-i { color: #fff; }
 .ids-we-mlb.ids-we-disabled .ids-i { color: var(--ids-ic); }
+
+/* More options link, the Advanced subheading and the segmented choices (Protocol, Direction).
+   These had no styles and fell back to the browser's buttons. */
+.ids-we-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+    padding: 0.2rem 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--nk-blue-primary);
+    cursor: pointer;
+}
+
+.ids-we-more:hover {
+    text-decoration: underline;
+}
+
+.ids-we-more:focus-visible,
+.ids-we-seg button:focus-visible {
+    outline: 2px solid var(--nk-blue-primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+.ids-we-adv {
+    margin-top: 0.2rem;
+}
+
+.ids-we-advh {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--nk-border);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--nk-text-muted);
+}
+
+.ids-we-seg {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 3px;
+    max-width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    background: var(--nk-surface-bg, #f8fafc);
+}
+
+.ids-we-seg button {
+    height: 28px;
+    padding: 0 0.8rem;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ids-we-seg button:hover:not(.ids-we-on):not(:disabled) {
+    color: var(--nk-text-main);
+    background: #eef2f7;
+}
+
+.ids-we-seg button.ids-we-on {
+    background: #fff;
+    color: var(--nk-blue-primary);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12), 0 0 0 1px var(--nk-border);
+}
+
+.ids-we-seg button:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+/* The narrow segmented control keeps its natural width; the input variant is width-capped above. */
+.ids-we-seg.ids-we-narrow {
+    width: auto;
+}

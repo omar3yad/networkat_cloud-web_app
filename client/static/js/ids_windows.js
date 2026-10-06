@@ -7,8 +7,10 @@
  *
  * ctx: { peerId, readonly, api (NkIds.api), N (NkIds), toast(kind, msg), refreshSide(), refreshStatus() }
  * IdsWin.group('settings', { title, icon, items: [names] }) makes IdsWin.open(name) open the group
- * window (side index; every section mounted once at open, switching only shows another) for any name in
- * items. Sections get the same win shape.
+ * window (side index) for any name in items. Sections get the same win shape. The section asked for
+ * mounts (and loads) first; the others mount one after another behind it, each when the one before
+ * has loaded, and one the user picks early jumps the queue. A section's open() may return a promise
+ * that settles when its first load is done; without one, the next section follows right away.
  * win: { el, card, body, foot, close(force), setBusy(bool), beforeClose(fn) }
  *   - body / foot are empty elements the window fills.
  *   - beforeClose(fn): fn() returns true to allow closing (e.g. no unsaved changes).
@@ -16,6 +18,7 @@
  *     unsaved changes; a section without them is reloaded after another section saves.
  */
 (function () {
+    const LOAD_LIMIT_MS = 8000;
     const registry = {};
     let ctx = null;
     let current = null;
@@ -152,12 +155,24 @@
             if (current !== grp) return;
             names.forEach((k) => {
                 const o = grp.secs[k];
-                if (k === saved || (o.dirty && o.dirty())) return;
+                if (k === saved || o.pending || (o.dirty && o.dirty())) return;   // a held one loads fresh at its turn
                 mount(k, o.el);
             });
         }
 
-        // Every section is mounted once, when the window opens, so switching never reloads.
+        // A section waiting its turn: a loading placeholder in its place, no requests yet.
+        function hold(n) {
+            const wrap = document.createElement('div');
+            wrap.className = `ids-grp-sec ids-win-${n}`;
+            wrap.hidden = true;
+            wrap.innerHTML = '<div class="ids-win-body"><div class="ids-win-msg">' +
+                IdsIcon('circle-notch', { spin: true }) + ' Loading…</div></div><div class="ids-win-foot"></div>';
+            main.appendChild(wrap);
+            grp.secs[n] = { el: wrap, pending: true, guard: null, released: false, dirty: null };
+        }
+
+        // Mounts one section (a held one takes its placeholder's place). Returns a promise that
+        // settles once the section has loaded, or after a limit so one slow section never stalls the queue.
         function mount(n, old) {
             const def = registry[n];
             const wrap = document.createElement('div');
@@ -187,15 +202,34 @@
                 setBusy: (on) => wrap.classList.toggle('ids-win-busy', !!on),
             };
             grp.secs[n] = sec;
+            let loaded;
             try {
-                def.open(secCtx, sec);
+                loaded = def.open(secCtx, sec);
             } catch (e) {
                 sec.body.innerHTML = '<div class="ids-win-msg">Couldn\'t open</div>';
             }
+            return Promise.race([
+                Promise.resolve(loaded).catch(() => {}),
+                new Promise((resolve) => setTimeout(resolve, LOAD_LIMIT_MS)),
+            ]);
+        }
+
+        // The rest of the sections, in order, one at a time; stops when the window closes.
+        let draining = false;
+        function drain() {
+            if (draining) return;
+            draining = true;
+            const step = () => {
+                const next = current === grp ? names.find((k) => grp.secs[k].pending) : null;
+                if (!next) { draining = false; return; }
+                mount(next, grp.secs[next].el).then(step);
+            };
+            step();
         }
 
         grp.show = (n) => {
             if (!grp.secs[n] || n === grp.active) return;
+            if (grp.secs[n].pending) mount(n, grp.secs[n].el);   // picked early: jumps the queue
             grp.active = n;
             names.forEach((k) => { grp.secs[k].el.hidden = k !== n; });
             mark();
@@ -207,8 +241,11 @@
         });
         current = grp;
         wire(el);
-        names.forEach((n) => mount(n));
-        grp.show(names.includes(name) ? name : names[0]);
+        const first = names.includes(name) ? name : names[0];
+        names.forEach(hold);
+        const firstLoaded = mount(first, grp.secs[first].el);
+        grp.show(first);
+        firstLoaded.then(drain);
         return true;
     }
 

@@ -125,7 +125,8 @@
 
         S.render = render;
         render();
-        def.load().then(() => { S.phase = 'ready'; render(); })
+        // ready settles when the first load is done (the window shell waits on it before loading the next section).
+        S.ready = def.load().then(() => { S.phase = 'ready'; render(); })
             .catch(() => { S.phase = 'failed'; render(); });
         return S;
     }
@@ -133,14 +134,24 @@
     // Rule names: the signature of the latest threat of each rule (no rule lookup API yet).
     const ruleNames = new Map();
 
+    const RULE_NAME_REQUESTS = 3;
+
     function loadRuleNames(ctx, sids, done) {
         const todo = [...new Set(sids)].filter((sid) => !ruleNames.has(sid));
         if (!todo.length) return;
-        Promise.all(todo.map((sid) => ctx.api.threats(ctx.peerId, { sid, limit: 1 })
-            .then((r) => {
-                const e = ((r && r.entries) || [])[0];
-                if (e && e.signature) ruleNames.set(sid, e.signature);
-            }).catch(() => {}))).then(done);
+        // One name per rule, no lookup API: a few requests at a time, so they never crowd out the windows' own loads.
+        let next = 0;
+        const worker = async () => {
+            while (next < todo.length) {
+                const sid = todo[next++];
+                try {
+                    const r = await ctx.api.threats(ctx.peerId, { sid, limit: 1 });
+                    const e = ((r && r.entries) || [])[0];
+                    if (e && e.signature) ruleNames.set(sid, e.signature);
+                } catch (err) { /* the row keeps "Rule <number>" */ }
+            }
+        };
+        Promise.all(Array.from({ length: Math.min(RULE_NAME_REQUESTS, todo.length) }, worker)).then(done);
     }
 
     const isWatchlistSid = (sid) => +sid >= 9950000 && +sid <= 9999999;
@@ -153,11 +164,10 @@
     }
 
     // Alias names for muted items (peer alias id or slug -> name).
-    async function loadAliasNames(peerId) {
+    async function loadAliasNames(ctx) {
         const names = new Map();
         try {
-            const res = await fetch(`${window.API_BASE || ''}/api/peers/${encodeURIComponent(peerId)}/aliases`, { credentials: 'same-origin' });
-            const data = await res.json();
+            const data = await ctx.api.aliases(ctx.peerId);
             (data.lists || []).forEach((a) => {
                 [a.id, a.slug].filter(Boolean).forEach((k) => names.set(String(k), a.name || a.slug || a.id));
             });
@@ -208,7 +218,7 @@
         S = stagedWindow(ctx, win, {
             descHtml: 'Threats that are still inspected but not recorded. Mute one from its details on the IDS page.',
             load: async () => {
-                const [res, names] = await Promise.all([ctx.api.list(ctx.peerId, 'muted'), loadAliasNames(ctx.peerId)]);
+                const [res, names] = await Promise.all([ctx.api.list(ctx.peerId, 'muted'), loadAliasNames(ctx)]);
                 aliases = names;
                 items = ((res && res.items) || []).map((d) => ({ d, del: false }));
                 loadRuleNames(ctx, items.map((it) => it.d.sid), () => S && S.render());
@@ -231,6 +241,7 @@
             }),
             afterSave: (c) => c.refreshSide(),
         });
+        return S.ready;
     }
 
     // ── Changed rules ─────────────────────────────────────────────────────────
@@ -323,6 +334,7 @@
             }),
             afterSave: (c) => { c.refreshSide(); c.refreshStatus(); },
         });
+        return S.ready;
     }
 
     IdsWin.register('muted', { title: 'Muted threats', icon: 'bell-slash', open: openMuted });

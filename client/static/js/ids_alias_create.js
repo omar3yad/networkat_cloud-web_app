@@ -277,12 +277,17 @@
         $('idsAcSubmit').disabled = true;
         try {
             const send = async (url, method, body) => {
-                const res = await fetch(url, {
-                    method,
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
-                });
+                let res;
+                try {
+                    res = await fetch(url, {
+                        method,
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                    });
+                } finally {
+                    if (window.NkIds) NkIds.api.bust();   // the alias list changed: windows must re-read it
+                }
                 let data = null;
                 try { data = await res.json(); } catch (e) { /* empty body */ }
                 if (!res.ok) throw new Error((data && (data.message || data.error || data.detail)) || 'Failed to save');

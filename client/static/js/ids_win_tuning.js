@@ -29,6 +29,7 @@
         } catch (e) {
             throw new Error('Network error.');
         }
+        N.api.bust();   // settings changed: other windows must re-read them
         let data = null;
         try { data = await res.json(); } catch (e) { /* empty body */ }
         if (!res.ok) {
@@ -341,7 +342,7 @@
         };
         win.body.innerHTML = '<div class="ids-win-msg">Loading…</div>';
         renderFoot(w, true);
-        ctx.api.settings(ctx.peerId).then((data) => {
+        return ctx.api.settings(ctx.peerId).then((data) => {
             spec.init(w, data);
             win.body.innerHTML = '<div class="ids-wt"></div>';
             w.root = win.body.firstChild;
@@ -669,12 +670,12 @@
         title: 'Inspection',
         icon: 'magnifying-glass',
         wide: true,
-        open(ctx, win) { mount(ctx, win, inspection); },
+        open(ctx, win) { return mount(ctx, win, inspection); },
     });
 
     IdsWin.register('performance', {
         title: 'Performance',
         icon: 'gauge',
-        open(ctx, win) { mount(ctx, win, performance); },
+        open(ctx, win) { return mount(ctx, win, performance); },
     });
 })();

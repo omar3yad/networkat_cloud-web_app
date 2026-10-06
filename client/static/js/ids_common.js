@@ -77,6 +77,29 @@
         ).toString();
     }
 
+    // Reads shared by many windows (settings, aliases): one request serves every caller for a few
+    // seconds, and each caller gets its own copy. Any write clears it (bust), so a read after a
+    // save is always fresh. The short life also covers changes made from another tab.
+    const CACHE_MS = 10000;
+    const cache = new Map();
+
+    function copy(v) {
+        return v === undefined ? v : JSON.parse(JSON.stringify(v));
+    }
+
+    function cached(key, fetcher) {
+        const hit = cache.get(key);
+        if (hit && Date.now() - hit.at < CACHE_MS) return hit.p.then(copy);
+        const entry = { at: Date.now(), p: fetcher() };
+        cache.set(key, entry);
+        entry.p.catch(() => { if (cache.get(key) === entry) cache.delete(key); });
+        return entry.p.then(copy);
+    }
+
+    function bust() {
+        cache.clear();
+    }
+
     async function request(peerId, path, { method = 'GET', params, body } = {}) {
         const qs = query(params);
         const init = { method, credentials: 'same-origin', headers: { Accept: 'application/json' } };
@@ -88,8 +111,10 @@
         try {
             res = await fetch(base(peerId) + path + (qs ? `?${qs}` : ''), init);
         } catch (e) {
+            if (method !== 'GET') bust();
             throw new ApiError(0, 'Network error', 'error');
         }
+        if (method !== 'GET') bust();
         let data = null;
         try { data = await res.json(); } catch (e) { /* empty body */ }
         if (!res.ok) {
@@ -99,10 +124,21 @@
         return data;
     }
 
+    // The peer's alias lists, as the alias API returns them (each window picks what it shows).
+    async function fetchAliases(peerId) {
+        const res = await fetch(`${window.API_BASE || ''}/api/peers/${encodeURIComponent(peerId)}/aliases`,
+            { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const data = await res.json();
+        if (!res.ok) throw new Error('aliases');
+        return data;
+    }
+
     const api = {
         status: (peerId) => request(peerId, ''),
         setEnabled: (peerId, enabled) => request(peerId, '/enabled', { method: 'PUT', body: { enabled } }),
-        settings: (peerId) => request(peerId, '/settings'),
+        settings: (peerId) => cached(`${peerId}:settings`, () => request(peerId, '/settings')),
+        aliases: (peerId) => cached(`${peerId}:aliases`, () => fetchAliases(peerId)),
+        bust,
         threats: (peerId, params) => request(peerId, '/threats', { params }),
         summary: (peerId, since) => request(peerId, '/threats/summary', { params: { since } }),
         clear: (peerId) => request(peerId, '/threats', { method: 'DELETE' }),

@@ -66,7 +66,7 @@
             types: Object.keys(SERVER_LABEL), portTypes: Object.keys(PORT_LABEL),
             limits: { nets: 50, srv: 100 },
             ports: {}, savedPorts: {}, defPorts: {}, perr: {}, pwarn: {},
-            open: { nets: false, srv: false }, add: { nets: newForm('nets', 'add'), srv: newForm('srv', 'add') },
+            addL: null, add: { nets: newForm('nets', 'add'), srv: newForm('srv', 'add') },
             ov: null, menu: null, tip: null, tipPin: false,
             saving: false, saved: false, err: '', confirm: false,
         };
@@ -75,7 +75,7 @@
         let tipTimer = null;
 
         win.body.innerHTML = '<div class="ids-win-msg">Loading.</div>';
-        load();
+        const ready = load();   // settles when the first load is done (the shell loads the next section after it)
 
         // ── Data ────────────────────────────────────────────────────────────
 
@@ -91,6 +91,7 @@
             } catch (e) {
                 throw new Error('Network error');
             }
+            N.api.bust();   // settings changed: other windows must re-read them
             let data = null;
             try { data = await res.json(); } catch (e) { /* empty body */ }
             if (!res.ok) throw new Error(data && typeof data.detail === 'string' ? data.detail : 'Request failed');
@@ -99,10 +100,7 @@
 
         // Only address aliases (type normal): the peer refuses any other type here.
         async function loadAliases() {
-            const res = await fetch(`${window.API_BASE || ''}/api/peers/${encodeURIComponent(ctx.peerId)}/aliases`,
-                { credentials: 'same-origin', headers: { Accept: 'application/json' } });
-            const data = await res.json();
-            if (!res.ok) throw new Error('aliases');
+            const data = await N.api.aliases(ctx.peerId);
             return (data.lists || []).filter((a) => a.type === 'normal').map((a) => ({
                 id: a.id || a.slug,
                 name: a.name || a.slug || a.id,
@@ -348,15 +346,32 @@
                 `<button type="button" role="tab" data-tab="${k}" aria-selected="${S.tab === k}" class="${S.tab === k ? 'ids-wt-on' : ''}">${l}</button>`).join('');
         }
 
+        // Add: a collapsed heading and plus; it opens the Add window.
         function addHtml(l) {
             if (ctx.readonly) return '';
-            const o = S.open[l];
+            return '<section class="ids-sec ids-we-add ids-we-shut">' +
+                `<button type="button" class="ids-we-toggle" data-x="toggle" data-l="${l}" title="Add">` +
+                `<span class="ids-sec-h">Add</span>${IdsIcon('plus')}</button></section>`;
+        }
+
+        // The Add window (a page modal, like Edit).
+        function drawAddOv() {
+            const l = S.addL;
+            if (!l || ctx.readonly || S.tab !== l || !win.el.isConnected) {
+                if (ova) { ova.remove(); ova = null; }
+                return;
+            }
+            if (!ova) ova = mountOv();
             const help = l === 'nets' ? 'One or more networks separated by commas, or an alias.' : 'The service, then the device that runs it.';
-            return `<section class="ids-sec ids-we-add${o ? '' : ' ids-we-shut'}">` +
-                `<button type="button" class="ids-we-toggle" data-x="toggle" data-l="${l}" aria-expanded="${o}" title="${o ? 'Close' : 'Add'}">` +
-                `<span class="ids-sec-h">Add</span>${IdsIcon(o ? 'minus' : 'plus')}</button>` +
-                (o ? `<p class="ids-sec-help">${help}</p><div class="ids-sec-body">${formHtml(S.add[l], true)}</div>` : '') +
-                '</section>';
+            const old = ova.querySelector('.ids-we-ovb');
+            const top = old ? old.scrollTop : 0;
+            ova.innerHTML = '<div class="ids-we-ovcard" role="dialog" aria-modal="true">' +
+                `<div class="modal-header ids-we-ovh"><h2>${l === 'nets' ? 'Add network' : 'Add server'}</h2><button type="button" class="modal-close" data-x="addclose" aria-label="Close">&times;</button></div>` +
+                `<div class="ids-we-ovb"><section class="ids-sec"><h3 class="ids-sec-h">Add</h3><p class="ids-sec-help">${help}</p>` +
+                `<div class="ids-sec-body">${formHtml(S.add[l], false)}</div></section></div>` +
+                '<div class="ids-we-ovf"><button type="button" class="ids-btn" data-x="addclose">Cancel</button>' +
+                `<button type="button" class="ids-btn ids-btn-primary" data-x="add">${IdsIcon('plus')}Add</button></div></div>`;
+            ova.querySelector('.ids-we-ovb').scrollTop = top;
         }
 
         const BADGE = {
@@ -413,6 +428,7 @@
             pane.innerHTML = S.tab === 'ports' ? portsHtml() : addHtml(S.tab) + listHtml(S.tab);
             paintPorts();
             drawFoot();
+            drawAddOv();
         }
 
         // Port rows change in place: a typed value is never redrawn.
@@ -469,6 +485,21 @@
         // ── Sub-windows: edit one item, or paste many addresses ─────────────
 
         let ov = null;
+        let ova = null;   // the Add window
+
+        // A page modal, one layer above the Lists window.
+        function mountOv() {
+            const el = document.createElement('div');
+            el.className = 'ids-win ids-we-ov';
+            document.body.appendChild(el);
+            el.addEventListener('click', onClick);
+            el.addEventListener('input', onInput);
+            el.addEventListener('focusout', onFocusOut);
+            el.addEventListener('keydown', onKeydown);
+            el.addEventListener('mousedown', keepFocus);
+            el.addEventListener('mousedown', (ev) => { el.dataset.downOut = ev.target === el ? '1' : ''; });
+            return el;
+        }
 
         const multiKey = (o) => o.rows.map((r) => r.trim()).filter(Boolean).join(',');
         function ovDirty() {
@@ -496,20 +527,13 @@
         }
 
         function drawOv() {
-            if (!S.ov) {
+            if (!S.ov || !win.el.isConnected) {
                 if (ov) { ov.remove(); ov = null; }
                 return;
             }
             if (!ov) {
-                ov = document.createElement('div');
-                ov.className = 'ids-we-ov';
-                (win.el || win.card).appendChild(ov);
-                ov.addEventListener('click', onClick);
-                ov.addEventListener('input', onInput);
-                ov.addEventListener('focusout', onFocusOut);
-                ov.addEventListener('keydown', onKeydown);
-                ov.addEventListener('mousedown', keepFocus);
-                ov.addEventListener('mousedown', (ev) => { ov.dataset.downOut = ev.target === ov ? '1' : ''; });
+                ov = mountOv();
+                ov.classList.add('ids-we-ov-top');   // many addresses opens over Add
             }
             ov.innerHTML = `<div class="ids-we-ovcard" role="dialog" aria-modal="true">${ovInner()}</div>`;
         }
@@ -592,16 +616,16 @@
         function doAdd(l) {
             const fs = S.add[l];
             const r = checkForm(fs);
-            if (!r) { draw(); return; }
+            if (!r) { drawAddOv(); return; }
             const type = l === 'srv' ? fs.type : '';
             const made = (r.alias
                 ? [{ kind: 'alias', aliasId: r.alias.id, value: '', type }]
                 : r.addrs.map((a) => ({ kind: 'address', value: a, aliasId: '', type })))
                 .filter((m, k, all) => !dupOf(l, m, -1) && all.findIndex((o) => itemKey(o) === itemKey(m)) === k);
-            if (!made.length) { fs.err = 'Already in the list.'; draw(); return; }
+            if (!made.length) { fs.err = 'Already in the list.'; drawAddOv(); return; }
             if (liveCount(l) + made.length > S.limits[l]) {
                 fs.err = `Up to ${S.limits[l]}.`;
-                draw();
+                drawAddOv();
                 return;
             }
             made.reverse().forEach((m) => S.items[l].unshift({ uid: `n${++uidSeq}`, id: null, ...m, p: 'add' }));
@@ -609,9 +633,8 @@
             S.err = '';
             S.add[l] = newForm(l, 'add');
             S.add[l].type = type || S.types[0];
+            S.addL = null;
             draw();
-            const inp = pane.querySelector(`[data-form="add-${l}"] [data-f="value"]`);
-            if (inp) inp.focus();
         }
 
         function discard() {
@@ -777,11 +800,12 @@
         function closeMenus() {
             let changed = false;
             if (S.menu) {
+                const inEdit = S.menu === 'edit';
                 S.menu = null;
-                if (S.ov) drawOv(); else draw();
+                if (inEdit) drawOv(); else drawAddOv();
                 changed = true;
             }
-            [[S.add.nets, pane], [S.add.srv, pane], [S.ov && S.ov.fs, ov]].forEach(([fs, root]) => {
+            [[S.add.nets, ova], [S.add.srv, ova], [S.ov && S.ov.fs, ov]].forEach(([fs, root]) => {
                 if (!fs || !fs.dd) return;
                 fs.dd = false;
                 const fe = root && root.querySelector(`[data-form="${formName(fs)}"]`);
@@ -792,7 +816,8 @@
         }
 
         function onClick(ev) {
-            if (ev.target === ov && ov.dataset.downOut) { S.ov = null; S.menu = null; drawOv(); return; }
+            if (ov && ev.target === ov && ov.dataset.downOut) { S.ov = null; S.menu = null; drawOv(); return; }
+            if (ova && ev.target === ova && ova.dataset.downOut) { S.addL = null; S.menu = null; drawAddOv(); return; }
             const b = ev.target.closest('button');
             if (!b) return;
             const d = b.dataset;
@@ -810,13 +835,13 @@
             }
             if (d.menu && fs) {
                 S.menu = S.menu === d.menu ? null : d.menu;
-                if (fs.mode === 'edit') drawOv(); else draw();
+                if (fs.mode === 'edit') drawOv(); else drawAddOv();
                 return;
             }
             if (d.ty && fs) {
                 fs.type = d.ty;
                 S.menu = null;
-                if (fs.mode === 'edit') { drawOv(); refreshOvBtn(); } else draw();
+                if (fs.mode === 'edit') { drawOv(); refreshOvBtn(); } else drawAddOv();
                 return;
             }
             if (x === 'dd' && fs) {
@@ -826,10 +851,11 @@
             else if (x === 'multi' && fs) { if (!multiOff(fs)) openMulti(fs.list); }
             else if (x === 'add' && fs) doAdd(fs.list);
             else if (x === 'toggle') {
-                S.open[d.l] = !S.open[d.l];
-                draw();
-                if (S.open[d.l]) { const inp = pane.querySelector(`[data-form="add-${d.l}"] [data-f="value"]`); if (inp) inp.focus(); }
-            } else if (x === 'ovsave') doEdit();
+                S.addL = d.l;
+                drawAddOv();
+                const inp = ova && ova.querySelector('[data-f="value"]');
+                if (inp) inp.focus();
+            } else if (x === 'addclose') { S.addL = null; S.menu = null; drawAddOv(); } else if (x === 'ovsave') doEdit();
             else if (x === 'ovmulti') doMulti();
             else if (x === 'rowadd') { readRows(); S.ov.rows.push(''); drawOv(); const l = ov.querySelectorAll('[data-ma]'); l[l.length - 1].focus(); }
             else if (x === 'rowdel') {
@@ -905,7 +931,7 @@
             const [fe, fs] = formOf(el);
             if (!el.dataset || el.dataset.f !== 'value' || !fs) return;
             const to = ev.relatedTarget;
-            if (to && to.closest && to.closest('.ids-we-acwrap, .ids-we-addbar, .ids-we-ovf, .ids-wn-dsel')) return;
+            if (to && to.closest && to.closest('.ids-we-acwrap, .ids-we-ovf, .ids-wn-dsel')) return;
             if (fs.value.trim() && !fs.warn) {
                 const r = parse(fs);
                 fs.err = r.err || (fs.mode === 'edit' && r.addrs && r.addrs.length > 1 ? 'One address when editing.' : '');
@@ -954,11 +980,14 @@
         function onEscape(ev) {
             if (!win.el.isConnected) { document.removeEventListener('keydown', onEscape, true); return; }
             if (ev.key !== 'Escape') return;
+            if (document.querySelector('#idsAcModal.active')) return;   // Create alias above: Escape is its own
             if (closeMenus()) { ev.stopPropagation(); return; }
             if (S.tip) { ev.stopPropagation(); S.tipPin = false; setTip(null); return; }
             if (S.ov) { ev.stopPropagation(); S.ov = null; drawOv(); return; }
+            if (S.addL) { ev.stopPropagation(); S.addL = null; S.menu = null; drawAddOv(); return; }
             if (S.confirm) { ev.stopPropagation(); S.confirm = false; drawFoot(); }
         }
+        return ready;
     }
 
     IdsWin.register('networks', { title: 'Networks', icon: 'network-wired', open });

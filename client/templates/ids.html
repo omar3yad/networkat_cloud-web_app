@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_watchlists.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_excluded.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_networks.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_custom_rules.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -127,6 +128,7 @@
                 <button type="button" class="ids-link" data-open="muted"><span data-ids-i="bell-slash"></span><span class="ids-link-t">Muted threats</span><span class="ids-link-v" id="ids-v-muted"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
                 <button type="button" class="ids-link" data-open="excluded"><span data-ids-i="eye-slash"></span><span class="ids-link-t">Excluded devices</span><span class="ids-link-v" id="ids-v-excluded"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
                 <button type="button" class="ids-link" data-open="watchlists"><span data-ids-i="list-check"></span><span class="ids-link-t">Watchlists</span><span class="ids-link-v" id="ids-v-watchlists"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+                <button type="button" class="ids-link" data-open="custom"><span data-ids-i="file-shield"></span><span class="ids-link-t">Custom rules</span><span class="ids-link-v" id="ids-v-custom"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
                 <button type="button" class="ids-link" data-open="rules"><span data-ids-i="pen-to-square"></span><span class="ids-link-t">Changed rules</span><span class="ids-link-v" id="ids-v-rules"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
             </div>
         </div>
@@ -162,5 +164,6 @@
 <script src="{{ url_for('static', filename='js/ids_win_watchlists.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ids_win_excluded.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ids_win_networks.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_win_custom_rules.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ids.js') }}"></script>
 {% endblock %}
