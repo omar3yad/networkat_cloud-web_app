@@ -857,6 +857,13 @@ def update_settings():
         response = requests.patch(url, json=data, headers=_get_api_headers(), timeout=5)
         if response.status_code == 200:
             return (response.text, response.status_code, {'Content-Type': 'application/json'})
+        # A rejected value (e.g. "Invalid color") is final: show it, don't save it through the fallback.
+        if response.status_code in (400, 422):
+            try:
+                detail = response.json().get('detail')
+            except ValueError:
+                detail = None
+            return jsonify({'success': False, 'error': detail if isinstance(detail, str) else 'Invalid value'}), response.status_code
     except Exception as e:
         current_app.logger.warning("FastAPI settings proxy error (using direct fallback): %s", e)
 

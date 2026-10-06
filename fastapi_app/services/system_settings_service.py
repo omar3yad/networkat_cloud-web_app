@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
 from models.system_setting import SystemSetting
+from fastapi_app.services import appearance_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,9 @@ class SystemSettingsService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="No settings provided for update"
             )
+
+        for key, val in updates.items():
+            appearance_service.validate(key, val)
 
         now = datetime.utcnow()
         try:

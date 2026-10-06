@@ -45,7 +45,7 @@ app = FastAPI(
         "url": "https://github.com/omar3yad", 
     },
     license_info={
-        "name": "omar",
+        "name": "omar_Ahmed",
         "url": "https://opensource.org/licenses/MIT",
     }
 )
