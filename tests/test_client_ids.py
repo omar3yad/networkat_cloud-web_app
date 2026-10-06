@@ -100,6 +100,10 @@ class FakeAgent(BaseHTTPRequestHandler):
             return self._json(200, dict(STATUS, applied="starting", code="ok", message="starting"))
         if path.startswith("/services/"):
             return self._json(200, {"ok": True, "services": []})
+        if path.endswith("/batch"):
+            body = FakeAgent.calls[-1]["body"]
+            return self._json(200, {"removed": body["remove"], "updated": body["update"], "added": body["add"],
+                                    "applied": "restart", "code": "ok", "message": "m"})
         if path.startswith("/ids-ips/watchlists"):
             return self._json(201, {"item": {"id": "c3"}, "applied": "dataset", "code": "ok", "message": "m"})
         if path == "/ids-ips/suppressions/ff":
@@ -243,3 +247,30 @@ def test_errors_are_mapped(peer):
 def test_unreachable_agent_is_offline(peer, monkeypatch):
     monkeypatch.setattr(svc, "AGENT_PORT", 1)
     assert _error(svc.get_status, peer) == (503, "offline")
+
+
+def test_excluded_address_becomes_host_or_network_and_lists_go_as_one(peer):
+    svc.add_item(peer, "excluded", [{"target": "address", "value": "192.168.1.5"},
+                                    {"target": "address", "value": "192.168.2.0/24"},
+                                    {"target": "alias", "alias_id": "a1"}])
+    call = FakeAgent.calls[-1]
+    assert call["path"] == "/ids-ips/exclusions" and call["actor"] == "client"
+    assert [i["target"] for i in call["body"]] == ["host", "network", "alias"]
+    assert len(FakeAgent.calls) == 1
+
+
+def test_batch_maps_and_answers_the_three_lists(peer):
+    out = svc.batch_items(peer, "excluded", {"add": [{"target": "address", "value": "10.0.0.0/8"}],
+                                             "update": [{"id": "ab", "target": "address", "value": "10.0.0.9"}],
+                                             "remove": ["cd"]})
+    call = FakeAgent.calls[-1]
+    assert call["method"] == "POST" and call["path"] == "/ids-ips/exclusions/batch" and call["actor"] == "client"
+    assert call["body"]["add"][0]["target"] == "network" and call["body"]["update"][0]["target"] == "host"
+    assert out["removed"] == ["cd"] and out["applied"] == "restart" and "message" not in out
+
+
+def test_batch_refuses_what_the_client_may_not_do(peer):
+    assert _error(svc.batch_items, peer, "muted", {"update": [{"id": "ab"}]}) == (400, "usage")
+    assert _error(svc.batch_items, peer, "watchlists", {"add": [{"kind": "certificates"}]}) == (400, "usage")
+    assert _error(svc.batch_items, peer, "watchlists", {"remove": ["b2"]}) == (404, "not_found")
+    assert not [c for c in FakeAgent.calls if c["method"] != "GET"]

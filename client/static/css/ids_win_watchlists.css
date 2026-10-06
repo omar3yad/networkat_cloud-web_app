@@ -1,0 +1,524 @@
+/* IDS window: Watchlists. Shared bits live in ids_windows.css / ids.css. */
+
+.ids-win-watchlists .ids-win-card {
+    position: relative;
+}
+
+/* Add section: collapsed to a heading and a plus. */
+.ids-ww-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ids-ww-toggle .ids-sec-h {
+    flex: 1;
+    min-width: 0;
+}
+
+.ids-ww-toggle > .ids-i {
+    color: var(--ids-ic);
+}
+
+.ids-ww-shut {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+}
+
+.ids-ww-shut .ids-sec-h::after {
+    display: none;
+}
+
+/* Form */
+.ids-ww-lbl {
+    display: block;
+    margin: 0.7rem 0 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--nk-text-main);
+}
+
+.ids-ww-lbl.ids-ww-first {
+    margin-top: 0;
+}
+
+.ids-ww-inp {
+    width: 100%;
+    height: 34px;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    padding: 0 0.65rem;
+    font: inherit;
+    font-size: 0.82rem;
+    background: #fff;
+    color: var(--nk-text-main);
+}
+
+.ids-ww-inp:focus {
+    outline: none;
+    border-color: var(--nk-blue-primary);
+}
+
+.ids-ww-inp.ids-ww-bad {
+    border-color: var(--sl-error);
+}
+
+.ids-ww-inp.ids-ww-warnb {
+    border-color: #f59e0b;
+}
+
+.ids-ww-hint {
+    margin-top: 0.25rem;
+    font-size: 0.74rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-ww-err {
+    margin-top: 0.25rem;
+    font-size: 0.74rem;
+    color: var(--sl-error);
+}
+
+.ids-ww-warn {
+    display: flex;
+    gap: 0.35rem;
+    align-items: flex-start;
+    margin-top: 0.25rem;
+    font-size: 0.74rem;
+    color: var(--sl-warning);
+}
+
+.ids-ww-warn .ids-i {
+    color: var(--ids-ic-warn);
+    margin-top: 0.15rem;
+}
+
+/* Kind: two equal columns, never wraps. */
+.ids-ww-seg {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    max-width: 18rem;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    overflow: hidden;
+    background: #fff;
+}
+
+.ids-ww-seg button {
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.78rem;
+    padding: 0.4rem 0.3rem;
+    line-height: 1.25;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+}
+
+.ids-ww-seg button + button {
+    border-left: 1px solid var(--nk-border);
+}
+
+.ids-ww-seg button.ids-ww-on {
+    background: var(--nk-blue-soft, #f0f9ff);
+    color: var(--nk-blue-primary);
+    font-weight: 600;
+}
+
+/* Alias field: @ picker on the left. */
+.ids-ww-acwrap {
+    position: relative;
+}
+
+.ids-ww-alias {
+    padding-left: 2.25rem;
+}
+
+/* Blue and bold only once it is an alias (starts with @), like Excluded devices. */
+.ids-ww-alias.ids-ww-inalias {
+    color: var(--nk-blue-primary);
+    font-weight: 700;
+}
+
+/* "Create alias" beside "Pick an alias." */
+.ids-ww-warn .ids-ww-acl2,
+.ids-ww-err .ids-ww-acl2 {
+    margin: 0 0 0 0.3rem;
+    font-size: inherit;
+}
+
+.ids-ww-atb {
+    position: absolute;
+    left: 0.55rem;
+    top: 17px;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0 2px;
+    border-radius: 50%;
+    border: 1px solid var(--nk-border);
+    background: #f1f5f9;
+    color: var(--nk-blue-primary);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.ids-ww-atb:hover {
+    background: var(--nk-blue-primary);
+    border-color: var(--nk-blue-primary);
+    color: #fff;
+}
+
+.ids-ww-acdd {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    box-shadow: var(--nk-shadow-lg, 0 10px 28px rgba(15, 23, 42, 0.14));
+    z-index: 1000;
+    margin-top: 4px;
+}
+
+/* Same rows as the firewall rule page's alias list. */
+.ids-ww-aci {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: var(--nk-transition);
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+}
+
+.ids-ww-aci:last-of-type {
+    border-bottom: none;
+}
+
+.ids-ww-aci:hover {
+    background: #f8fafc;
+}
+
+.ids-ww-acn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-weight: 700;
+    color: var(--nk-blue-primary);
+    font-size: 0.75rem;
+    min-width: 0;
+}
+
+.ids-ww-acl {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ids-ww-acc {
+    font-size: 0.6rem;
+    color: var(--nk-blue-primary);
+    background: #e0f2fe;
+    padding: 1px 3px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.ids-ww-actype {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--nk-text-muted);
+    background: #f1f5f9;
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
+.ids-ww-ace {
+    font-size: 0.75rem;
+    color: #0284c7;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    transition: var(--nk-transition);
+}
+
+.ids-ww-ace:hover {
+    background: #e0f2fe;
+    color: var(--nk-blue-primary);
+}
+
+.ids-ww-acd {
+    font-size: 0.75rem;
+    color: var(--nk-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    display: block;
+}
+
+.ids-ww-acnone {
+    padding: 0.85rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-ww-acf {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-top: 1px solid var(--nk-border);
+    cursor: pointer;
+    font-family: inherit;
+    padding: 6px 12px;
+    background: #f8fafc;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--nk-blue-primary);
+    text-decoration: none;
+}
+
+.ids-ww-addbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.8rem;
+}
+
+/* List */
+.ids-ww-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem;
+    align-items: center;
+    padding: 0.55rem 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+.ids-ww-row:first-child {
+    border-top: 0;
+}
+
+.ids-ww-main {
+    min-width: 0;
+}
+
+.ids-ww-t {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.35rem;
+    min-width: 0;
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.ids-ww-n {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.ids-ww-isoff .ids-ww-n {
+    color: var(--nk-text-muted);
+}
+
+.ids-ww-d {
+    font-size: 0.74rem;
+    color: var(--nk-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.ids-ww-al {
+    color: var(--nk-blue-primary);
+    font-weight: 700;
+}
+
+.ids-ww-sv {
+    display: inline-block;
+    padding: 0.05rem 0.45rem;
+    border-radius: 9999px;
+    background: var(--sb);
+    color: var(--sc);
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.ids-ww-pend {
+    padding: 0.05rem 0.45rem;
+    border-radius: 9999px;
+    background: var(--sl-warning-bg);
+    color: var(--sl-warning);
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+.ids-ww-pend.ids-ww-del {
+    background: var(--sl-error-bg);
+    color: var(--sl-error);
+}
+
+.ids-ww-gone .ids-ww-n,
+.ids-ww-gone .ids-ww-d {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.ids-ww-acts {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+}
+
+.ids-ww-sw {
+    margin: 0 0.35rem 0 0.2rem;
+}
+
+.ids-ww-ic {
+    border: 0;
+    background: none;
+    padding: 0.3rem;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+}
+
+.ids-ww-ic:hover {
+    color: var(--nk-blue-primary);
+}
+
+.ids-ww-empty {
+    padding: 0.4rem 0;
+    font-size: 0.78rem;
+    color: var(--nk-text-muted);
+}
+
+/* Footer */
+.ids-ww-strong {
+    color: var(--nk-text-main);
+}
+
+.ids-ww-ok {
+    color: #15803d;
+}
+
+.ids-ww-ferr {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--sl-error);
+}
+
+/* Edit window: lies over the whole window card. */
+.ids-ww-ov {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1.2rem 0.75rem;
+    overflow: auto;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: inherit;
+}
+
+.ids-ww-ovcard {
+    width: 100%;
+    max-width: 520px;
+    background: #fff;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-lg);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+}
+
+.ids-ww-ovh {
+    padding: 1rem 1.25rem;
+}
+
+.ids-ww-ovh h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.ids-ww-ovb {
+    padding: 1rem 1.25rem 1.1rem;
+}
+
+.ids-ww-ovf {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.8rem 1.25rem;
+    border-top: 1px solid var(--nk-border);
+    background: #f8fafc;
+    border-radius: 0 0 var(--nk-radius-lg) var(--nk-radius-lg);
+}
+
+@media (max-width: 520px) {
+    .ids-ww-ovh,
+    .ids-ww-ovb,
+    .ids-ww-ovf {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+    }
+
+    .ids-ww-ov {
+        padding: 0.6rem 0.4rem;
+    }
+}
+
+/* Both sections keep their gap; the hosts are plain wrappers in the flex body. */
+.ids-win-watchlists [data-host="list"] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.ids-win-watchlists [data-host]:empty {
+    display: none;
+}
+
+
+.ids-ww-acl2 {
+    border: 0;
+    background: none;
+    padding: 0;
+    margin-top: 4px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--nk-blue-primary);
+    cursor: pointer;
+}
+
+/* Icons (central tokens). */
+.ids-ww-ic .ids-i { color: var(--ids-ic); }
+.ids-ww-ic:hover .ids-i { color: var(--ids-ic-on); }
+.ids-ww-ace .ids-i,
+.ids-ww-acf .ids-i,
+.ids-ww-more .ids-i { color: var(--ids-ic-on); }
+.ids-ww-ok .ids-i { color: var(--ids-ic-ok); }

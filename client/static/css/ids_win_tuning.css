@@ -1,0 +1,582 @@
+/* IDS windows: Inspection and Performance (ids_win_tuning.js). Prefix: ids-wt-. */
+
+.ids-wt {
+    container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.ids-wt .ids-sec-help {
+    position: relative;
+}
+
+/* Tabs */
+.ids-wt-tabs {
+    display: flex;
+    gap: 0.2rem;
+    margin: -1rem -1.5rem 0;
+    padding: 0 1.5rem;
+    border-bottom: 1px solid var(--nk-border);
+    position: sticky;
+    top: -1rem;
+    z-index: 5;
+    background: #fff;
+}
+
+.ids-wt-tabs button {
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--nk-text-muted);
+    padding: 0.65rem 0.7rem;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+}
+
+.ids-wt-tabs button.ids-wt-on {
+    color: var(--nk-blue-primary);
+    border-bottom-color: var(--nk-blue-primary);
+}
+
+.ids-wt-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+/* (i) bubble */
+.ids-wt-tip {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 0.3rem;
+}
+
+.ids-wt-ib {
+    border: 0;
+    background: none;
+    padding: 0 0.1rem;
+    color: var(--ids-ic-on);
+    cursor: default;
+    font-size: 0.8rem;
+    line-height: 1;
+    display: inline-flex;
+}
+
+.ids-wt-bub {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 6;
+    background: var(--nk-text-main);
+    color: #fff;
+    font-size: 0.76rem;
+    line-height: 1.5;
+    font-weight: 400;
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--nk-radius-sm);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+    user-select: text;
+    -webkit-user-select: text;
+    cursor: text;
+}
+
+.ids-wt-tip.ids-wt-open .ids-wt-bub {
+    display: block;
+}
+
+/* Rows */
+.ids-wt-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "t s f" "m m m";
+    column-gap: 0.7rem;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+.ids-wt-row:first-child {
+    border-top: 0;
+}
+
+.ids-wt-lt {
+    grid-area: t;
+    min-width: 0;
+}
+
+.ids-wt-l {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.ids-wt-d {
+    font-size: 0.76rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-wt-row > .ids-wt-stt {
+    grid-area: s;
+}
+
+.ids-wt-row > .ids-wt-fv,
+.ids-wt-row > .ids-wt-sw,
+.ids-wt-row > .ids-wt-lvl {
+    grid-area: f;
+}
+
+.ids-wt-row > .ids-wt-msg {
+    grid-area: m;
+}
+
+.ids-wt-offlbl .ids-wt-l {
+    color: var(--nk-text-muted);
+}
+
+.ids-wt-cdot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--nk-blue-primary);
+    flex: none;
+}
+
+.ids-wt-cdot[hidden],
+.ids-wt-msg[hidden] {
+    display: none;
+}
+
+.ids-wt-stt {
+    font-size: 0.72rem;
+    white-space: nowrap;
+    color: var(--nk-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.ids-wt-stt:empty {
+    display: none;
+}
+
+.ids-wt-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    padding: 0.08rem 0.45rem;
+    color: #b45309;
+    background: #fef3c7;
+}
+
+.ids-wt-undo {
+    border: 0;
+    background: none;
+    padding: 0 0.2rem;
+    color: var(--ids-ic);
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.ids-wt-lnk {
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--nk-blue-primary);
+    cursor: pointer;
+}
+
+.ids-wt-fv {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* Switch */
+.ids-wt-sw {
+    position: relative;
+    width: 36px;
+    height: 21px;
+    border-radius: 9999px;
+    background: #fff;
+    border: 1.5px solid var(--nk-border-hover, #cbd5e1);
+    flex: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.ids-wt-sw::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--nk-border-hover, #cbd5e1);
+}
+
+.ids-wt-sw.ids-wt-on {
+    background: var(--nk-blue-primary);
+    border-color: var(--nk-blue-primary);
+}
+
+.ids-wt-sw.ids-wt-on::after {
+    left: auto;
+    right: 2px;
+    background: #fff;
+}
+
+.ids-wt-sw[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Checkbox rows (WAN interfaces) */
+.ids-wt-ckrow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+.ids-wt-ckrow:first-child {
+    border-top: 0;
+}
+
+.ids-wt-ck {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    padding: 0.55rem 0;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--nk-text-main);
+    cursor: pointer;
+    text-align: left;
+}
+
+.ids-wt-ck[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.ids-wt-box {
+    width: 17px;
+    height: 17px;
+    border-radius: 5px;
+    border: 1.5px solid var(--nk-border-hover, #cbd5e1);
+    display: grid;
+    place-items: center;
+    background: #fff;
+    flex: none;
+}
+
+.ids-wt-box .ids-i {
+    font-size: 0.6rem;
+    color: #fff;
+    opacity: 0;
+}
+
+.ids-wt-ck.ids-wt-on .ids-wt-box {
+    background: var(--nk-blue-primary);
+    border-color: var(--nk-blue-primary);
+}
+
+.ids-wt-ck.ids-wt-on .ids-wt-box .ids-i {
+    opacity: 1;
+}
+
+.ids-wt-none {
+    margin: 0;
+    padding: 0.5rem 0;
+    font-size: 0.84rem;
+    color: var(--nk-text-muted);
+}
+
+/* Radio rows */
+.ids-wt-pre {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.ids-wt-pi {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: center;
+    border: 1.5px solid var(--nk-border);
+    border-radius: var(--nk-radius-md);
+    background: #fff;
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+}
+
+.ids-wt-rd {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid #94a3b8;
+    background: #fff;
+    box-sizing: border-box;
+    flex: none;
+}
+
+.ids-wt-n {
+    font-weight: 700;
+    font-size: 0.86rem;
+}
+
+.ids-wt-pi-t {
+    min-width: 0;
+}
+
+.ids-wt-pi.ids-wt-sel {
+    border-color: var(--nk-blue-primary);
+    background: var(--nk-blue-soft, #f0f9ff);
+}
+
+.ids-wt-pi.ids-wt-sel .ids-wt-rd {
+    border: 5px solid var(--nk-blue-primary);
+}
+
+.ids-wt-pi.ids-wt-offrow {
+    cursor: not-allowed;
+    background: #f8fafc;
+}
+
+.ids-wt-offrow .ids-wt-n,
+.ids-wt-offrow .ids-wt-d {
+    color: #94a3b8;
+}
+
+.ids-wt-why {
+    display: block;
+    font-size: 0.74rem;
+    color: var(--sl-warning, #b45309);
+    margin-top: 0.1rem;
+}
+
+.ids-wt-tag {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--nk-blue-primary);
+    background: #e0f2fe;
+    border-radius: 9999px;
+    padding: 0.05rem 0.4rem;
+}
+
+/* Number fields */
+.ids-wt-ig {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    width: 6.2rem;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    background: #fff;
+    cursor: text;
+    overflow: hidden;
+}
+
+.ids-wt-ig.ids-wt-ig-cores {
+    width: 4rem;
+}
+
+.ids-wt-num {
+    border: 0;
+    height: 30px;
+    width: 100%;
+    min-width: 0;
+    padding: 0 0.5rem;
+    text-align: right;
+    background: transparent;
+    outline: 0;
+    font: inherit;
+    font-size: 0.84rem;
+    color: var(--nk-text-main);
+}
+
+.ids-wt-ig-c .ids-wt-num,
+.ids-wt-ig-cores .ids-wt-num {
+    text-align: center;
+}
+
+.ids-wt-un {
+    padding: 0 0.55rem 0 0;
+    font-size: 0.76rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-wt-ig:focus-within {
+    border-color: var(--nk-blue-primary);
+    box-shadow: 0 0 0 2px #bae6fd;
+}
+
+.ids-wt-ig:has(.ids-wt-bad) {
+    border-color: var(--sl-error);
+}
+
+.ids-wt-ig:has(.ids-wt-bad):focus-within {
+    box-shadow: 0 0 0 2px #fecaca;
+}
+
+.ids-wt-msg {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.74rem;
+    color: var(--sl-error);
+    margin-top: 0.35rem;
+}
+
+.ids-wt-msg.ids-wt-amber {
+    color: var(--sl-warning, #b45309);
+}
+
+/* Rule matching chips: three equal columns */
+.ids-wt-lvl {
+    display: grid;
+    grid-template-columns: repeat(3, 5.2rem);
+    gap: 0.35rem;
+}
+
+.ids-wt-lvl .ids-chip {
+    justify-content: center;
+    padding: 0 0.4rem;
+}
+
+.ids-wt .ids-chip[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Protocols in two columns */
+.ids-wt-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.2rem;
+}
+
+.ids-wt-cols .ids-wt-row:nth-child(2) {
+    border-top: 0;
+}
+
+/* Footer */
+.ids-wt-ok {
+    color: #15803d;
+    font-weight: 600;
+}
+
+.ids-wt-fail {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--sl-error);
+}
+
+/* Unsaved-changes confirm, inside the window */
+.ids-wt-confirm {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.35);
+    border-radius: inherit;
+}
+
+.ids-wt-confirm-box {
+    width: min(340px, 100%);
+    background: #fff;
+    border-radius: var(--nk-radius-md);
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.25);
+    padding: 1rem 1.1rem;
+}
+
+.ids-wt-confirm-box p {
+    margin: 0.25rem 0 0.9rem;
+    font-size: 0.84rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-wt-confirm-btns {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@container (max-width: 480px) {
+    .ids-wt-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "t f" "s s" "m m";
+        column-gap: 0.6rem;
+    }
+
+    .ids-wt-row > .ids-wt-stt {
+        margin-top: 0.25rem;
+    }
+
+    /* A switch row keeps the badge beside the label. */
+    .ids-wt-cols .ids-wt-row {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        grid-template-areas: "t s f" "m m m";
+    }
+
+    .ids-wt-cols .ids-wt-row > .ids-wt-stt {
+        margin-top: 0;
+    }
+
+    .ids-wt-cols {
+        grid-template-columns: 1fr;
+    }
+
+    .ids-wt-cols .ids-wt-row:nth-child(2) {
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .ids-wt-row.ids-wt-rowch {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "t" "f" "s" "m";
+        row-gap: 0.4rem;
+    }
+
+    .ids-wt-lvl {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .ids-wt-pi {
+        padding: 0.55rem 0.65rem;
+        gap: 0.55rem;
+    }
+}
+
+@media (max-width: 520px) {
+    .ids-wt-tabs {
+        margin: -0.9rem -1rem 0;
+        padding: 0 1rem;
+        top: -0.9rem;
+    }
+}
+
+.ids-wt-ok .ids-i { color: var(--ids-ic-ok); }
+.ids-wt-fail .ids-i { color: var(--ids-ic-bad); }

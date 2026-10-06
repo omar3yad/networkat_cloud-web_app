@@ -1,0 +1,293 @@
+/* IDS page: Muted threats and Changed rules windows (list-window standard). */
+
+.ids-wm-card {
+    position: relative;
+}
+
+/* One row: text left, tools right. */
+.ids-wm-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem;
+    align-items: center;
+    padding: 0.55rem 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+.ids-wm-row:first-child {
+    border-top: 0;
+}
+
+.ids-wm-text {
+    min-width: 0;
+}
+
+.ids-wm-l {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    row-gap: 0.15rem;
+    min-width: 0;
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.ids-wm-d {
+    font-size: 0.74rem;
+    color: var(--nk-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.ids-wm-gone .ids-wm-v,
+.ids-wm-gone .ids-wm-d {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.ids-wm-badge {
+    margin-left: 0.35rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 9999px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--sl-warning, #b45309);
+    background: var(--sl-warning-bg, #fef3c7);
+}
+
+.ids-wm-badge.ids-wm-del {
+    color: var(--sl-error, #dc2626);
+    background: var(--sl-error-bg, #fee2e2);
+}
+
+.ids-wm-tools {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.ids-wm-ic {
+    border: 0;
+    background: none;
+    padding: 0.25rem 0.3rem;
+    font-size: 0.85rem;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.ids-wm-ic:hover:not([disabled]) {
+    color: var(--nk-blue-primary);
+    background: #f1f5f9;
+}
+
+.ids-wm-ic[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ids-wm-empty {
+    padding: 0.6rem 0;
+    font-size: 0.82rem;
+    color: var(--nk-text-muted);
+}
+
+/* On / Off segmented control: equal columns, never wraps. */
+.ids-wm-seg {
+    display: inline-grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--nk-border);
+    border-radius: 9999px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.ids-wm-seg button {
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.74rem;
+    padding: 0.25rem 0.8rem;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+}
+
+.ids-wm-seg button.ids-wm-on {
+    background: var(--nk-blue-soft, #f0f9ff);
+    color: var(--nk-blue-primary);
+    font-weight: 600;
+}
+
+.ids-wm-seg button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Our own dropdown. */
+.ids-wm-dsel {
+    position: relative;
+}
+
+.ids-wm-dbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 28px;
+    min-width: 9.5rem;
+    padding: 0 0.6rem;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    background: #fff;
+    font: inherit;
+    font-size: 0.74rem;
+    color: var(--nk-text-main);
+    cursor: pointer;
+}
+
+.ids-wm-dbtn:hover:not([disabled]),
+.ids-wm-dbtn.ids-wm-open {
+    border-color: var(--nk-blue-primary);
+}
+
+.ids-wm-dbtn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.ids-wm-dbtn .ids-i {
+    margin-left: auto;
+    font-size: 0.6rem;
+    color: var(--ids-ic);
+    transition: transform 0.15s;
+}
+
+.ids-wm-dbtn.ids-wm-open .ids-i {
+    transform: rotate(180deg);
+}
+
+.ids-wm-menu.ids-menu {
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    min-width: 100%;
+    padding: 0.25rem;
+}
+
+.ids-wm-menu.ids-menu button {
+    white-space: nowrap;
+    font-size: 0.76rem;
+}
+
+.ids-wm-menu.ids-menu button .ids-i {
+    margin-left: auto;
+    color: var(--ids-ic-on);
+}
+
+.ids-wm-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+    background: #94a3b8;
+}
+
+.ids-wm-dot.ids-wm-high {
+    background: #ef4444;
+}
+
+.ids-wm-dot.ids-wm-medium {
+    background: #fbbf24;
+}
+
+.ids-wm-off {
+    color: var(--sl-error, #dc2626);
+    font-weight: 600;
+}
+
+/* Footer. */
+.ids-wm-foot-t {
+    color: var(--nk-text-main);
+    font-weight: 700;
+}
+
+.ids-wm-ok {
+    color: #15803d;
+    font-weight: 600;
+}
+
+.ids-wm-err {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--sl-error, #dc2626);
+}
+
+/* Ask-before-closing sheet, inside the window. */
+.ids-wm-ask {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: inherit;
+}
+
+.ids-wm-ask-box {
+    width: min(360px, 100%);
+    padding: 1rem 1.1rem;
+    background: #fff;
+    border-radius: var(--nk-radius-md);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+}
+
+.ids-wm-ask-box b {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.ids-wm-ask-box p {
+    margin: 0 0 0.8rem;
+    font-size: 0.84rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-wm-ask-btns {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+@media (max-width: 520px) {
+    .ids-wm-row.ids-wm-r3 {
+        grid-template-columns: 1fr;
+    }
+
+    .ids-wm-r3 .ids-wm-tools {
+        justify-content: flex-start;
+    }
+
+    .ids-wm-menu.ids-menu {
+        right: auto;
+        left: 0;
+    }
+}
+
+.ids-wm-v {
+    overflow-wrap: anywhere;
+}
+
+.ids-wm-sid {
+    margin-left: 0.35rem;
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--nk-text-muted);
+}
+
+/* Icons (central tokens). */
+.ids-wm-ic .ids-i { color: var(--ids-ic); }
+.ids-wm-ic:hover:not([disabled]) .ids-i { color: var(--ids-ic-on); }
+.ids-wm-ok .ids-i { color: var(--ids-ic-ok); }

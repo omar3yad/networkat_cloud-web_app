@@ -1,0 +1,282 @@
+/* IDS page windows: the shell (ids_windows.js) and the parts every window shares.
+   Window-specific rules live in ids_win_<name>.css. */
+
+.ids-win {
+    --ids-h1: #0369a1;
+    --ids-h1-line: #7dd3fc;
+    --sl-notice: #0369a1;
+}
+
+body.ids-win-open {
+    overflow: hidden;
+}
+
+.ids-win .ids-win-card {
+    width: min(560px, calc(100vw - 2rem));
+    max-width: 560px;
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.ids-win .ids-win-card.ids-win-wide {
+    width: min(720px, calc(100vw - 2rem));
+    max-width: 720px;
+}
+
+.ids-win-head {
+    flex: none;
+}
+
+.ids-win-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.ids-win-foot:empty {
+    display: none;
+}
+
+.ids-win-foot {
+    flex: none;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.85rem 1.5rem 1rem;
+    border-top: 1px solid var(--nk-border);
+}
+
+.ids-win-busy .ids-win-body {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* One-line description under the header. */
+.ids-win-desc {
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--nk-text-muted);
+}
+
+/* Loading / error line inside a window. */
+.ids-win-msg {
+    padding: 2rem 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--nk-text-muted);
+}
+
+/* Section = rounded block with an H1 heading (dark blue + fading line). */
+.ids-sec {
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-lg);
+    background: var(--nk-card-bg);
+    padding: 0.9rem 1rem 1rem;
+}
+
+.ids-sec-h {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ids-h1);
+}
+
+.ids-sec-h::after {
+    content: "";
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, var(--ids-h1-line), transparent);
+}
+
+.ids-sec-help {
+    margin: 0.25rem 0 0.6rem;
+    font-size: 0.82rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-sec-body {
+    padding-left: 1rem;
+}
+
+/* A section with no help line still keeps its body off the heading. */
+.ids-sec-h + .ids-sec-body {
+    margin-top: 0.75rem;
+}
+
+.ids-sec-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0;
+    border-top: 1px solid #f1f5f9;
+    font-size: 0.88rem;
+    color: var(--nk-text-main);
+}
+
+.ids-sec-row:first-child {
+    border-top: 0;
+}
+
+/* Footer status (staged windows): status text left, buttons right. */
+.ids-foot-status {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.84rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-foot-status small {
+    display: block;
+    color: var(--sl-notice);
+}
+
+.ids-foot-btns {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+@media (max-width: 520px) {
+    .ids-win-body {
+        padding: 0.9rem 1rem;
+    }
+
+    .ids-win-foot {
+        padding: 0.75rem 1rem 0.9rem;
+    }
+
+    .ids-foot-status {
+        flex-basis: 100%;
+    }
+
+    .ids-sec-body {
+        padding-left: 0.5rem;
+    }
+}
+
+/* ── Grouped window: side index + one section ───────────────────────────── */
+
+.ids-win .ids-win-card.ids-win-grp {
+    width: min(980px, calc(100vw - 2rem));
+    max-width: 980px;
+    height: min(760px, calc(100vh - 2rem));
+    position: relative;
+    /* The card is the container: a container query can't restyle its own container. */
+    container-type: inline-size;
+    container-name: idsgrp;
+}
+
+.ids-grp {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+}
+
+.ids-grp-index {
+    flex: none;
+    width: 210px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.75rem 0.6rem;
+    border-right: 1px solid var(--nk-border);
+    background: #f8fafc;
+    overflow-y: auto;
+}
+
+.ids-grp-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    font: inherit;
+    font-size: 0.86rem;
+    color: var(--nk-text-main);
+    padding: 0.55rem 0.65rem;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ids-grp-item > .ids-i {
+    width: 16px;
+    text-align: center;
+    color: var(--ids-ic);
+}
+
+.ids-grp-item:hover:not(:disabled) {
+    background: #eef2f7;
+}
+
+.ids-grp-item.ids-on {
+    background: #e0f2fe;
+    color: var(--nk-blue-primary);
+    font-weight: 600;
+}
+
+.ids-grp-item.ids-on > .ids-i {
+    color: var(--ids-ic-on);
+}
+
+.ids-grp-item:focus-visible {
+    outline: 2px solid var(--nk-blue-primary);
+    outline-offset: -2px;
+}
+
+.ids-grp-item:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.ids-grp-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* The section wrapper: sub-modals position against the whole window card. */
+.ids-grp-sec {
+    display: contents;
+}
+
+/* Hidden sections stay mounted (no reload on switch). */
+.ids-grp-sec[hidden] {
+    display: none !important;
+}
+
+@container idsgrp (max-width: 720px) {
+    .ids-grp {
+        flex-direction: column;
+    }
+
+    .ids-grp-index {
+        width: auto;
+        flex-direction: row;
+        gap: 0.25rem;
+        padding: 0.5rem 0.6rem;
+        border-right: 0;
+        border-bottom: 1px solid var(--nk-border);
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ids-grp-item {
+        width: auto;
+        flex: none;
+    }
+}

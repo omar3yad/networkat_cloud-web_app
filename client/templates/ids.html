@@ -1,0 +1,166 @@
+{% extends "client_base.html" %}
+
+{% block title %}{% set ns = namespace(name=request.args.get('name') or 'Device') %}{% for p in (sidebar_peers or []) if p.id == peer_id %}{% set ns.name = p.name %}{% endfor %}IDS · {{ ns.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_base.css') }}">
+<link rel="stylesheet" href="/api/v2/client/ui/theme.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/peer_details.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/system_logs.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_windows.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_settings.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_tuning.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_muted_rules.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_watchlists.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_excluded.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_win_networks.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set ns = namespace(name=request.args.get('name') or 'Device') %}{% for p in (sidebar_peers or []) if p.id == peer_id %}{% set ns.name = p.name %}{% endfor %}
+<div class="details-container ids-page" id="ids-page" data-peer-id="{{ peer_id }}"
+    data-details-url="{{ url_for('client.peer_details', peer_id=peer_id) }}"
+    data-readonly="{{ 'true' if is_readonly_subscription else 'false' }}">
+
+    <a href="{{ url_for('client.peer_details', peer_id=peer_id) }}" class="back-link">
+        <span data-ids-i="arrow-left"></span> Back to {{ ns.name }}
+    </a>
+
+    <div class="header-section sl-header">
+        <div class="title-area">
+            <h1>IDS</h1>
+            <p>{{ ns.name }}</p>
+        </div>
+    </div>
+
+    <!-- Status: name + state pill + switch, one message line, facts -->
+    <div class="details-card ids-status" id="ids-status">
+        <div class="ids-status-top">
+            <span class="ids-status-name">IDS</span>
+            <span id="ids-pill"></span>
+            <span class="ids-sp"></span>
+            <label class="switch ids-switch" id="ids-switch-wrap" title="IDS on/off" hidden>
+                <input type="checkbox" id="ids-switch" aria-label="IDS on/off">
+                <span class="slider"></span>
+                <span data-ids-i="lock" class="ids-switch-lock" aria-hidden="true"></span>
+            </label>
+        </div>
+        <div class="ids-status-msg" id="ids-status-msg"></div>
+        <div class="ids-status-bar" id="ids-status-bar" hidden></div>
+        <div class="ids-facts" id="ids-facts" hidden>
+            <div>Rules<b id="ids-fact-rules">—</b></div>
+            <div>Updated<b id="ids-fact-updated">—</b></div>
+            <div>Next update<b id="ids-fact-next">—</b></div>
+            <div>Pause on change<b id="ids-fact-gap">—</b></div>
+        </div>
+    </div>
+
+    <div class="ids-grid">
+        <!-- Threats: filters, table, details pane -->
+        <div class="details-card ids-threats">
+            <div class="ids-threats-title">
+                <h3>Threats</h3>
+                <span class="ids-shown" id="ids-shown"></span>
+                <span class="ids-sp"></span>
+                {% if not is_readonly_subscription %}
+                <button type="button" class="ids-icon-btn" id="ids-clear" title="Clear threats" aria-label="Clear threats">
+                    <span data-ids-i="trash-can"></span>
+                </button>
+                {% endif %}
+            </div>
+            <div class="ids-filters" id="ids-filters">
+                <button type="button" class="ids-drop" data-filter="severity"><span>All severities</span><span data-ids-i="chevron-down"></span></button>
+                <button type="button" class="ids-drop" data-filter="kind"><span>All kinds</span><span data-ids-i="chevron-down"></span></button>
+                <button type="button" class="ids-drop" data-filter="device"><span>All devices</span><span data-ids-i="chevron-down"></span></button>
+                <button type="button" class="ids-drop" data-filter="direction"><span>Any direction</span><span data-ids-i="chevron-down"></span></button>
+                <button type="button" class="ids-drop" data-filter="range"><span>Any time</span><span data-ids-i="chevron-down"></span></button>
+                <button type="button" class="ids-reset" id="ids-reset" hidden><span data-ids-i="rotate-left"></span>Reset filters</button>
+                <label class="ids-search">
+                    <span data-ids-i="magnifying-glass"></span>
+                    <input type="search" id="ids-q" placeholder="Search" maxlength="200" autocomplete="off">
+                </label>
+            </div>
+            <div class="ids-threats-body" id="ids-threats-body">
+                <div class="ids-t2" id="ids-t2">
+                    <div class="ids-table-wrap">
+                        <table class="ids-table" id="ids-table">
+                            <colgroup>
+                                <col class="ids-c-sev"><col class="ids-c-time"><col class="ids-c-kind"><col>
+                                <col class="ids-c-rem"><col class="ids-c-svc"><col class="ids-c-n">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th><span class="ids-c-sevt">Severity</span></th><th>Time</th><th class="ids-c-kind">Kind</th>
+                                    <th>Device</th><th class="ids-c-rem">Remote</th><th class="ids-c-svc">Service</th><th>Times</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ids-rows"></tbody>
+                        </table>
+                        <div class="ids-more" id="ids-more" hidden></div>
+                    </div>
+                    <div class="ids-pane" id="ids-pane"></div>
+                </div>
+                <div class="sl-state ids-state" id="ids-threats-state">
+                    <span data-ids-i="spinner" data-ids-spin></span>
+                    <span class="sl-state-title">Loading</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column: last 24 hours, settings, lists -->
+        <div class="ids-side">
+            <div class="details-card ids-side-card">
+                <h4>Last 24 hours</h4>
+                <div class="ids-bars" id="ids-bars"></div>
+            </div>
+            <div class="details-card ids-side-card">
+                <h4>Settings</h4>
+                <button type="button" class="ids-link" data-open="detection"><span data-ids-i="sliders"></span><span class="ids-link-t">Detection</span><span class="ids-link-v" id="ids-v-detection"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+                <button type="button" class="ids-link" data-open="inspection"><span data-ids-i="magnifying-glass"></span><span class="ids-link-t">Inspection</span><span class="ids-link-v" id="ids-v-inspection"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+                <button type="button" class="ids-link" data-open="networks"><span data-ids-i="network-wired"></span><span class="ids-link-t">Networks</span><span class="ids-link-v" id="ids-v-networks"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+                <button type="button" class="ids-link" data-open="performance"><span data-ids-i="gauge"></span><span class="ids-link-t">Performance</span><span class="ids-link-v" id="ids-v-performance"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+                <button type="button" class="ids-link" data-open="recording"><span data-ids-i="box-archive"></span><span class="ids-link-t">Threat recording</span><span class="ids-link-v" id="ids-v-recording"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+            </div>
+            <div class="details-card ids-side-card">
+                <h4>Lists</h4>
+                <button type="button" class="ids-link" data-open="muted"><span data-ids-i="bell-slash"></span><span class="ids-link-t">Muted threats</span><span class="ids-link-v" id="ids-v-muted"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+                <button type="button" class="ids-link" data-open="excluded"><span data-ids-i="eye-slash"></span><span class="ids-link-t">Excluded devices</span><span class="ids-link-v" id="ids-v-excluded"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+                <button type="button" class="ids-link" data-open="watchlists"><span data-ids-i="list-check"></span><span class="ids-link-t">Watchlists</span><span class="ids-link-v" id="ids-v-watchlists"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+                <button type="button" class="ids-link" data-open="rules"><span data-ids-i="pen-to-square"></span><span class="ids-link-t">Changed rules</span><span class="ids-link-v" id="ids-v-rules"></span><span data-ids-i="chevron-right" class="ids-link-ch"></span></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear threats -->
+<div class="modal-overlay ids-modal" id="ids-clear-modal">
+    <div class="modal-card">
+        <div class="modal-header delete-modal-header">
+            <h2><span data-ids-i="trash-can"></span> Clear threats?</h2>
+            <button type="button" class="modal-close" data-close="1" aria-label="Close">&times;</button>
+        </div>
+        <div class="ids-modal-body">
+            <p>Every recorded threat on this device is deleted.</p>
+        </div>
+        <div class="ids-modal-foot">
+            <button type="button" class="ids-btn" data-close="1">Cancel</button>
+            <button type="button" class="ids-btn ids-btn-danger" id="ids-clear-confirm">Clear</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/ids_icons.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_common.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_windows.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_win_settings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_win_tuning.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_win_muted_rules.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_alias_create.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_win_watchlists.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_win_excluded.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids_win_networks.js') }}"></script>
+<script src="{{ url_for('static', filename='js/ids.js') }}"></script>
+{% endblock %}

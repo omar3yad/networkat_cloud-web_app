@@ -1,0 +1,554 @@
+/* IDS window: Excluded devices. Shared bits live in ids_windows.css / ids.css. */
+
+.ids-win-excluded .ids-win-card {
+    position: relative;
+}
+
+/* Add section: collapsed to a heading and a plus. */
+.ids-we-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 0;
+    background: none;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ids-we-toggle .ids-sec-h {
+    flex: 1;
+    min-width: 0;
+}
+
+.ids-we-toggle > .ids-i {
+    color: var(--ids-ic);
+}
+
+.ids-we-shut {
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+}
+
+.ids-we-shut .ids-sec-h::after {
+    display: none;
+}
+
+/* Form */
+.ids-we-lbl {
+    display: block;
+    margin: 0.7rem 0 0.3rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--nk-text-main);
+}
+
+.ids-we-lbl.ids-we-first {
+    margin-top: 0;
+}
+
+.ids-we-inp {
+    width: 100%;
+    height: 34px;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    padding: 0 0.65rem;
+    font: inherit;
+    font-size: 0.82rem;
+    background: #fff;
+    color: var(--nk-text-main);
+}
+
+.ids-we-inp:focus {
+    outline: none;
+    border-color: var(--nk-blue-primary);
+}
+
+.ids-we-inp.ids-we-bad {
+    border-color: var(--sl-error);
+}
+
+.ids-we-inp.ids-we-warnb {
+    border-color: #f59e0b;
+}
+
+/* Port and Protocol: one narrow width that fits their values. */
+.ids-we-narrow {
+    width: 12rem;
+    max-width: 100%;
+}
+
+.ids-we-hint {
+    margin-top: 0.25rem;
+    font-size: 0.74rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-we-err {
+    margin-top: 0.25rem;
+    font-size: 0.74rem;
+    color: var(--sl-error);
+}
+
+.ids-we-warn {
+    display: flex;
+    gap: 0.35rem;
+    align-items: flex-start;
+    margin-top: 0.25rem;
+    font-size: 0.74rem;
+    color: var(--sl-warning);
+}
+
+.ids-we-warn .ids-i {
+    color: var(--ids-ic-warn);
+    margin-top: 0.15rem;
+}
+
+.ids-we-info {
+    display: flex;
+    gap: 0.45rem;
+    align-items: flex-start;
+    margin-top: 0.7rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--nk-radius-sm);
+    background: var(--sl-notice-bg);
+    color: var(--sl-notice);
+    font-size: 0.74rem;
+}
+
+.ids-we-info .ids-i {
+    color: var(--ids-ic-on);
+    margin-top: 0.15rem;
+}
+
+/* Address field: @ picker on the left, + (many addresses) on the right. */
+.ids-we-acwrap {
+    position: relative;
+}
+
+.ids-we-main {
+    padding-left: 2.25rem;
+    padding-right: 2.25rem;
+}
+
+/* Editing has no "+", so no room is kept for it. */
+[data-form="edit"] .ids-we-main {
+    padding-right: 0.75rem;
+}
+
+.ids-we-main.ids-we-inalias {
+    color: var(--nk-blue-primary);
+    font-weight: 700;
+}
+
+.ids-we-atb,
+.ids-we-mlb {
+    position: absolute;
+    top: 17px;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--nk-border);
+    background: #f1f5f9;
+    color: var(--nk-blue-primary);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+    user-select: none;
+}
+
+.ids-we-atb {
+    left: 0.55rem;
+    padding-bottom: 2px;
+    font-size: 0.85rem;
+}
+
+.ids-we-mlb {
+    right: 0.55rem;
+    font-size: 0.7rem;
+}
+
+.ids-we-atb:hover,
+.ids-we-mlb:hover {
+    background: var(--nk-blue-primary);
+    border-color: var(--nk-blue-primary);
+    color: #fff;
+}
+
+.ids-we-mlb.ids-we-disabled {
+    color: #94a3b8;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.ids-we-acdd {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    box-shadow: var(--nk-shadow-lg, 0 10px 28px rgba(15, 23, 42, 0.14));
+    z-index: 1000;
+    margin-top: 4px;
+}
+
+/* Same rows as the firewall rule page's alias list. */
+.ids-we-aci {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: var(--nk-transition);
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+}
+
+.ids-we-aci:last-of-type {
+    border-bottom: none;
+}
+
+.ids-we-aci:hover {
+    background: #f8fafc;
+}
+
+.ids-we-acn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    font-weight: 700;
+    color: var(--nk-blue-primary);
+    font-size: 0.75rem;
+    min-width: 0;
+}
+
+.ids-we-acl {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.ids-we-acc {
+    font-size: 0.6rem;
+    color: var(--nk-blue-primary);
+    background: #e0f2fe;
+    padding: 1px 3px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.ids-we-actype {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--nk-text-muted);
+    background: #f1f5f9;
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
+.ids-we-ace {
+    font-size: 0.75rem;
+    color: #0284c7;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    transition: var(--nk-transition);
+}
+
+.ids-we-ace:hover {
+    background: #e0f2fe;
+    color: var(--nk-blue-primary);
+}
+
+.ids-we-acd {
+    font-size: 0.75rem;
+    color: var(--nk-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    display: block;
+}
+
+.ids-we-acnone {
+    padding: 0.85rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-we-acf {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-top: 1px solid var(--nk-border);
+    cursor: pointer;
+    font-family: inherit;
+    padding: 6px 12px;
+    background: #f8fafc;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--nk-blue-primary);
+    text-decoration: none;
+}
+
+.ids-we-addbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.8rem;
+}
+
+/* List */
+.ids-we-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem;
+    align-items: center;
+    padding: 0.55rem 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+.ids-we-row:first-child {
+    border-top: 0;
+}
+
+.ids-we-main2 {
+    min-width: 0;
+}
+
+.ids-we-t {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.35rem;
+    min-width: 0;
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
+.ids-we-v {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.ids-we-al {
+    color: var(--nk-blue-primary);
+    font-weight: 700;
+}
+
+.ids-we-tag {
+    padding: 0 0.4rem;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: var(--nk-text-muted);
+    font-size: 0.66rem;
+    font-weight: 600;
+}
+
+.ids-we-d {
+    font-size: 0.74rem;
+    color: var(--nk-text-muted);
+    overflow-wrap: anywhere;
+}
+
+.ids-we-pend {
+    padding: 0.05rem 0.45rem;
+    border-radius: 9999px;
+    background: var(--sl-warning-bg);
+    color: var(--sl-warning);
+    font-size: 0.68rem;
+    font-weight: 600;
+}
+
+.ids-we-pend.ids-we-del {
+    background: var(--sl-error-bg);
+    color: var(--sl-error);
+}
+
+.ids-we-gone .ids-we-v,
+.ids-we-gone .ids-we-d {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.ids-we-acts {
+    display: flex;
+    align-items: center;
+    gap: 0.1rem;
+}
+
+.ids-we-ic {
+    border: 0;
+    background: none;
+    padding: 0.3rem;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+}
+
+.ids-we-ic:hover {
+    color: var(--nk-blue-primary);
+}
+
+.ids-we-empty {
+    padding: 0.4rem 0;
+    font-size: 0.78rem;
+    color: var(--nk-text-muted);
+}
+
+/* Footer */
+.ids-we-strong {
+    color: var(--nk-text-main);
+}
+
+.ids-we-ok {
+    color: #15803d;
+}
+
+.ids-we-ferr {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--sl-error);
+}
+
+/* Sub-windows (edit, many addresses): their own modal over the whole page. */
+.ids-we-ov {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(15, 23, 42, 0.45);
+}
+
+.ids-we-ovcard {
+    width: 100%;
+    max-width: 520px;
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-lg);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+}
+
+.ids-we-ovh {
+    padding: 1rem 1.25rem;
+}
+
+.ids-we-ovh h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.ids-we-ovh,
+.ids-we-ovf {
+    flex: none;
+}
+
+.ids-we-ovb {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 1rem 1.25rem 1.1rem;
+}
+
+.ids-we-ovf {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.8rem 1.25rem;
+    border-top: 1px solid var(--nk-border);
+    background: #f8fafc;
+    border-radius: 0 0 var(--nk-radius-lg) var(--nk-radius-lg);
+}
+
+.ids-we-rowsh {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+}
+
+.ids-we-rowx {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.ids-we-rowx .ids-we-inp {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 520px) {
+    .ids-we-ovh,
+    .ids-we-ovb,
+    .ids-we-ovf {
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+    }
+
+    .ids-we-ov {
+        padding: 0.6rem;
+    }
+}
+
+/* Both sections keep their gap; the hosts are plain wrappers in the flex body. */
+.ids-win-excluded [data-host="list"] {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+}
+
+.ids-win-excluded [data-host]:empty {
+    display: none;
+}
+
+.ids-we-acl2 {
+    border: 0;
+    background: none;
+    padding: 0;
+    margin-top: 4px;
+    font: inherit;
+    font-weight: 600;
+    color: var(--nk-blue-primary);
+    cursor: pointer;
+}
+
+/* Icons (central tokens). */
+.ids-we-ic .ids-i { color: var(--ids-ic); }
+.ids-we-ic:hover .ids-i { color: var(--ids-ic-on); }
+.ids-we-ace .ids-i,
+.ids-we-acf .ids-i,
+.ids-we-more .ids-i { color: var(--ids-ic-on); }
+.ids-we-ok .ids-i { color: var(--ids-ic-ok); }
+.ids-we-mlb .ids-i { color: var(--ids-ic-on); }
+.ids-we-mlb:hover .ids-i { color: #fff; }
+.ids-we-mlb.ids-we-disabled .ids-i { color: var(--ids-ic); }

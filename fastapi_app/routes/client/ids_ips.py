@@ -11,8 +11,8 @@ Browser path -> agent path (services/client/ids_ips_service.py):
   /enabled              -> /ids-ips/detection      the switch
   /settings[/reset]     -> /ids-ips/settings[/reset]
   /rules/{sid}          -> /ids-ips/rules/{sid}
-  /custom-rules, /muted, /excluded, /watchlists
-                        -> /ids-ips/custom-rules, suppressions, exclusions, watchlists
+  /custom-rules, /muted, /excluded, /watchlists [/batch]
+                        -> /ids-ips/custom-rules, suppressions, exclusions, watchlists [/batch]
   /threats[/stream], /threats/summary
                         -> /logs/ids-ips/events[/stream], /logs/ids-ips/summary
 
@@ -29,6 +29,7 @@ from fastapi_app.schemas.client.ids_ips import (
     CustomRulesOrder,
     Direction,
     EnabledUpdate,
+    ListBatch,
     RuleChange,
     SettingsReset,
 )
@@ -152,8 +153,22 @@ def list_items(list_name: ListName, peer: dict = Depends(get_client_peer)):
 
 
 @router.post("/{list_name}", status_code=201, dependencies=[Depends(require_client_write)])
-def add_item(list_name: ListName, payload: dict[str, Any] = Body(...), peer: dict = Depends(get_client_peer)):
+def add_item(
+    list_name: ListName,
+    payload: dict[str, Any] | list[dict[str, Any]] = Body(...),
+    peer: dict = Depends(get_client_peer),
+):
+    """One object or a list of them (every item or none)."""
+    if isinstance(payload, list) and not 1 <= len(payload) <= 100:
+        raise IdsError(400, "Invalid request", "usage")
     return ids_ips_service.add_item(peer, list_name, payload)
+
+
+@router.post("/{list_name}/batch", dependencies=[Depends(require_client_write)])
+def batch_items(list_name: ListName, payload: ListBatch, peer: dict = Depends(get_client_peer)):
+    if not (payload.add or payload.update or payload.remove):
+        raise IdsError(400, "Invalid request", "usage")
+    return ids_ips_service.batch_items(peer, list_name, payload.model_dump())
 
 
 @router.put("/{list_name}/{item_id}", dependencies=[Depends(require_client_write)])

@@ -661,15 +661,15 @@
                     <div class="stat-value">{{ total_customers }}</div>
                 </div>
 
-                <div class="stat-card">
+                <a href="/peers" class="stat-card" style="text-decoration: none; color: inherit;">
                     <div class="stat-header">
                         <span class="stat-label">Total Peers</span>
                         <i class="fas fa-network-wired"></i>
                     </div>
                     <div class="stat-value">{{ total_peers if total_peers is defined else total_edges }}</div>
-                </div>
+                </a>
 
-                <div class="stat-card">
+                <a href="/peers" class="stat-card" style="text-decoration: none; color: inherit;">
                     <div class="stat-header">
                         <span class="stat-label">Online Peers</span>
                         <i class="fas fa-check-circle"></i>
@@ -679,7 +679,7 @@
                         <i class="fas fa-circle" style="color: #ff0000; font-size: 0.5rem;"></i>
                         {{ offline_peers if offline_peers is defined else offline_edges }} offline
                     </div>
-                </div>
+                </a>
             </div>
 
             <!-- Recent Edges -->
@@ -756,10 +756,15 @@
                     <div class="card-header">
                         <h2><i class="fas fa-plus-circle"></i> Quick Actions</h2>
                     </div>
-                    <div style="padding: 1.5rem;">
+                    <div style="padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
                         <a href="/customers" class="quick-action-link">
                             <i class="fas fa-building" style="color: var(--blue);"></i>
                             <span>Create New Customer</span>
+                            <i class="fas fa-arrow-right" style="margin-left: auto; color: var(--gray-600);"></i>
+                        </a>
+                        <a href="/peers" class="quick-action-link">
+                            <i class="fas fa-network-wired" style="color: var(--blue);"></i>
+                            <span>View All Peers</span>
                             <i class="fas fa-arrow-right" style="margin-left: auto; color: var(--gray-600);"></i>
                         </a>
                     </div>

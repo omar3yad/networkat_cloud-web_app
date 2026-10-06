@@ -8,7 +8,7 @@ may not send (prevention, community_id, certificate watchlists) is refused in
 services/client/ids_ips_service.py.
 """
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -49,3 +49,12 @@ class CustomRulesOrder(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     ids: list[str] = Field(min_length=1, max_length=500)
+
+
+class ListBatch(BaseModel):
+    """Remove, change and add in one request (at most 100 items in all, checked by the peer)."""
+    model_config = ConfigDict(extra="forbid")
+
+    add: list[dict] = Field(default_factory=list, max_length=100)
+    update: list[dict] = Field(default_factory=list, max_length=100)
+    remove: list[Annotated[str, Field(pattern=r"^[0-9a-f]{1,64}$")]] = Field(default_factory=list, max_length=100)

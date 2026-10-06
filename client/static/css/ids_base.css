@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+/* IDS look: the one place for its fonts, icon colors and icon sizes.
+   Loaded first on the IDS page (and by the IDS widget on the device page). Every other ids*.css uses these
+   tokens and never sets its own font-family or icon color literal. Icons come from ids_icons.js (IdsIcon). */
+
+:root {
+    /* Fonts. English: the system face. Arabic: IBM Plex Sans Arabic. Values (IPs, ports, SIDs, ranges): IBM Plex Mono. */
+    --ids-ff: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --ids-ff-ar: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+    --ids-ff-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    /* Icon colors: grey at rest, blue when active or the point of the control. */
+    --ids-ic: #64748b;
+    --ids-ic-on: #0284c7;
+    --ids-ic-on-bg: #e0f2fe;
+    --ids-ic-ok: #059669;
+    --ids-ic-warn: #d97706;
+    --ids-ic-bad: #dc2626;
+
+    /* Icon sizes. Icons are 1em, so they follow the text; use these where an icon stands alone. */
+    --ids-ic-sm: 14px;
+    --ids-ic-md: 16px;
+    --ids-ic-lg: 18px;
+}
+
+/* The IDS page and its windows (appended to <body>) use the IDS fonts. */
+.ids-page,
+.ids-win,
+.ids-widget {
+    font-family: var(--ids-ff);
+}
+
+.ids-page :is(input, select, textarea, button),
+.ids-win :is(input, select, textarea, button) {
+    font-family: inherit;
+}
+
+/* Arabic text: right to left, in the Arabic face. */
+.ids-ar,
+[lang="ar"] {
+    font-family: var(--ids-ff-ar);
+}
+
+.ids-ar {
+    direction: rtl;
+    text-align: right;
+    unicode-bidi: isolate;
+}
+
+/* Values: IPs, CIDRs, ports, SIDs. */
+.ids-mono {
+    font-family: var(--ids-ff-mono);
+    font-size: 0.94em;
+    direction: ltr;
+    unicode-bidi: isolate;
+}
+
+/* Icons (IdsIcon). Color comes from the parent's text color unless a control sets --ids-ic / --ids-ic-on. */
+.ids-i {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    flex: none;
+    vertical-align: -0.14em;
+    stroke-width: 2;
+}
+
+[data-ids-i] {
+    display: inline-flex;
+    line-height: 0;
+}
+
+.ids-i-spin {
+    animation: ids-i-spin 0.9s linear infinite;
+}
+
+@keyframes ids-i-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ids-i-spin { animation-duration: 2.4s; }
+}

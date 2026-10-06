@@ -1996,3 +1996,42 @@ def admin_view_api_peer_system_logs_stream(customer_id, peer_id):
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
     )
 
+
+# ----------------------------------------------------------------------
+# Admin All Peers Management
+# ----------------------------------------------------------------------
+
+@admin_bp.route('/peers')
+@login_required
+def peers_page():
+    """Admin All Peers Overview Page."""
+    from fastapi_app.services.admin.peers_service import AdminPeersService
+    data = AdminPeersService.get_all_peers_data(db=db.session, force_refresh=False)
+    return render_template(
+        'peers.html',
+        peers=data['peers'],
+        stats=data['stats'],
+        customers=data['customers'],
+        active_page='peers'
+    )
+
+
+@admin_bp.route('/api/admin/peers', methods=['GET'])
+@login_required
+def api_admin_peers():
+    """JSON API for All Peers data and live stats."""
+    from fastapi_app.services.admin.peers_service import AdminPeersService
+    force_refresh = request.args.get('refresh', '').lower() in ['1', 'true', 'yes']
+    try:
+        data = AdminPeersService.get_all_peers_data(db=db.session, force_refresh=force_refresh)
+        return jsonify({
+            'success': True,
+            'peers': data['peers'],
+            'stats': data['stats'],
+            'customers': data['customers']
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error fetching admin peers: {e}")
+        return jsonify({'success': False, 'error': 'Failed to fetch peers'}), 500
+
+

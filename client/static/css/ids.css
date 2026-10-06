@@ -1,0 +1,1157 @@
+/* IDS page + peer details frame. Reuses peer_details.css (cards, switch) and
+   system_logs.css (live badge, empty states, View all). */
+
+:root {
+    /* IDS severity: dot/bar colours far apart (red, amber, grey), text, pill background. */
+    --ids-high: #ef4444;
+    --ids-high-text: #dc2626;
+    --ids-high-bg: #fee2e2;
+    --ids-medium: #fbbf24;
+    --ids-medium-text: #d97706;
+    --ids-medium-bg: #fef3c7;
+    --ids-low: #94a3b8;
+    --ids-low-text: #64748b;
+    --ids-low-bg: #f1f5f9;
+}
+
+.ids-page [hidden],
+.ids-widget [hidden],
+.ids-modal [hidden] {
+    display: none !important;
+}
+
+.ids-sev-high { --sd: var(--ids-high); --sc: var(--ids-high-text); --sb: var(--ids-high-bg); }
+.ids-sev-medium { --sd: var(--ids-medium); --sc: var(--ids-medium-text); --sb: var(--ids-medium-bg); }
+.ids-sev-low { --sd: var(--ids-low); --sc: var(--ids-low-text); --sb: var(--ids-low-bg); }
+
+.ids-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--sd);
+    flex: none;
+}
+
+/* ── State pill (tone = colour) ─────────────────────────────────────────── */
+
+.ids-tone-ok { --tc: var(--sl-notice); --tb: var(--sl-notice-bg); }
+.ids-tone-warn { --tc: var(--sl-warning); --tb: var(--sl-warning-bg); }
+.ids-tone-err { --tc: var(--sl-error); --tb: var(--sl-error-bg); }
+.ids-tone-off { --tc: var(--sl-info); --tb: var(--sl-info-bg); }
+
+.ids-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 22px;
+    padding: 0 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    color: var(--tc);
+    background: var(--tb);
+    vertical-align: middle;
+}
+
+/* Watching (running only): green, with a soft ring pulsing from the whole pill. */
+.ids-pill-run {
+    --tc: #15803d;
+    --tb: #dcfce7;
+}
+
+.ids-pill-run {
+    position: relative;
+}
+
+.ids-pill-run::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid #22c55e;
+    opacity: 0;
+    animation: ids-watch 2.2s ease-out infinite;
+    pointer-events: none;
+}
+
+/* The same ring on every device, also with reduced motion (phones turn it on with battery saver). */
+@keyframes ids-watch {
+    0% { transform: scale(1); opacity: 0.9; }
+    70%, 100% { transform: scale(1.35, 1.8); opacity: 0; }
+}
+
+.ids-state > .ids-i,
+.ids-state > [data-ids-i] {
+    font-size: 1.8rem;
+    opacity: 0.45;
+    color: var(--ids-ic);
+}
+
+.ids-state.ids-tone-ok > .ids-i { color: var(--ids-ic-on); }
+.ids-state.ids-tone-warn > .ids-i { color: var(--ids-ic-warn); }
+.ids-state.ids-tone-err > .ids-i { color: var(--ids-ic-bad); }
+
+.ids-pill .ids-i {
+    color: currentColor;
+}
+
+.ids-status-bar .ids-i {
+    color: currentColor;
+}
+
+/* ── Peer details frame ─────────────────────────────────────────────────── */
+
+.ids-widget-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-width: 0;
+}
+
+/* Last 24 hours, like a language bar: counts, never percentages. */
+.ids-strip {
+    margin: 0 0 0.8rem;
+}
+
+.ids-strip-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--nk-text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.ids-strip-head b {
+    color: var(--nk-text-main);
+    font-size: 0.82rem;
+}
+
+.ids-strip-bar {
+    display: flex;
+    gap: 2px;
+    height: 8px;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: #f1f5f9;
+}
+
+.ids-strip-bar i {
+    display: block;
+    height: 100%;
+    background: var(--sd);
+}
+
+.ids-strip-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+    margin-top: 0.45rem;
+    font-size: 0.78rem;
+}
+
+.ids-strip-legend a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--nk-text-main);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.ids-strip-legend a span:not(.ids-dot) {
+    color: var(--nk-text-muted);
+    font-weight: 400;
+}
+
+.ids-strip-legend a:hover {
+    text-decoration: underline;
+}
+
+/* Small table, like the IDS page table. */
+.ids-mini {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    table-layout: fixed;
+}
+
+.ids-mini col.ids-c-sev { width: 80px; }
+.ids-mini col.ids-c-time { width: 56px; }
+.ids-mini col.ids-c-kind { width: 96px; }
+.ids-mini col.ids-c-n { width: 60px; }
+
+.ids-mini th {
+    text-align: left;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--nk-text-muted);
+    padding: 0.35rem 0.4rem;
+    border-bottom: 1px solid var(--nk-border);
+}
+
+.ids-mini td {
+    padding: 0.5rem 0.4rem;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+}
+
+.ids-mini tr:last-child td {
+    border-bottom: none;
+}
+
+.ids-mini tbody tr:hover td,
+.ids-mini tbody tr:focus td {
+    background: var(--nk-blue-soft, #f0f9ff);
+    outline: none;
+}
+
+.ids-mini tr.ids-row-new td {
+    animation: sl-flash 2.4s ease-out;
+}
+
+.ids-sev-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--sc);
+    font-weight: 700;
+}
+
+.ids-sev-dot::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--sd);
+    flex: none;
+}
+
+.ids-widget .sl-state {
+    padding: 1.6rem 1rem;
+}
+
+@media (max-width: 520px) {
+    .ids-mini .ids-c-rem { display: none; }
+    .ids-mini col.ids-c-sev { width: 22px; }
+    .ids-mini col.ids-c-kind { width: 76px; }
+    .ids-mini col.ids-c-time { width: 50px; }
+    .ids-mini col.ids-c-n { width: 48px; }
+    .ids-mini td,
+    .ids-mini th { padding-left: 0.3rem; padding-right: 0.3rem; }
+    .ids-mini td:first-child,
+    .ids-mini th:first-child { padding-right: 0; }
+    .ids-mini .ids-sev-dot span,
+    .ids-mini .ids-c-sevt { display: none; }
+}
+
+/* ── IDS page ───────────────────────────────────────────────────────────── */
+
+/* The page sits in a flex column with auto margins: keep it full width even
+   when the table is empty. */
+.ids-page {
+    width: 100%;
+}
+
+.ids-sp {
+    flex: 1;
+}
+
+/* Status band (S2) */
+.ids-status {
+    padding: 1.1rem 1.4rem;
+}
+
+.ids-status-top {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 24px;
+}
+
+.ids-status-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.ids-status-msg {
+    font-size: 0.82rem;
+    color: var(--nk-text-muted);
+    margin-top: 0.35rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 1.2em;
+}
+
+.ids-status-msg.ids-msg-tone {
+    color: var(--tc);
+    font-weight: 500;
+}
+
+.ids-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: var(--nk-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--tc);
+    background: var(--tb);
+}
+
+.ids-facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.6rem;
+    border-top: 1px solid var(--nk-border);
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    font-size: 0.74rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-facts b {
+    display: block;
+    font-size: 0.86rem;
+    color: var(--nk-text-main);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Locked switch: off, visible, lock on the ball. */
+.ids-switch {
+    position: relative;
+}
+
+.ids-switch-lock {
+    display: none;
+    position: absolute;
+    left: 3px;
+    bottom: 3px;
+    width: 16px;
+    height: 16px;
+    font-size: 0.6rem;
+    line-height: 0;
+    align-items: center;
+    justify-content: center;
+    color: var(--ids-ic);
+    pointer-events: none;
+}
+
+.ids-switch.ids-locked .ids-switch-lock {
+    display: inline-flex;
+}
+
+/* Layout C1: threats left, a narrow column on the right. */
+.ids-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 1.25rem;
+    align-items: start;
+    margin-top: 1.25rem;
+}
+
+.ids-threats {
+    position: relative;
+    padding: 1.25rem;
+    min-width: 0;
+}
+
+.ids-threats-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.ids-threats-title h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.ids-shown {
+    font-size: 0.78rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-icon-btn {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    background: #fff;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+}
+
+.ids-icon-btn:hover {
+    color: var(--sl-error);
+    border-color: #fecaca;
+}
+
+/* Filters: our own dropdowns + search */
+.ids-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 0.8rem;
+}
+
+.ids-drop {
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0 0.65rem;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    background: #fff;
+    font: inherit;
+    font-size: 0.8rem;
+    color: var(--nk-text-main);
+    cursor: pointer;
+    max-width: 14rem;
+}
+
+.ids-drop span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ids-drop .ids-i {
+    font-size: 0.65rem;
+    color: var(--ids-ic);
+}
+
+.ids-drop.ids-set .ids-i {
+    color: var(--ids-ic-on);
+}
+
+.ids-drop.ids-set {
+    border-color: #7dd3fc;
+    background: #f0f9ff;
+    color: var(--nk-blue-primary);
+    font-weight: 600;
+}
+
+.ids-reset {
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 0.65rem;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    background: #fff;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--nk-text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ids-reset .ids-i {
+    font-size: 0.7rem;
+    color: var(--ids-ic);
+}
+
+.ids-reset:hover .ids-i {
+    color: var(--ids-ic-on);
+}
+
+.ids-reset:hover {
+    color: var(--nk-blue-primary);
+    border-color: #7dd3fc;
+    background: #f0f9ff;
+}
+
+.ids-search {
+    flex: 1;
+    min-width: 150px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0 0.65rem;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    background: #fff;
+    color: var(--nk-text-muted);
+}
+
+.ids-search input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    font: inherit;
+    font-size: 0.82rem;
+    background: transparent;
+    color: var(--nk-text-main);
+}
+
+.ids-menu {
+    position: absolute;
+    z-index: 3000;
+    max-height: 320px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid var(--nk-border);
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+    padding: 0.3rem;
+}
+
+.ids-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 0.82rem;
+    text-align: left;
+    padding: 0.45rem 0.6rem;
+    border-radius: 7px;
+    cursor: pointer;
+    color: var(--nk-text-main);
+}
+
+.ids-menu button + button {
+    border-top: 1px solid #f8fafc;
+}
+
+.ids-menu button span:not(.ids-dot) {
+    flex: 1;
+}
+
+.ids-menu button:hover {
+    background: #f1f5f9;
+}
+
+.ids-menu button.ids-sel {
+    background: #f0f9ff;
+    color: var(--nk-blue-primary);
+    font-weight: 600;
+}
+
+.ids-menu button .ids-i {
+    font-size: 0.7rem;
+    color: var(--ids-ic-on);
+}
+
+/* The table adapts to the width its wrapper gets (sidebar, side column and
+   details pane all take from it), not to the viewport. Phone layout (.ids-narrow)
+   has its own rules below and wins by specificity. */
+.ids-table-wrap {
+    container: ids-tw / inline-size;
+    min-width: 0;
+}
+
+/* Table + details pane (T2) */
+.ids-t2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 0.9rem;
+    align-items: start;
+}
+
+.ids-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    table-layout: fixed;
+}
+
+.ids-table col.ids-c-sev { width: 86px; }
+.ids-table col.ids-c-time { width: 56px; }
+.ids-table col.ids-c-kind { width: 96px; }
+.ids-table col.ids-c-svc { width: 64px; }
+.ids-table col.ids-c-n { width: 60px; }
+
+.ids-table th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--nk-text-muted);
+    padding: 0.4rem;
+    border-bottom: 1px solid var(--nk-border);
+}
+
+.ids-table td {
+    padding: 0.55rem 0.4rem;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+}
+
+.ids-table tbody tr:hover td {
+    background: #f8fafc;
+}
+
+.ids-table tbody tr:focus {
+    outline: none;
+}
+
+.ids-table tbody tr:focus-visible td {
+    background: #f8fafc;
+}
+
+.ids-table tbody tr.ids-cur td {
+    background: #f0f9ff;
+}
+
+.ids-table tr.ids-row-new td {
+    animation: sl-flash 2.4s ease-out;
+}
+
+.ids-more {
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--nk-text-muted);
+    padding: 0.7rem 0 0.2rem;
+}
+
+.ids-pane {
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-md);
+    padding: 0.9rem;
+    background: #fbfdff;
+    min-width: 0;
+    position: sticky;
+    top: 1rem;
+}
+
+.ids-pane-empty {
+    color: var(--nk-text-muted);
+    font-size: 0.82rem;
+}
+
+.ids-back .ids-i {
+    color: var(--ids-ic-on);
+}
+
+.ids-back {
+    display: none;
+    align-items: center;
+    gap: 0.35rem;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--nk-blue-primary);
+    padding: 0;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+
+.ids-pane-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 0.45rem;
+    overflow-wrap: anywhere;
+}
+
+.ids-pane-tags {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ids-sev-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--sc);
+    background: var(--sb);
+}
+
+.ids-times {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--nk-text-muted);
+    background: #f1f5f9;
+    border-radius: 9999px;
+    padding: 0.1rem 0.5rem;
+    white-space: nowrap;
+}
+
+.ids-kv {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+    margin: 0.7rem 0;
+}
+
+.ids-kv span:nth-child(odd) {
+    color: var(--nk-text-muted);
+}
+
+.ids-kv span:nth-child(even) {
+    overflow-wrap: anywhere;
+}
+
+.ids-pane-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.ids-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    height: 32px;
+    padding: 0 0.8rem;
+    border-radius: var(--nk-radius-sm);
+    border: 1px solid var(--nk-border);
+    background: #fff;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--nk-text-main);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ids-btn:hover:not([disabled]) {
+    border-color: #cbd5e1;
+}
+
+.ids-btn[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ids-pane-btns .ids-btn {
+    justify-content: flex-start;
+}
+
+.ids-btn .ids-i {
+    color: var(--ids-ic);
+}
+
+.ids-btn-redo .ids-i {
+    color: var(--ids-ic-bad);
+}
+
+.ids-btn-primary .ids-i,
+.ids-btn-danger .ids-i {
+    color: #fff;
+}
+
+.ids-btn-redo {
+    color: var(--sl-error);
+    border-color: #fecaca;
+}
+
+.ids-btn-primary {
+    background: var(--nk-blue-primary);
+    border-color: var(--nk-blue-primary);
+    color: #fff;
+}
+
+.ids-btn-danger {
+    background: var(--sl-error);
+    border-color: var(--sl-error);
+    color: #fff;
+}
+
+/* The action form opens inside the pane. */
+.ids-act {
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--nk-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.ids-act-h {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.ids-act-h .ids-i {
+    color: var(--ids-ic-on);
+}
+
+.ids-act-red .ids-i {
+    color: var(--ids-ic-bad);
+}
+
+.ids-act-red {
+    color: var(--sl-error);
+}
+
+.ids-f {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.ids-f > span {
+    font-size: 0.76rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-input {
+    height: 34px;
+    border: 1px solid var(--nk-border);
+    border-radius: var(--nk-radius-sm);
+    padding: 0 0.6rem;
+    font: inherit;
+    font-size: 0.82rem;
+    width: 100%;
+}
+
+.ids-input:focus {
+    outline: none;
+    border-color: var(--nk-blue-primary);
+}
+
+.ids-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.ids-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 28px;
+    padding: 0 0.7rem;
+    border: 1px solid var(--nk-border);
+    border-radius: 9999px;
+    background: #fff;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--nk-text-main);
+    cursor: pointer;
+    max-width: 100%;
+}
+
+.ids-chip.ids-on {
+    border-color: #7dd3fc;
+    background: #f0f9ff;
+    color: var(--nk-blue-primary);
+}
+
+.ids-chip[class*="ids-sev-"].ids-on {
+    border-color: transparent;
+    background: var(--sb);
+    color: var(--sc);
+}
+
+.ids-note {
+    font-size: 0.78rem;
+    color: var(--sl-notice);
+}
+
+.ids-act-btns {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.45rem;
+}
+
+.ids-done .ids-i {
+    color: var(--ids-ic-ok);
+}
+
+.ids-done {
+    margin-top: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #15803d;
+}
+
+/* Narrow: the pane replaces the table, with a way back. */
+.ids-t2.ids-narrow {
+    grid-template-columns: 1fr;
+}
+
+/* Columns in the narrow layout follow the wrapper width (container rules below). */
+
+.ids-t2.ids-narrow:not(.ids-detail) .ids-pane,
+.ids-t2.ids-narrow.ids-detail .ids-table-wrap {
+    display: none;
+}
+
+.ids-t2.ids-narrow .ids-pane {
+    position: static;
+}
+
+.ids-t2.ids-narrow .ids-back {
+    display: inline-flex;
+}
+
+/* Wrapper widths: hide Remote, then Service, then tighten (Kind stays). */
+@container ids-tw (max-width: 659px) {
+    .ids-table .ids-c-rem { display: none; }
+}
+
+@container ids-tw (max-width: 539px) {
+    .ids-table .ids-c-svc { display: none; }
+}
+
+@container ids-tw (max-width: 439px) {
+    .ids-table col.ids-c-sev { width: 22px; }
+    .ids-table col.ids-c-time { width: 52px; }
+    .ids-table col.ids-c-kind { width: 84px; }
+    .ids-table col.ids-c-n { width: 50px; }
+    .ids-table .ids-sev-dot span,
+    .ids-table .ids-c-sevt { display: none; }
+    .ids-table td:first-child,
+    .ids-table th:first-child { padding-right: 0; }
+}
+
+/* Right column */
+.ids-side {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    min-width: 0;
+}
+
+.ids-side-card {
+    position: relative;
+    padding: 1.1rem 1.2rem;
+}
+
+.ids-side-card h4 {
+    margin: 0 0 0.55rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.ids-bar {
+    display: grid;
+    grid-template-columns: 58px 1fr auto;
+    gap: 0.55rem;
+    align-items: center;
+    width: 100%;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.25rem 0;
+    cursor: pointer;
+    text-align: left;
+    color: var(--nk-text-main);
+}
+
+.ids-bar-track {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--sb);
+    overflow: hidden;
+}
+
+.ids-bar-track i {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--sd);
+}
+
+.ids-bar b {
+    text-align: right;
+    min-width: 2ch;
+    font-variant-numeric: tabular-nums;
+}
+
+.ids-bar:hover span:first-child {
+    text-decoration: underline;
+}
+
+.ids-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    border: none;
+    border-top: 1px solid #f1f5f9;
+    background: none;
+    font: inherit;
+    font-size: 0.84rem;
+    color: var(--nk-text-main);
+    padding: 0.55rem 0.1rem;
+    cursor: pointer;
+    text-align: left;
+}
+
+.ids-side-card h4 + .ids-link {
+    border-top: none;
+}
+
+.ids-link > .ids-i:first-child,
+.ids-link > [data-ids-i]:first-child {
+    width: 16px;
+    color: var(--ids-ic);
+}
+
+.ids-link:hover > .ids-i:first-child {
+    color: var(--ids-ic-on);
+}
+
+.ids-link:hover .ids-link-t {
+    color: var(--nk-blue-primary);
+}
+
+.ids-link-t {
+    flex: 1;
+    min-width: 0;
+}
+
+.ids-link-v {
+    font-size: 0.75rem;
+    color: var(--nk-text-muted);
+    white-space: nowrap;
+}
+
+.ids-link-ch {
+    font-size: 0.65rem;
+    color: var(--ids-ic);
+}
+
+/* Veil: a state with no live IDS frosts the threats and the 24 h card. */
+.ids-veiled > :not(.ids-veil) {
+    filter: blur(2px);
+    opacity: 0.55;
+    pointer-events: none;
+    user-select: none;
+}
+
+.ids-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 3rem;
+    border-radius: var(--nk-radius-lg);
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.ids-side-card .ids-veil {
+    align-items: center;
+    padding-top: 0;
+}
+
+.ids-veil > span {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1rem;
+    border-radius: 9999px;
+    background: #fff;
+    border: 1px solid var(--nk-border);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--nk-text-main);
+}
+
+.ids-veil > span > .ids-i {
+    color: var(--ids-ic);
+}
+.ids-veil.ids-tone-warn > span > .ids-i { color: var(--ids-ic-warn); }
+.ids-veil.ids-tone-err > span > .ids-i { color: var(--ids-ic-bad); }
+
+/* Clear window */
+.ids-modal .modal-card {
+    max-width: 420px;
+}
+
+.ids-modal-body {
+    padding: 1.25rem 1.5rem 0.5rem;
+    font-size: 0.9rem;
+    color: var(--nk-text-muted);
+}
+
+.ids-modal-body p {
+    margin: 0;
+}
+
+.ids-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem 1.25rem;
+}
+
+@media (max-width: 1100px) {
+    .ids-t2 {
+        grid-template-columns: minmax(0, 1fr) 260px;
+    }
+}
+
+@media (max-width: 900px) {
+    .ids-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .ids-page {
+        padding: 1rem;
+    }
+
+    .ids-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .ids-threats {
+        padding: 1rem;
+    }
+
+    .ids-drop {
+        flex: 1 1 calc(50% - 0.45rem);
+        max-width: none;
+        justify-content: space-between;
+    }
+
+    .ids-search {
+        flex-basis: 100%;
+    }
+}

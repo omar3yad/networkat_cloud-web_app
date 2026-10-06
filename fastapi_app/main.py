@@ -1,5 +1,6 @@
 # /opt/networkat_sdwan/core/web_app/fastapi_app/main.py
 
+import logging
 import os
 from sqlalchemy.orm import Session
 from fastapi import Depends, FastAPI, Request
@@ -11,10 +12,15 @@ from fastapi_app.routes.controller import commands as controller_commands
 from fastapi_app.routes import auth as client_auth
 from fastapi_app.routes.client import system_logs as client_system_logs
 from fastapi_app.routes.client import ids_ips as client_ids_ips
+from fastapi_app.routes.client import appearance as client_appearance
 from fastapi_app.services.client.system_logs_service import SystemLogsError
 from fastapi_app.services.client.ids_ips_service import IdsError
 from fastapi_app.routes import plans as plans_routes
 from fastapi_app.routes import settings as settings_routes
+from fastapi_app.routes.admin import (
+    peers as admin_peers,
+    plans as admin_plans,
+)
 from fastapi_app.routes.netbird import (
     setup_keys as netbird_setup_keys,
     routes as netbird_routes,
@@ -51,6 +57,21 @@ app.include_router(client_auth.router)
 # (fastapi_app/dependencies.py: get_client_session / get_client_peer)
 app.include_router(client_system_logs.router)
 app.include_router(client_ids_ips.router)
+app.include_router(client_appearance.router)  # public: theme.css, no auth
+
+
+@app.on_event("startup")
+def _seed_appearance_defaults():
+    try:
+        from fastapi_app.database import SessionLocal
+        from fastapi_app.services import appearance_service
+        db = SessionLocal()
+        try:
+            appearance_service.ensure_defaults(db)
+        finally:
+            db.close()
+    except Exception as exc:
+        logging.getLogger(__name__).error("Appearance seed failed: %s", exc)
 
 
 @app.exception_handler(SystemLogsError)
@@ -69,6 +90,8 @@ _SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts
 app.mount("/scripts", StaticFiles(directory=_SCRIPTS_DIR), name="scripts")
 
 # ── Protected routers — require Bearer token ──────────────────────────────────
+app.include_router(admin_peers.router,          dependencies=_auth)
+app.include_router(admin_plans.router,          dependencies=_auth)
 app.include_router(settings_routes.router,       dependencies=_auth)
 app.include_router(plans_routes.router,          dependencies=_auth)
 app.include_router(adguard_dns.router,          dependencies=_auth)

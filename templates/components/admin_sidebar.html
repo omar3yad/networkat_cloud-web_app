@@ -27,6 +27,11 @@
             <span>Customers</span>
         </a>
 
+        <a href="/peers" class="nav-item {% if active_page == 'peers' %}active{% endif %}">
+            <i class="fas fa-network-wired"></i>
+            <span>Peers</span>
+        </a>
+
         {% if session.get('admin_role') == 'admin' %}
         <a href="/plans" class="nav-item {% if active_page == 'plans' %}active{% endif %}">
             <i class="fas fa-layer-group"></i>

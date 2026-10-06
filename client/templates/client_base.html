@@ -125,6 +125,8 @@
                                             {% set click_handler = '' %}
                                             {% if request.endpoint == 'client.peer_system_logs' %}
                                                 {% set target_url = url_for('client.peer_system_logs', peer_id=p.id) %}
+                                            {% elif request.endpoint == 'client.peer_ids' %}
+                                                {% set target_url = url_for('client.peer_ids', peer_id=p.id) %}
                                             {% elif p.connected %}
                                                 {% if request.endpoint in ['client.peer_web_filter', 'client.peer_filtering'] %}
                                                     {% set target_url = url_for('client.peer_web_filter', peer_id=p.id) %}

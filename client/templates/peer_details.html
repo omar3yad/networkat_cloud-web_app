@@ -5,6 +5,9 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/peer_details.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/system_logs.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids_base.css') }}">
+<link rel="stylesheet" href="/api/v2/client/ui/theme.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ids.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -182,6 +185,10 @@
                     <i class="fas fa-list"></i>
                     <span>Aliases</span>
                 </a>
+                <a href="{{ url_for('client.peer_ids', peer_id=peer_id) }}" class="action-card">
+                    <i class="fas fa-magnifying-glass-chart"></i>
+                    <span>IDS</span>
+                </a>
                 {% endif %}
                 <a href="javascript:void(0)" class="action-card" id="btn-open-updates" onclick="openUpdatesModal()"
                     title="Manage Software Updates">
@@ -204,6 +211,12 @@
                     <i class="fas fa-list" style="color: var(--nk-text-muted);"></i>
                     <span style="color: var(--nk-text-muted);">Aliases</span>
                 </a>
+                {% if not admin_view %}
+                <a href="javascript:void(0)" class="action-card disabled" title="Peer is offline">
+                    <i class="fas fa-magnifying-glass-chart" style="color: var(--nk-text-muted);"></i>
+                    <span style="color: var(--nk-text-muted);">IDS</span>
+                </a>
+                {% endif %}
                 <a href="javascript:void(0)" class="action-card disabled"
                     title="This peer is offline. Updates are only accessible when the peer is online.">
                     <i class="fas fa-arrow-alt-circle-up" style="color: var(--nk-text-muted);"></i>
@@ -273,6 +286,25 @@
                     </div>
                 </div>
             </div>
+
+            {% if not admin_view %}
+            <!-- IDS: state, last 24 hours and the latest 5 threats, live (peer_ids_widget.js) -->
+            <div class="sl-widget ids-widget" id="ids-widget" data-peer-id="{{ peer_id }}"
+                data-page-url="{{ url_for('client.peer_ids', peer_id=peer_id) }}"
+                data-peer-online="{{ 'true' if is_online else 'false' }}" style="margin-top: 2rem;">
+                <h3 class="card-title sl-widget-title">
+                    <span class="ids-widget-name"><span data-ids-i="magnifying-glass-chart"></span> IDS <span id="ids-widget-pill"></span></span>
+                    <span class="sl-widget-actions">
+                        <a href="{{ url_for('client.peer_ids', peer_id=peer_id) }}" class="sl-view-all">View all &rarr;</a>
+                    </span>
+                </h3>
+                <div id="ids-widget-body" hidden></div>
+                <div class="sl-state" id="ids-widget-state">
+                    <span data-ids-i="spinner" data-ids-spin></span>
+                    <span class="sl-state-title">Loading</span>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- System logs: last 5 from the peer's system logs, live (peer_system_logs_widget.js) -->
             <div class="sl-widget" id="sl-widget" data-peer-id="{{ peer_id }}"
@@ -527,6 +559,11 @@
     <script src="{{ url_for('static', filename='js/peer_details.js') }}"></script>
     <script src="{{ url_for('static', filename='js/system_logs_common.js') }}"></script>
     <script src="{{ url_for('static', filename='js/peer_system_logs_widget.js') }}"></script>
+    {% if not admin_view %}
+    <script src="{{ url_for('static', filename='js/ids_icons.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ids_common.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/peer_ids_widget.js') }}"></script>
+    {% endif %}
     <script>
         window.API_BASE = {{ (api_base or '')| tojson }};
         window.ADMIN_VIEW = {{ 'true' if admin_view else 'false' }};

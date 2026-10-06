@@ -331,9 +331,23 @@ def list_items(peer: dict, name: str) -> dict:
     return {"items": items}
 
 
-def _list_write(peer: dict, name: str, method: str, suffix: str = "", body=None) -> dict:
-    if name == "watchlists" and body is not None and not _client_watchlist(body):
+def _client_item(name: str, item) -> dict:
+    """One item from the browser: refuse what the client may not send and
+    turn an excluded `address` into the peer's host / network."""
+    if not isinstance(item, dict):
         raise IdsError(400, "Invalid request", "usage")
+    if name == "watchlists" and not _client_watchlist(item):
+        raise IdsError(400, "Invalid request", "usage")
+    if name == "excluded" and item.get("target") == "address":
+        value = item.get("value")
+        target = "network" if isinstance(value, str) and "/" in value else "host"
+        item = dict(item, target=target)
+    return item
+
+
+def _list_write(peer: dict, name: str, method: str, suffix: str = "", body=None) -> dict:
+    if body is not None and suffix != "/order":
+        body = [_client_item(name, i) for i in body] if isinstance(body, list) else _client_item(name, body)
     if name == "watchlists" and method in ("PUT", "DELETE"):
         current = _call(peer, "GET", LISTS[name]).get("items") or []
         target = next((i for i in current if i.get("id") == suffix.strip("/")), None)
@@ -350,8 +364,31 @@ def _list_write(peer: dict, name: str, method: str, suffix: str = "", body=None)
     return out
 
 
-def add_item(peer: dict, name: str, item: dict) -> dict:
+def add_item(peer: dict, name: str, item) -> dict:
+    """One object -> {"item"}; a list -> {"items"}, every item or none."""
     return _list_write(peer, name, "POST", body=item)
+
+
+def batch_items(peer: dict, name: str, change: dict) -> dict:
+    """remove / update / add in one request: one transaction and one apply on the peer."""
+    if name == "muted" and change.get("update"):
+        raise IdsError(400, "Invalid request", "usage")  # no update: delete and add
+    add = [_client_item(name, i) for i in change.get("add") or []]
+    update = [_client_item(name, i) for i in change.get("update") or []]
+    remove = list(change.get("remove") or [])
+    if name == "watchlists" and (update or remove):
+        current = {i.get("id"): i for i in _call(peer, "GET", LISTS[name]).get("items") or []}
+        for item_id in remove + [u.get("id") for u in update]:
+            if item_id in current and not _client_watchlist(current[item_id]):
+                raise IdsError(404, "Not found", "not_found")
+    try:
+        reply = _write(peer, "POST", LISTS[name] + "/batch", {"add": add, "update": update, "remove": remove})
+    except _Timeout:
+        raise _unconfirmed()
+    out = _reply(reply)
+    for key in ("added", "updated", "removed"):
+        out[key] = reply.get(key) or []
+    return out
 
 
 def replace_item(peer: dict, name: str, item_id: str, item: dict) -> dict:

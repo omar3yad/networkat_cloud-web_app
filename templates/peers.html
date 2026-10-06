@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="description" content="Networkat Admin — All Connected Peers Management">
+    <title>Networkat · All Peers</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        :root {
+            --blue: #0078d4;
+            --blue-dark: #106ebe;
+            --blue-light: #deecf9;
+            --sidebar-bg: #1e2a41;
+            --sidebar-hover: #2d3a55;
+            --gray-50: #f8f9fa;
+            --gray-100: #f0f2f4;
+            --gray-200: #e1e4e8;
+            --gray-300: #d0d7de;
+            --gray-500: #8c959f;
+            --gray-600: #5e6c84;
+            --gray-700: #334155;
+            --gray-800: #1e2a41;
+            --success: #107c10;
+            --success-light: #dff6dd;
+            --danger: #d83b01;
+            --danger-light: #fde7e9;
+            --warning: #b45309;
+            --warning-light: #fff4ce;
+            --purple: #7c3aed;
+            --purple-light: #ede9fe;
+        }
+
+        body {
+            background: var(--gray-50);
+            display: flex;
+            min-height: 100vh;
+            color: var(--gray-800);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            width: calc(100% - 260px);
+            min-width: 0;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: #ffffff;
+            padding: 1rem 1.75rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            gap: 0.75rem;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+        }
+
+        .top-bar-titles {
+            min-width: 0;
+        }
+
+        .top-bar-titles h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--gray-800);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .top-bar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        /* Spinner animation */
+        @keyframes nkFullSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fa-spin, .is-spinning {
+            animation: nkFullSpin 0.75s linear infinite !important;
+            display: inline-block;
+            transform-origin: 50% 50%;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.55rem 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: var(--gray-700);
+            border-color: var(--gray-200);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+            background: var(--blue-light);
+        }
+
+        /* Page Body */
+        .page-body {
+            padding: 1.5rem 1.75rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 1.15rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .stat-icon.blue { background: var(--blue-light); color: var(--blue); }
+        .stat-icon.green { background: var(--success-light); color: var(--success); }
+        .stat-icon.orange { background: var(--warning-light); color: var(--warning); }
+        .stat-icon.purple { background: var(--purple-light); color: var(--purple); }
+
+        .stat-info .stat-val {
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: var(--gray-800);
+            line-height: 1.1;
+        }
+
+        .stat-info .stat-label {
+            font-size: 0.78rem;
+            color: var(--gray-600);
+            margin-top: 0.2rem;
+        }
+
+        /* Search & Filter Toolbar */
+        .toolbar {
+            background: #ffffff;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 0.9rem 1.15rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.85rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            flex: 1;
+            min-width: 260px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 220px;
+            max-width: 360px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.52rem 0.85rem 0.52rem 2.2rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.875rem;
+            outline: none;
+            background: var(--gray-50);
+            transition: all 0.15s ease;
+        }
+
+        .search-box input:focus {
+            background: #ffffff;
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.12);
+        }
+
+        .filter-select {
+            padding: 0.52rem 1.9rem 0.52rem 0.8rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 0.84rem;
+            color: var(--gray-700);
+            background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%235e6c84' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 0.7rem center;
+            background-size: 9px;
+            appearance: none;
+            -webkit-appearance: none;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+
+        .filter-select:focus {
+            border-color: var(--blue);
+        }
+
+        .filter-pills {
+            display: inline-flex;
+            background: var(--gray-100);
+            border-radius: 8px;
+            padding: 0.2rem;
+            gap: 0.15rem;
+        }
+
+        .filter-pill {
+            padding: 0.35rem 0.75rem;
+            border: none;
+            background: transparent;
+            color: var(--gray-600);
+            font-size: 0.82rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .filter-pill.active {
+            background: #ffffff;
+            color: var(--blue);
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--gray-600);
+            font-size: 0.82rem;
+            font-weight: 500;
+        }
+
+        /* Table Card Container */
+        .table-card {
+            background: #ffffff;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .peers-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 780px;
+        }
+
+        .peers-table th {
+            background: var(--gray-50);
+            color: var(--gray-600);
+            font-size: 0.76rem;
+            font-weight: 600;
+            padding: 0.8rem 1.15rem;
+            border-bottom: 1px solid var(--gray-200);
+            white-space: nowrap;
+            letter-spacing: 0.2px;
+        }
+
+        .peers-table td {
+            padding: 0.9rem 1.15rem;
+            border-bottom: 1px solid var(--gray-100);
+            font-size: 0.875rem;
+            vertical-align: middle;
+            color: var(--gray-800);
+        }
+
+        .peers-table tbody tr {
+            transition: background-color 0.12s ease;
+        }
+
+        .peers-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .peers-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Peer Name & Meta */
+        .peer-name-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .device-icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--gray-100);
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .peer-title-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            min-width: 0;
+        }
+
+        .peer-title-name {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .peer-id-badge {
+            font-family: monospace;
+            font-size: 0.72rem;
+            color: var(--gray-500);
+            background: var(--gray-100);
+            padding: 0.12rem 0.4rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: background 0.15s, color 0.15s;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .peer-id-badge:hover {
+            background: var(--blue-light);
+            color: var(--blue);
+        }
+
+        /* Customer Block */
+        .customer-link-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .customer-name {
+            font-weight: 600;
+            color: var(--blue);
+            transition: color 0.15s;
+            font-size: 0.88rem;
+        }
+
+        .customer-link-block:hover .customer-name {
+            color: var(--blue-dark);
+            text-decoration: underline;
+        }
+
+        .customer-sub {
+            font-size: 0.76rem;
+            color: var(--gray-500);
+        }
+
+        /* IP Badge */
+        .ip-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #f1f5f9;
+            border: 1px solid var(--gray-200);
+            padding: 0.22rem 0.55rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--gray-700);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .ip-badge:hover {
+            background: var(--blue-light);
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 100px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .status-badge.online {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .status-badge.online .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 0 2px rgba(16, 124, 16, 0.25);
+        }
+
+        .status-badge.offline {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .status-badge.offline .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--gray-500);
+        }
+
+        .status-badge.unreachable {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .status-badge.unreachable .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--warning);
+        }
+
+        /* OS Badge */
+        .os-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8rem;
+            color: var(--gray-700);
+        }
+
+        .os-badge i {
+            font-size: 0.9rem;
+            color: var(--gray-600);
+        }
+
+        .version-tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: var(--gray-100);
+            color: var(--gray-600);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            margin-left: 0.25rem;
+        }
+
+        /* Actions Column */
+        .action-links {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .action-btn-sm {
+            padding: 0.32rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            border: 1px solid var(--gray-200);
+            background: #ffffff;
+            color: var(--gray-700);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .action-btn-sm:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+            background: var(--blue-light);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 1.5rem;
+            color: var(--gray-500);
+        }
+
+        .empty-state i {
+            font-size: 2.75rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.35;
+            display: block;
+        }
+
+        .empty-state h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.3rem;
+        }
+
+        .empty-state p {
+            font-size: 0.84rem;
+            color: var(--gray-500);
+        }
+
+        /* Toast Notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast-msg {
+            background: var(--gray-800);
+            color: #ffffff;
+            padding: 0.7rem 1.15rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            animation: toastIn 0.2s ease;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* -------------------------------------------------------------
+           RESPONSIVE DESIGN (Mobile & Tablet)
+           ------------------------------------------------------------- */
+        @media (max-width: 991px) {
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .top-bar {
+                padding: 0.85rem 1.25rem;
+            }
+
+            .page-body {
+                padding: 1.25rem;
+            }
+
+            .mobile-menu-btn {
+                display: inline-flex !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-bar {
+                padding: 0.75rem 1rem;
+            }
+
+            .top-bar-titles h2 {
+                font-size: 1.05rem;
+            }
+
+            .page-body {
+                padding: 1rem;
+            }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+                margin-bottom: 1.15rem;
+            }
+
+            .stat-card {
+                padding: 0.85rem 0.95rem;
+                gap: 0.65rem;
+            }
+
+            .stat-icon {
+                width: 38px;
+                height: 38px;
+                font-size: 1rem;
+                border-radius: 8px;
+            }
+
+            .stat-info .stat-val {
+                font-size: 1.3rem;
+            }
+
+            .stat-info .stat-label {
+                font-size: 0.72rem;
+            }
+
+            .toolbar {
+                padding: 0.85rem;
+                gap: 0.65rem;
+            }
+
+            .toolbar-left {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.6rem;
+            }
+
+            .search-box {
+                max-width: 100%;
+                min-width: 100%;
+                width: 100%;
+            }
+
+            .filter-pills {
+                width: 100%;
+                display: flex;
+            }
+
+            .filter-pill {
+                flex: 1;
+                text-align: center;
+                padding: 0.4rem 0.5rem;
+            }
+
+            .filter-select {
+                width: 100%;
+            }
+
+            .toolbar-right {
+                width: 100%;
+                justify-content: space-between;
+                font-size: 0.78rem;
+                padding-top: 0.25rem;
+                border-top: 1px solid var(--gray-100);
+            }
+
+            #toast-container {
+                left: 1rem;
+                right: 1rem;
+                bottom: 1rem;
+                align-items: center;
+            }
+
+            .toast-msg {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.6rem;
+            }
+
+            .stat-card {
+                padding: 0.75rem 0.85rem;
+            }
+
+            .btn {
+                padding: 0.48rem 0.85rem;
+                font-size: 0.82rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    {% set active_page = 'peers' %}
+    {% include 'components/admin_sidebar.html' %}
+
+    <div class="main-content">
+        <!-- Top Bar -->
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <button type="button" class="mobile-menu-btn" id="mobile-menu-toggle" aria-label="Open sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="top-bar-titles">
+                    <h2>All Peers</h2>
+                </div>
+            </div>
+            <div class="top-bar-actions">
+                <button type="button" class="btn btn-secondary" id="btn-refresh-peers" onclick="refreshPeersList()">
+                    <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Page Body -->
+        <main class="page-body">
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-val" id="stat-total">{{ stats.total }}</div>
+                        <div class="stat-label">Total peers</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-signal"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-val" id="stat-online">{{ stats.online }}</div>
+                        <div class="stat-label">Online peers</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon orange">
+                        <i class="fas fa-power-off"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-val" id="stat-offline">{{ stats.offline }}</div>
+                        <div class="stat-label">Offline peers</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-val" id="stat-customers">{{ stats.customers_count }}</div>
+                        <div class="stat-label">Active accounts</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar (Search & Filter) -->
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="peer-search-input" placeholder="Search by name, IP, ID, customer, OS..." oninput="applyFilters()">
+                    </div>
+
+                    <div class="filter-pills">
+                        <button type="button" class="filter-pill active" data-filter="all" onclick="setStatusFilter('all')">All</button>
+                        <button type="button" class="filter-pill" data-filter="online" onclick="setStatusFilter('online')">Online</button>
+                        <button type="button" class="filter-pill" data-filter="offline" onclick="setStatusFilter('offline')">Offline</button>
+                    </div>
+
+                    <select id="customer-filter-select" class="filter-select" onchange="applyFilters()">
+                        <option value="">All customers</option>
+                        {% for c in customers %}
+                        <option value="{{ c.id }}">{{ c.name }}{% if c.company %} ({{ c.company }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select id="os-filter-select" class="filter-select" onchange="applyFilters()">
+                        <option value="">All platforms</option>
+                        <option value="linux">Linux</option>
+                        <option value="windows">Windows</option>
+                        <option value="darwin">macOS / Apple</option>
+                        <option value="openwrt">OpenWrt / Router</option>
+                        <option value="mikrotik">Mikrotik</option>
+                    </select>
+                </div>
+
+                <div class="toolbar-right">
+                    <span id="showing-count-label">Showing {{ peers|length }} peers</span>
+                </div>
+            </div>
+
+            <!-- Peers Table Card -->
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="peers-table">
+                        <thead>
+                            <tr>
+                                <th>Peer device</th>
+                                <th>Customer</th>
+                                <th>SD-WAN IP</th>
+                                <th>Status</th>
+                                <th>Platform &amp; Version</th>
+                                <th>Last seen</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="peers-table-body">
+                            {% if peers %}
+                            {% for p in peers %}
+                            <tr class="peer-row"
+                                data-id="{{ p.id }}"
+                                data-name="{{ p.name|lower }}"
+                                data-ip="{{ p.ip|lower }}"
+                                data-status="{{ 'online' if p.is_online else 'offline' }}"
+                                data-customer-id="{{ p.customer.id if p.customer else '' }}"
+                                data-customer-name="{{ (p.customer.name ~ ' ' ~ p.customer.company ~ ' ' ~ p.customer.email)|lower if p.customer else '' }}"
+                                data-os="{{ p.os|lower }}">
+                                <td>
+                                    <div class="peer-name-wrap">
+                                        <div class="device-icon-box">
+                                            {% if 'windows' in p.os|lower %}
+                                            <i class="fab fa-windows" style="color: #0078d4;"></i>
+                                            {% elif 'darwin' in p.os|lower or 'mac' in p.os|lower or 'ios' in p.os|lower %}
+                                            <i class="fab fa-apple" style="color: #475569;"></i>
+                                            {% elif 'openwrt' in p.os|lower or 'router' in p.os|lower or 'mikrotik' in p.os|lower %}
+                                            <i class="fas fa-router" style="color: #0284c7;"></i>
+                                            {% else %}
+                                            <i class="fab fa-linux" style="color: #334155;"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="peer-title-block">
+                                            <div class="peer-title-name">
+                                                <span>{{ p.name }}</span>
+                                            </div>
+                                            <span class="peer-id-badge" title="Click to copy Peer ID" onclick="copyText('{{ p.id }}', 'Peer ID copied')">
+                                                <i class="far fa-copy"></i>
+                                                <span>{{ p.id }}</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {% if p.customer %}
+                                    <a href="/customers/{{ p.customer.id }}" class="customer-link-block" title="View customer profile">
+                                        <span class="customer-name">{{ p.customer.name }}</span>
+                                        <span class="customer-sub">{{ p.customer.company or p.customer.email or 'Customer' }}</span>
+                                    </a>
+                                    {% else %}
+                                    <span style="color: var(--gray-500); font-size: 0.85rem;">Unassigned</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if p.ip and p.ip != '—' %}
+                                    <span class="ip-badge" title="Click to copy IP" onclick="copyText('{{ p.ip.split('/')[0] }}', 'IP copied')">
+                                        <i class="far fa-copy"></i>
+                                        <span>{{ p.ip }}</span>
+                                    </span>
+                                    {% else %}
+                                    <span style="color: var(--gray-500);">—</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {% if p.is_online %}
+                                    <span class="status-badge online">
+                                        <span class="status-dot"></span>
+                                        <span>Online</span>
+                                    </span>
+                                    {% elif p.connected and not p.is_reachable %}
+                                    <span class="status-badge unreachable">
+                                        <span class="status-dot"></span>
+                                        <span>Unreachable</span>
+                                    </span>
+                                    {% else %}
+                                    <span class="status-badge offline">
+                                        <span class="status-dot"></span>
+                                        <span>Offline</span>
+                                    </span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div class="os-badge">
+                                        <span>{{ p.os or 'Generic device' }}</span>
+                                        {% if p.version %}
+                                        <span class="version-tag">v{{ p.version }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span style="font-size: 0.82rem; color: var(--gray-600);">
+                                        {{ p.last_seen or '—' }}
+                                    </span>
+                                </td>
+
+                                <td style="text-align: right;">
+                                    <div class="action-links" style="justify-content: flex-end;">
+                                        {% if p.customer %}
+                                        <a href="/admin/view/{{ p.customer.id }}/peers/{{ p.id }}" class="action-btn-sm" title="View peer live panel">
+                                            <i class="fas fa-external-link-alt"></i>
+                                            <span>Manage</span>
+                                        </a>
+                                        <a href="/customers/{{ p.customer.id }}" class="action-btn-sm" title="View customer details">
+                                            <i class="fas fa-user"></i>
+                                            <span>Customer</span>
+                                        </a>
+                                        {% else %}
+                                        <span style="color: var(--gray-500); font-size: 0.8rem;">—</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% else %}
+                            <tr id="empty-row">
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <i class="fas fa-network-wired"></i>
+                                        <h3>No peers found</h3>
+                                        <p>No SD-WAN peers are currently registered or connected in the network.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+
+    <script>
+        let currentStatusFilter = 'all';
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast-msg';
+            toast.innerHTML = `<i class="fas fa-check-circle" style="color: #4ade80;"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.25s ease';
+                setTimeout(() => toast.remove(), 250);
+            }, 2500);
+        }
+
+        function copyText(text, successMsg) {
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(successMsg || 'Copied to clipboard');
+            }).catch(() => {
+                showToast('Failed to copy');
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+
+        function setStatusFilter(status) {
+            currentStatusFilter = status;
+            document.querySelectorAll('.filter-pill').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.filter === status);
+            });
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const query = (document.getElementById('peer-search-input').value || '').trim().toLowerCase();
+            const customerId = document.getElementById('customer-filter-select').value;
+            const osFilter = (document.getElementById('os-filter-select').value || '').toLowerCase();
+
+            const rows = document.querySelectorAll('.peer-row');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const name = row.dataset.name || '';
+                const ip = row.dataset.ip || '';
+                const id = row.dataset.id || '';
+                const status = row.dataset.status || '';
+                const custId = row.dataset.customerId || '';
+                const custName = row.dataset.customerName || '';
+                const os = row.dataset.os || '';
+
+                const matchesQuery = !query ||
+                    name.includes(query) ||
+                    ip.includes(query) ||
+                    id.toLowerCase().includes(query) ||
+                    custName.includes(query) ||
+                    os.includes(query);
+
+                const matchesStatus = currentStatusFilter === 'all' || status === currentStatusFilter;
+                const matchesCustomer = !customerId || custId === customerId;
+                const matchesOs = !osFilter || os.includes(osFilter);
+
+                if (matchesQuery && matchesStatus && matchesCustomer && matchesOs) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const countLabel = document.getElementById('showing-count-label');
+            if (countLabel) {
+                countLabel.textContent = `Showing ${visibleCount} peer${visibleCount === 1 ? '' : 's'}`;
+            }
+
+            const tbody = document.getElementById('peers-table-body');
+            let emptyMsgRow = document.getElementById('no-filter-match-row');
+
+            if (visibleCount === 0 && rows.length > 0) {
+                if (!emptyMsgRow) {
+                    emptyMsgRow = document.createElement('tr');
+                    emptyMsgRow.id = 'no-filter-match-row';
+                    emptyMsgRow.innerHTML = `
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <i class="fas fa-search"></i>
+                                <h3>No matching peers</h3>
+                                <p>No peer devices match the specified search query or filter criteria.</p>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(emptyMsgRow);
+                }
+                emptyMsgRow.style.display = '';
+            } else if (emptyMsgRow) {
+                emptyMsgRow.style.display = 'none';
+            }
+        }
+
+        async function refreshPeersList() {
+            const refreshBtn = document.getElementById('btn-refresh-peers');
+            const refreshIcon = document.getElementById('refresh-icon');
+
+            if (refreshBtn) refreshBtn.disabled = true;
+            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+            try {
+                const resp = await fetch('/api/admin/peers?refresh=true');
+                if (!resp.ok) throw new Error('Failed to refresh');
+                const data = await resp.json();
+
+                if (data.success) {
+                    // Update stats
+                    if (data.stats) {
+                        document.getElementById('stat-total').textContent = data.stats.total || 0;
+                        document.getElementById('stat-online').textContent = data.stats.online || 0;
+                        document.getElementById('stat-offline').textContent = data.stats.offline || 0;
+                        document.getElementById('stat-customers').textContent = data.stats.customers_count || 0;
+                    }
+
+                    // Render table rows
+                    renderTableRows(data.peers || []);
+                    applyFilters();
+                    showToast('Peers inventory refreshed');
+                }
+            } catch (err) {
+                showToast('Failed to refresh peers');
+            } finally {
+                if (refreshBtn) refreshBtn.disabled = false;
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+            }
+        }
+
+        function renderTableRows(peers) {
+            const tbody = document.getElementById('peers-table-body');
+            if (!tbody) return;
+
+            if (!peers || peers.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="empty-row">
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <i class="fas fa-network-wired"></i>
+                                <h3>No peers found</h3>
+                                <p>No SD-WAN peers are currently registered or connected in the network.</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = peers.map(p => {
+                const isOnline = Boolean(p.is_online);
+                const isConnected = Boolean(p.connected);
+                const isReachable = Boolean(p.is_reachable);
+                const osLower = (p.os || '').toLowerCase();
+
+                let iconClass = 'fab fa-linux';
+                let iconColor = '#334155';
+                if (osLower.includes('windows')) {
+                    iconClass = 'fab fa-windows';
+                    iconColor = '#0078d4';
+                } else if (osLower.includes('darwin') || osLower.includes('mac') || osLower.includes('ios')) {
+                    iconClass = 'fab fa-apple';
+                    iconColor = '#475569';
+                } else if (osLower.includes('openwrt') || osLower.includes('router') || osLower.includes('mikrotik')) {
+                    iconClass = 'fas fa-router';
+                    iconColor = '#0284c7';
+                }
+
+                let statusBadge = `
+                    <span class="status-badge offline">
+                        <span class="status-dot"></span>
+                        <span>Offline</span>
+                    </span>
+                `;
+                if (isOnline) {
+                    statusBadge = `
+                        <span class="status-badge online">
+                            <span class="status-dot"></span>
+                            <span>Online</span>
+                        </span>
+                    `;
+                } else if (isConnected && !isReachable) {
+                    statusBadge = `
+                        <span class="status-badge unreachable">
+                            <span class="status-dot"></span>
+                            <span>Unreachable</span>
+                        </span>
+                    `;
+                }
+
+                const cust = p.customer;
+                const custHtml = cust ? `
+                    <a href="/customers/${escapeHtml(cust.id)}" class="customer-link-block" title="View customer profile">
+                        <span class="customer-name">${escapeHtml(cust.name)}</span>
+                        <span class="customer-sub">${escapeHtml(cust.company || cust.email || 'Customer')}</span>
+                    </a>
+                ` : `<span style="color: var(--gray-500); font-size: 0.85rem;">Unassigned</span>`;
+
+                const ipClean = (p.ip || '').split('/')[0];
+                const ipBadge = (p.ip && p.ip !== '—') ? `
+                    <span class="ip-badge" title="Click to copy IP" onclick="copyText('${escapeHtml(ipClean)}', 'IP copied')">
+                        <i class="far fa-copy"></i>
+                        <span>${escapeHtml(p.ip)}</span>
+                    </span>
+                ` : `<span style="color: var(--gray-500);">—</span>`;
+
+                const actionsHtml = cust ? `
+                    <div class="action-links" style="justify-content: flex-end;">
+                        <a href="/admin/view/${escapeHtml(cust.id)}/peers/${escapeHtml(p.id)}" class="action-btn-sm" title="View peer live panel">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span>Manage</span>
+                        </a>
+                        <a href="/customers/${escapeHtml(cust.id)}" class="action-btn-sm" title="View customer details">
+                            <i class="fas fa-user"></i>
+                            <span>Customer</span>
+                        </a>
+                    </div>
+                ` : `<span style="color: var(--gray-500); font-size: 0.8rem;">—</span>`;
+
+                const custNameData = cust ? `${cust.name || ''} ${cust.company || ''} ${cust.email || ''}`.toLowerCase() : '';
+
+                return `
+                    <tr class="peer-row"
+                        data-id="${escapeHtml(p.id)}"
+                        data-name="${escapeHtml((p.name || '').toLowerCase())}"
+                        data-ip="${escapeHtml((p.ip || '').toLowerCase())}"
+                        data-status="${isOnline ? 'online' : 'offline'}"
+                        data-customer-id="${cust ? escapeHtml(cust.id) : ''}"
+                        data-customer-name="${escapeHtml(custNameData)}"
+                        data-os="${escapeHtml(osLower)}">
+                        <td>
+                            <div class="peer-name-wrap">
+                                <div class="device-icon-box">
+                                    <i class="${iconClass}" style="color: ${iconColor};"></i>
+                                </div>
+                                <div class="peer-title-block">
+                                    <div class="peer-title-name">
+                                        <span>${escapeHtml(p.name)}</span>
+                                    </div>
+                                    <span class="peer-id-badge" title="Click to copy Peer ID" onclick="copyText('${escapeHtml(p.id)}', 'Peer ID copied')">
+                                        <i class="far fa-copy"></i>
+                                        <span>${escapeHtml(p.id)}</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>${custHtml}</td>
+                        <td>${ipBadge}</td>
+                        <td>${statusBadge}</td>
+
+                        <td>
+                            <div class="os-badge">
+                                <span>${escapeHtml(p.os || 'Generic device')}</span>
+                                ${p.version ? `<span class="version-tag">v${escapeHtml(p.version)}</span>` : ''}
+                            </div>
+                        </td>
+
+                        <td>
+                            <span style="font-size: 0.82rem; color: var(--gray-600);">
+                                ${escapeHtml(p.last_seen || '—')}
+                            </span>
+                        </td>
+
+                        <td style="text-align: right;">${actionsHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+
+</html>
