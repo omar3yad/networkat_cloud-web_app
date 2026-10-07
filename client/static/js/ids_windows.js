@@ -35,7 +35,36 @@
         ctx = c;
     }
 
-    function close(force) {
+    /* Back (phone gesture or button) closes the window instead of leaving the page: an open window owns
+       one history entry. Back acts like Escape, so the top layer closes first (a menu, an edit window,
+       Create alias, then the window itself); while the window stays open the entry is put back. */
+    let pushed = false;   // our entry is the current one
+    let ownPops = 0;      // popstates caused by our own history.back()
+
+    function pushEntry() {
+        if (pushed) return;
+        try { history.pushState({ idsWin: 1 }, ''); pushed = true; } catch (e) { /* no history: Back just leaves */ }
+    }
+
+    function dropEntry() {
+        if (!pushed) return;
+        pushed = false;
+        if (history.state && history.state.idsWin) { ownPops++; history.back(); }
+    }
+
+    window.addEventListener('popstate', () => {
+        if (ownPops) { ownPops--; return; }
+        if (!pushed) return;
+        pushed = false;   // the browser already took it
+        if (!current) return;
+        const alias = document.querySelector('#idsAcModal.active');
+        if (alias && window.IdsAliasCreate) window.IdsAliasCreate.close();
+        else document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        if (current) pushEntry();
+    });
+
+    // keep: another window opens right after (it reuses the entry).
+    function close(force, keep) {
         if (!current) return;
         if (!force && current.guard && !current.guard()) return;
         const el = current.el;
@@ -43,6 +72,7 @@
         el.classList.remove('active');
         setTimeout(() => el.remove(), 200);
         document.body.classList.remove('ids-win-open');
+        if (!keep) dropEntry();
     }
 
     /* A group = one wide window with a side index; each item is a registered window mounted as a section. */
@@ -67,7 +97,7 @@
         return el;
     }
 
-    function wire(el) {
+    function wire(el, onShown) {
         el.addEventListener('mousedown', (ev) => {
             if (ev.target === el) el.dataset.downOut = '1';
             else delete el.dataset.downOut;
@@ -76,7 +106,11 @@
             if ((ev.target === el && el.dataset.downOut) || ev.target.closest('[data-close]')) close(false);
         });
         document.body.classList.add('ids-win-open');
-        requestAnimationFrame(() => el.classList.add('active'));
+        pushEntry();
+        requestAnimationFrame(() => {
+            el.classList.add('active');
+            if (onShown) onShown();   // now it has a layout (before this it is display:none)
+        });
     }
 
     function open(name) {
@@ -84,7 +118,7 @@
         if (!def || !ctx) return false;
         const g = groupOf(name);
         if (g) return openGroup(g, name);
-        close(true);
+        close(true, true);
         const el = shell(`ids-win-${name}`, def.wide ? ' ids-win-wide' : '', def.icon, def.title);
         const card = el.querySelector('.ids-win-card');
         card.insertAdjacentHTML('beforeend', '<div class="ids-win-body"></div><div class="ids-win-foot"></div>');
@@ -113,7 +147,7 @@
         const names = g.items.filter((n) => registry[n]);
         if (!names.length) return false;
         if (current && current.grp === g) { current.show(name); return true; }
-        close(true);
+        close(true, true);
         const el = shell('ids-win-group', ' ids-win-grp', g.icon, g.title);
         const card = el.querySelector('.ids-win-card');
         card.insertAdjacentHTML('beforeend',
@@ -143,10 +177,22 @@
                 b.classList.toggle('ids-on', on);
                 if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
             });
-            const on = el.querySelector('.ids-grp-item.ids-on');
-            if (on && on.scrollIntoView) {
-                try { on.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { /* ignore */ }
-            }
+            reveal(true);
+        }
+
+        // Scrolls the index (a strip on phones, a column on wide screens) so the chosen section is in
+        // its middle. Needs a layout: at open the window is still hidden, so open() calls it again once shown.
+        function reveal(smooth) {
+            const nav = el.querySelector('.ids-grp-index');
+            const on = nav && nav.querySelector('.ids-grp-item.ids-on');
+            if (!on || !nav.offsetParent) return;
+            const left = on.offsetLeft - nav.offsetLeft - (nav.clientWidth - on.offsetWidth) / 2;
+            const top = on.offsetTop - nav.offsetTop - (nav.clientHeight - on.offsetHeight) / 2;
+            const to = {};
+            if (nav.scrollWidth > nav.clientWidth) to.left = Math.max(0, left);
+            if (nav.scrollHeight > nav.clientHeight) to.top = Math.max(0, top);
+            if (!('left' in to) && !('top' in to)) return;
+            try { nav.scrollTo(Object.assign(to, { behavior: smooth ? 'smooth' : 'auto' })); } catch (e) { /* ignore */ }
         }
 
         // After a save in one section the others show the new values: each one with no
@@ -240,7 +286,7 @@
             if (b) grp.show(b.dataset.sec);
         });
         current = grp;
-        wire(el);
+        wire(el, () => reveal(false));
         const first = names.includes(name) ? name : names[0];
         names.forEach(hold);
         const firstLoaded = mount(first, grp.secs[first].el);

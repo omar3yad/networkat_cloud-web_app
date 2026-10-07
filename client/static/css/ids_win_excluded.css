@@ -314,12 +314,6 @@
     text-decoration: none;
 }
 
-.ids-we-addbar {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 0.8rem;
-}
-
 /* List */
 .ids-we-row {
     display: grid;
@@ -456,6 +450,7 @@
     width: 100%;
     max-width: 520px;
     max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     display: flex;
     flex-direction: column;
     background: #fff;

@@ -268,8 +268,18 @@
         return a;
     }
 
+    // A window that opens takes the keyboard focus itself, never its first field: no cursor and no
+    // on-screen keyboard on phones until the person picks a field. Tab, Enter and Escape still work from it.
+    function focusDialog(root) {
+        const card = root && (root.querySelector('[role="dialog"], .modal-card') || root);
+        if (!card) return;
+        if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex', '-1');
+        card.style.outline = 'none';
+        card.focus({ preventScroll: true });
+    }
+
     window.NkIds = {
-        SEVERITIES, STATES, stateIcon, ApiError, api, esc,
+        SEVERITIES, STATES, stateIcon, ApiError, api, esc, focusDialog,
         stateFromStatus, stateFromError, startError,
         dateTime, fullTime, shortTime, sevLabel, sevClass, placeLabel, deviceLabel, remoteLabel, timesLabel,
         pillHtml, updateLink,

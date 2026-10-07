@@ -434,11 +434,12 @@
 
         function nameBlock(fs) {
             const r = fs.r;
-            return '<span class="ids-we-lbl ids-we-first">Name</span>' +
+            return '<span class="ids-we-lbl ids-we-first ids-wc-nlbl">Name' +
+                '<span class="ids-wt-tip"><button type="button" class="ids-wt-ib" data-nametip="1" aria-label="More about this" aria-expanded="false">' + IdsIcon('circle-info') + '</button>' +
+                '<span class="ids-wt-bub" role="tooltip">The alert shows up in your threats list under this name. A common one fills in the whole rule for you.</span></span></span>' +
                 `<div class="ids-wc-nmw">${inp(fs, 'name', 'Type a name or pick a common one', 'ids-wc-name', NAME_MAX)}` +
                 `<button type="button" class="ids-wc-nmarrow" data-sopen="1" title="Common rules" aria-label="Common rules">${IdsIcon('chevron-down')}</button>` +
                 `<div data-live="sugg">${suggMenu(fs)}</div></div>` + slot(fs, 'name') +
-                '<div class="ids-wc-fh">The alert shows up in your threats list under this name. A common one fills in the whole rule for you.</div>' +
                 '<span class="ids-we-lbl">Severity</span>' +
                 `<div class="ids-chips">${SEVS.map(([k, l]) =>
                     `<button type="button" class="ids-chip ids-sev-${k}${r.sev === k ? ' ids-on' : ''}" data-sv="${k}"><span class="ids-dot"></span>${l}</button>`).join('')}</div>`;
@@ -757,8 +758,7 @@
         function openAdd() {
             S.ov = { fs: newForm('add') };
             drawOv();
-            const f = ov.querySelector('[data-f="name"]');
-            if (f) f.focus();
+            N.focusDialog(ov);
         }
 
         function openEdit(i) {
@@ -769,8 +769,7 @@
             fs.more = it.more.slice();
             S.ov = { i, fs, base: fsKey(fs) };
             drawOv();
-            const f = ov.querySelector('[data-f="name"]');
-            if (f) f.focus();
+            N.focusDialog(ov);
         }
 
         // ── Staging ─────────────────────────────────────────────────────────
@@ -1003,12 +1002,22 @@
             if (k === 'port' && r.proto === 'any') r.proto = 'tcp';
             reform(fs);
             const root = rootOf(fs);
-            const f = root.querySelector('.ids-wc-pi.ids-on .ids-wc-cin input');
-            if (f) f.focus({ preventScroll: true });
             glow(root.querySelector('.ids-wc-hk'), 'ids-wc-glow');   // the heading changed: show it
         }
 
         function onClick(ev) {
+            const tipB = ev.target.closest('[data-nametip]');
+            const openTip = (ov || document).querySelector('.ids-wc-nlbl .ids-wt-tip.ids-wt-open');
+            if (openTip && openTip !== (tipB && tipB.parentElement)) {
+                openTip.classList.remove('ids-wt-open');
+                openTip.querySelector('.ids-wt-ib').setAttribute('aria-expanded', 'false');
+            }
+            if (tipB) {
+                const t = tipB.parentElement, on = !t.classList.contains('ids-wt-open');
+                t.classList.toggle('ids-wt-open', on);
+                tipB.setAttribute('aria-expanded', String(on));
+                return;
+            }
             if (ov && ev.target === ov && ov.dataset.downOut) { S.ov = null; drawOv(); return; }
             const fs = formOf(ev.target);
             if (fs && fs.sopen && !ev.target.closest('.ids-wc-nmw')) { fs.sopen = null; liveSugg(fs); }
@@ -1025,7 +1034,7 @@
             if (fs && d.menu === undefined && d.pick === undefined && fs.menu) fs.menu = null;
             if (fs && d.gokind) {   // the blue words: show the choice that set them, with a short glow
                 const c = rootOf(fs).querySelector('.ids-wc-pi.ids-on');
-                if (c) { c.scrollIntoView({ block: 'center', behavior: 'smooth' }); glow(c, 'ids-wc-glow'); }
+                if (c) { c.scrollIntoView({ block: 'nearest' }); glow(c, 'ids-wc-glow'); }   // already in view: no movement
             } else if (fs && d.sugg) {
                 applySugg(fs, d.sugg);
                 fs.sopen = null;
@@ -1033,8 +1042,6 @@
             } else if (fs && d.sopen) {
                 fs.sopen = fs.sopen ? null : 'all';
                 liveSugg(fs);
-                const f = rootOf(fs).querySelector('[data-f="name"]');
-                if (f) f.focus();
                 showMenu(fs);
             } else if (fs && d.menu) {
                 fs.menu = fs.menu === d.menu ? null : d.menu;
@@ -1059,7 +1066,6 @@
                 }
                 fs.menu = null;
                 reform(fs);
-                if (d.pick === 'to' && d.v === 'addr') { const f = rootOf(fs).querySelector('[data-f="toV"]'); if (f) f.focus(); }
             } else if (fs && d.sv) {
                 fs.r.sev = d.sv;
                 reform(fs);

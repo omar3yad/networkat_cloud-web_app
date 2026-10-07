@@ -262,7 +262,7 @@
                 '<span class="ids-we-lbl">Device</span>';
         }
 
-        function formHtml(fs, withAdd) {
+        function formHtml(fs) {
             const cls = (fs.err ? ' ids-we-bad' : fs.warn ? ' ids-we-warnb' : '') + (isAlias(fs) ? ' ids-we-inalias' : '');
             const ph = fs.list === 'nets' ? '10.9.0.0/16, 172.16.5.0/24' : '192.168.100.10';
             return `<div data-form="${formName(fs)}">` + (fs.list === 'srv' ? typeHtml(fs) : '') +
@@ -273,7 +273,6 @@
                     `<button type="button" class="ids-we-mlb${multiOff(fs) ? ' ids-we-disabled' : ''}" data-x="multi" title="Add multiple addresses" aria-label="Add multiple addresses">${IdsIcon('plus')}</button>`) +
                 `<div data-live="dd">${ddHtml(fs)}</div></div>` +
                 `<div data-live="msg">${msgHtml(fs)}</div>` +
-                (withAdd ? '<div class="ids-we-addbar"><button type="button" class="ids-btn ids-btn-primary" data-x="add">' + IdsIcon('plus') + 'Add</button></div>' : '') +
                 '</div>';
         }
 
@@ -368,7 +367,7 @@
             ova.innerHTML = '<div class="ids-we-ovcard" role="dialog" aria-modal="true">' +
                 `<div class="modal-header ids-we-ovh"><h2>${l === 'nets' ? 'Add network' : 'Add server'}</h2><button type="button" class="modal-close" data-x="addclose" aria-label="Close">&times;</button></div>` +
                 `<div class="ids-we-ovb"><section class="ids-sec"><h3 class="ids-sec-h">Add</h3><p class="ids-sec-help">${help}</p>` +
-                `<div class="ids-sec-body">${formHtml(S.add[l], false)}</div></section></div>` +
+                `<div class="ids-sec-body">${formHtml(S.add[l])}</div></section></div>` +
                 '<div class="ids-we-ovf"><button type="button" class="ids-btn" data-x="addclose">Cancel</button>' +
                 `<button type="button" class="ids-btn ids-btn-primary" data-x="add">${IdsIcon('plus')}Add</button></div></div>`;
             ova.querySelector('.ids-we-ovb').scrollTop = top;
@@ -512,7 +511,7 @@
             if (o.k === 'edit') {
                 return `<div class="modal-header ids-we-ovh"><h2>${o.fs.list === 'nets' ? 'Edit network' : 'Edit server'}</h2><button type="button" class="modal-close" data-x="ovclose" aria-label="Close">&times;</button></div>` +
                     '<div class="ids-we-ovb"><section class="ids-sec"><h3 class="ids-sec-h">Edit</h3>' +
-                    `<div class="ids-sec-body">${formHtml(o.fs, false)}</div></section></div>` +
+                    `<div class="ids-sec-body">${formHtml(o.fs)}</div></section></div>` +
                     '<div class="ids-we-ovf"><button type="button" class="ids-btn" data-x="ovclose">Cancel</button>' +
                     `<button type="button" class="ids-btn ids-btn-primary" data-x="ovsave"${ovDirty() ? '' : ' disabled'}>Update</button></div>`;
             }
@@ -556,8 +555,7 @@
             S.ov = { k: 'edit', l, i, fs, base: fsKey(fs) };
             S.menu = null;
             drawOv();
-            const f = ov.querySelector('[data-f="value"]');
-            if (f) f.focus();
+            N.focusDialog(ov);
         }
 
         function openMulti(l) {
@@ -633,8 +631,9 @@
             S.err = '';
             S.add[l] = newForm(l, 'add');
             S.add[l].type = type || S.types[0];
-            S.addL = null;
-            draw();
+            draw();   // the Add window stays open for the next one
+            const inp = ova && ova.querySelector('[data-f="value"]');
+            if (inp) inp.focus();
         }
 
         function discard() {
@@ -853,8 +852,7 @@
             else if (x === 'toggle') {
                 S.addL = d.l;
                 drawAddOv();
-                const inp = ova && ova.querySelector('[data-f="value"]');
-                if (inp) inp.focus();
+                N.focusDialog(ova);
             } else if (x === 'addclose') { S.addL = null; S.menu = null; drawAddOv(); } else if (x === 'ovsave') doEdit();
             else if (x === 'ovmulti') doMulti();
             else if (x === 'rowadd') { readRows(); S.ov.rows.push(''); drawOv(); const l = ov.querySelectorAll('[data-ma]'); l[l.length - 1].focus(); }

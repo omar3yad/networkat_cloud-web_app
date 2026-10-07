@@ -23,6 +23,15 @@
     margin-top: -0.15rem;
 }
 
+/* (i) beside the Name label: the bubble opens under the label, across the form. */
+.ids-wc-nlbl {
+    position: relative;
+}
+
+.ids-wc-nlbl .ids-wt-ib {
+    cursor: pointer;
+}
+
 /* Name, with common rules */
 .ids-wc-nmw {
     position: relative;
@@ -409,6 +418,17 @@
 /* Add / Edit window: one form; the live hint sits above Cancel / Add (Update). */
 .ids-we-ovcard.ids-wc-ovcard {
     max-width: 620px;
+    /* A fixed height: picking an activity changes the content, and a card that grows or shrinks
+       re-centres itself, so the header and footer would jump up and down. */
+    height: min(760px, calc(100vh - 2rem));
+    height: min(760px, calc(100dvh - 2rem));
+}
+
+@media (max-width: 520px) {
+    .ids-we-ovcard.ids-wc-ovcard {
+        height: calc(100vh - 1.2rem);
+        height: calc(100dvh - 1.2rem);
+    }
 }
 
 .ids-wc-ovcard .ids-we-ovh h2 {
@@ -447,7 +467,7 @@
 }
 
 .ids-wc-pi.ids-wc-glow {
-    animation: ids-wc-kglow 1.4s ease-out;
+    animation: ids-wc-kglow 1.2s ease-out;
 }
 
 /* A short wave from the word, one colour, ending just past the word. */
@@ -468,11 +488,17 @@
     animation: ids-wc-wave 1.2s ease-out forwards;
 }
 
+/* Reduced motion (many phones have it on): no growing or scaling, but the glow still lasts the same
+   1.2s. A 0.01s animation is a blink, not a wave. */
+@keyframes ids-wc-fade {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .ids-wc-pi.ids-wc-glow,
     .ids-wc-hk.ids-wc-glow::after,
     .ids-wc-xpl b.ids-wc-tglow::after {
-        animation-duration: 0.01s;
+        animation-name: ids-wc-fade;
     }
 }
 

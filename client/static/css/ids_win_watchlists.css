@@ -305,12 +305,6 @@
     text-decoration: none;
 }
 
-.ids-ww-addbar {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 0.8rem;
-}
-
 /* List */
 .ids-ww-row {
     display: grid;
@@ -452,6 +446,7 @@
     width: 100%;
     max-width: 520px;
     max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     overflow-y: auto;
     background: #fff;
     border: 1px solid var(--nk-border);

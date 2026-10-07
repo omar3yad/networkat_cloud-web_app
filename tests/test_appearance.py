@@ -41,3 +41,15 @@ def test_validate():
         with pytest.raises(HTTPException) as e:
             validate(k, v)
         assert e.value.status_code == 400
+
+
+def test_scroll_ms():
+    assert "--ids-glide-ms: 420;" in theme_css({})
+    assert "--ids-glide-ms: 600;" in theme_css({"appearance.scroll_ms": "600"})
+    assert "--ids-glide-ms: 0;" in theme_css({"appearance.scroll_ms": "0"})
+    assert "--ids-glide-ms: 420;" in theme_css({"appearance.scroll_ms": "99999"})
+    assert "--ids-glide-ms: 420;" in theme_css({"appearance.scroll_ms": "1;}x{"})
+    validate("appearance.scroll_ms", "800")
+    for v in ("-1", "2001", "abc", "", "1.5"):
+        with pytest.raises(HTTPException):
+            validate("appearance.scroll_ms", v)

@@ -226,7 +226,7 @@
                 `<button type="button" data-${attr}="${k}" class="${cur === k ? 'ids-we-on' : ''}">${l}</button>`).join('')}</div>`;
         }
 
-        function formHtml(fs, withAdd) {
+        function formHtml(fs) {
             const cls = (fs.err ? ' ids-we-bad' : fs.warn ? ' ids-we-warnb' : '') + (isAlias(fs) ? ' ids-we-inalias' : '');
             let h = `<div data-form="${fs.mode}"><div class="ids-we-acwrap">` +
                 '<button type="button" class="ids-we-atb" data-x="dd" title="Pick an alias" aria-label="Pick an alias">@</button>' +
@@ -247,9 +247,7 @@
                     `<span class="ids-we-lbl">Direction</span>${segHtml(DIR, fs.dir, 'd')}` +
                     '<div class="ids-we-hint">The port is the remote port when it sends, otherwise the device\'s own port.</div></div>';
             }
-            return h + `<div data-live="info">${infoHtml(fs)}</div>` +
-                (withAdd ? '<div class="ids-we-addbar"><button type="button" class="ids-btn ids-btn-primary" data-x="add">' + IdsIcon('plus') + 'Add</button></div>' : '') +
-                '</div>';
+            return h + `<div data-live="info">${infoHtml(fs)}</div></div>`;
         }
 
         // Update one form in place (typing must not lose focus or the phone keyboard).
@@ -331,7 +329,7 @@
                 '<div class="modal-header ids-we-ovh"><h2>Add excluded device</h2><button type="button" class="modal-close" data-x="addclose" aria-label="Close">&times;</button></div>' +
                 '<div class="ids-we-ovb"><section class="ids-sec"><h3 class="ids-sec-h">Add</h3>' +
                 '<p class="ids-sec-help">One or more addresses separated by commas, or an alias.</p>' +
-                `<div class="ids-sec-body">${formHtml(S.add, false)}</div></section></div>` +
+                `<div class="ids-sec-body">${formHtml(S.add)}</div></section></div>` +
                 '<div class="ids-we-ovf"><button type="button" class="ids-btn" data-x="addclose">Cancel</button>' +
                 `<button type="button" class="ids-btn ids-btn-primary" data-x="add">${IdsIcon('plus')}Add</button></div></div>`;
             ova.querySelector('.ids-we-ovb').scrollTop = top;
@@ -423,7 +421,7 @@
             if (o.k === 'edit') {
                 return '<div class="modal-header ids-we-ovh"><h2>Edit excluded device</h2><button type="button" class="modal-close" data-x="ovclose" aria-label="Close">&times;</button></div>' +
                     '<div class="ids-we-ovb"><section class="ids-sec"><h3 class="ids-sec-h">Edit</h3>' +
-                    `<div class="ids-sec-body">${formHtml(o.fs, false)}</div></section></div>` +
+                    `<div class="ids-sec-body">${formHtml(o.fs)}</div></section></div>` +
                     '<div class="ids-we-ovf"><button type="button" class="ids-btn" data-x="ovclose">Cancel</button>' +
                     `<button type="button" class="ids-btn ids-btn-primary" data-x="ovsave"${ovDirty() ? '' : ' disabled'}>Update</button></div>`;
             }
@@ -483,8 +481,7 @@
             fs.adv = !!(it.comment || it.port || it.proto !== 'any' || it.dir !== 'any');
             S.ov = { k: 'edit', i, fs, base: fsKey(fs) };
             drawOv();
-            const f = ov.querySelector('[data-f="value"]');
-            if (f) f.focus();
+            N.focusDialog(ov);
         }
 
         function openMulti() {
@@ -553,8 +550,9 @@
             S.saved = false;
             S.err = '';
             S.add = newForm('add');
-            S.open = false;
-            redraw();
+            redraw();   // the Add window stays open for the next one
+            const inp = ova && ova.querySelector('[data-f="value"]');
+            if (inp) inp.focus();
         }
 
         // Close drops every unsaved change and closes, no confirm.
@@ -729,8 +727,7 @@
             else if (x === 'toggle') {
                 S.open = true;
                 drawAddOv();
-                const inp = ova && ova.querySelector('[data-f="value"]');
-                if (inp) inp.focus();
+                N.focusDialog(ova);
             } else if (x === 'addclose') { S.open = false; drawAddOv(); }
             else if (x === 'ovsave') doEdit();
             else if (x === 'ovmulti') doMulti();

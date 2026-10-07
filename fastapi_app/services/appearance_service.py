@@ -52,6 +52,11 @@ _COLOR_KEYS = {
     "appearance.icon_color_warn": ("--ids-ic-warn", "#d97706", "Icon color (warning)", "Warning icons. Hex like #d97706."),
     "appearance.icon_color_bad": ("--ids-ic-bad", "#dc2626", "Icon color (error)", "Error icons. Hex like #dc2626."),
 }
+# key -> (css var, default ms, min, max, label, description). Integer, milliseconds.
+_MS_KEYS = {
+    "appearance.scroll_ms": ("--ids-glide-ms", 420, 0, 2000, "Scroll time (ms)",
+                             "Phone: how long the page glides to an opened threat. 0 jumps. 0 to 2000."),
+}
 _FONT_LABELS = {
     "appearance.font_en": "English font",
     "appearance.font_ar": "Arabic font",
@@ -76,6 +81,9 @@ def default_rows() -> List[dict]:
         })
     for key, (_var, default, label, desc) in _COLOR_KEYS.items():
         rows.append({"key": key, "value": default, "label": label, "description": "IDS page. " + desc})
+    for key, (_var, default, _lo, _hi, label, desc) in _MS_KEYS.items():
+        rows.append({"key": key, "value": str(default), "label": label, "description": "IDS page. " + desc,
+                     "value_type": "integer"})
     return rows
 
 
@@ -87,7 +95,7 @@ def ensure_defaults(db: Session) -> None:
         if r["key"] in existing:
             continue
         db.add(SystemSetting(
-            key=r["key"], value=r["value"], value_type="string",
+            key=r["key"], value=r["value"], value_type=r.get("value_type", "string"),
             label=r["label"], description=r["description"], category=CATEGORY,
         ))
         added = True
@@ -110,6 +118,10 @@ def validate(key: str, value) -> None:
     elif key in _COLOR_KEYS:
         if not _COLOR_RE.match(v):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid color")
+    elif key in _MS_KEYS:
+        _var, _default, lo, hi, _l, _d = _MS_KEYS[key]
+        if not re.fullmatch(r"\d{1,4}", v) or not lo <= int(v) <= hi:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Use {lo} to {hi}")
     else:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown setting")
 
@@ -129,6 +141,10 @@ def theme_css(values: dict) -> str:
         raw = str(values.get(key) or "").strip()
         color = raw.lower() if _COLOR_RE.match(raw) else default
         decls.append(f"{var}: {color};")
+    for key, (var, default, lo, hi, _l, _d) in _MS_KEYS.items():
+        raw = str(values.get(key) or "").strip()
+        ms = int(raw) if re.fullmatch(r"\d{1,4}", raw) and lo <= int(raw) <= hi else default
+        decls.append(f"{var}: {ms};")
     out = ""
     if families:
         out += "@import url('https://fonts.googleapis.com/css2?family=" + "&family=".join(families) + "&display=swap');\n"

@@ -433,7 +433,7 @@
         counter('idsAcSlug', 'idsAcSlug-counter');
         counter('idsAcComment', 'idsAcComment-counter');
         root.classList.add('active');
-        $('idsAcSlug').focus();
+        if (window.NkIds) NkIds.focusDialog(root);
         loadResolver(cfg.peerId);
     }
 

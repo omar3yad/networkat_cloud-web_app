@@ -15,6 +15,7 @@ body.ids-win-open {
     width: min(560px, calc(100vw - 2rem));
     max-width: 560px;
     max-height: calc(100vh - 2rem);
+    max-height: calc(100dvh - 2rem);
     display: flex;
     flex-direction: column;
     padding: 0;
@@ -169,6 +170,7 @@ body.ids-win-open {
     width: min(980px, calc(100vw - 2rem));
     max-width: 980px;
     height: min(760px, calc(100vh - 2rem));
+    height: min(760px, calc(100dvh - 2rem));
     position: relative;
     /* The card is the container: a container query can't restyle its own container. */
     container-type: inline-size;
@@ -266,8 +268,8 @@ body.ids-win-open {
     .ids-grp-index {
         width: auto;
         flex-direction: row;
-        gap: 0.25rem;
-        padding: 0.5rem 0.6rem;
+        gap: 0.5rem;
+        padding: 0.65rem 0.75rem;
         border-right: 0;
         border-bottom: 1px solid var(--nk-border);
         overflow-x: auto;
@@ -275,8 +277,32 @@ body.ids-win-open {
         -webkit-overflow-scrolling: touch;
     }
 
+    /* In the strip every section is a box of its own: hover/press greys it, the chosen one is blue. */
     .ids-grp-item {
         width: auto;
         flex: none;
+        padding: 0.55rem 0.8rem;
+        border: 1px solid var(--nk-border);
+        background: #fff;
+    }
+
+    .ids-grp-item:hover:not(:disabled) {
+        background: #eef2f7;
+        border-color: #cbd5e1;
+    }
+
+    .ids-grp-item:active:not(:disabled) {
+        background: #e2e8f0;
+    }
+
+    .ids-grp-item.ids-on,
+    .ids-grp-item.ids-on:hover:not(:disabled),
+    .ids-grp-item.ids-on:active:not(:disabled) {
+        background: #e0f2fe;
+        border-color: #7dd3fc;
+    }
+
+    .ids-grp-item:focus-visible {
+        outline-offset: 1px;
     }
 }

@@ -273,8 +273,32 @@
         if (S.byId.has(id)) S.openId = id;
     }
 
+    // Phone: an open threat is a screen of its own, so Back closes it (back to the list) instead of leaving the page.
+    let detailPushed = false;
+    let detailPops = 0;
+    function syncDetail() {
+        const want = isNarrow() && !!S.openId && !$('ids-t2').hidden;
+        if (want && !detailPushed) {
+            try { history.pushState({ idsDetail: 1 }, ''); detailPushed = true; } catch (e) { /* no history */ }
+        } else if (!want && detailPushed) {
+            detailPushed = false;
+            if (history.state && history.state.idsDetail) { detailPops++; history.back(); }
+        }
+    }
+    window.addEventListener('popstate', () => {
+        if (detailPops) { detailPops--; return; }
+        if (!detailPushed) return;
+        if (history.state && history.state.idsDetail) return;   // a window opened over it was closed: still on the threat
+        detailPushed = false;
+        S.openId = null;
+        S.panel = null;
+        S.done = null;
+        if (S.rows.length) renderThreats();
+    });
+
     function setThreatsState(icon, title, text, spin) {
         $('ids-t2').hidden = true;
+        syncDetail();
         const el = $('ids-threats-state');
         el.innerHTML = `${IdsIcon(icon, { spin: !!spin })}<span class="sl-state-title">${esc(title)}</span>` +
             (text ? `<span class="sl-state-text">${esc(text)}</span>` : '');
@@ -313,6 +337,7 @@
         const narrow = isNarrow();
         t2.classList.toggle('ids-narrow', narrow);
         t2.classList.toggle('ids-detail', narrow && !!S.openId);
+        syncDetail();
         $('ids-rows').innerHTML = S.rows.map((e) => rowHtml(e, e.id === freshId)).join('');
         $('ids-shown').textContent = `${S.rows.length.toLocaleString('en-US')} shown`;
         const more = $('ids-more');
@@ -485,6 +510,29 @@
         renderPane();
     }
 
+    // A short, even glide: the browser's own smooth scroll is longer and varies. The time is the admin
+    // setting "Scroll time" (appearance.scroll_ms) through the theme's --ids-glide-ms.
+    const GLIDE_DEFAULT_MS = 420;
+    function glideMs() {
+        const v = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ids-glide-ms'), 10);
+        return Number.isFinite(v) && v >= 0 ? v : GLIDE_DEFAULT_MS;
+    }
+    function glideBy(dy) {
+        const max = document.documentElement.scrollHeight - window.innerHeight;
+        const from = window.scrollY;
+        const to = Math.max(0, Math.min(max, from + dy));
+        if (to === from) return;
+        const ms = glideMs();
+        if (!ms || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { window.scrollTo(0, to); return; }
+        const t0 = performance.now();
+        const step = (now) => {
+            const k = Math.min(1, (now - t0) / ms);
+            window.scrollTo(0, from + (to - from) * (1 - Math.pow(1 - k, 3)));
+            if (k < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+
     function openRow(tr) {
         if (!tr) return;
         const id = Number(tr.dataset.id);
@@ -497,7 +545,14 @@
         const t2 = $('ids-t2');
         t2.classList.toggle('ids-detail', isNarrow());
         renderPane();
-        if (isNarrow()) $('ids-threats-body').scrollIntoView({ block: 'start', behavior: 'smooth' });
+        syncDetail();
+        // Phone: scroll only when the ticket isn't fully in view: down to its end when it starts low, up to its start when it starts above. One jump, no slide.
+        if (isNarrow()) {
+            const r = $('ids-pane').getBoundingClientRect();
+            const vh = window.innerHeight || document.documentElement.clientHeight;
+            if (r.top < 0) glideBy(r.top);
+            else if (r.bottom > vh) glideBy(r.bottom - vh + 24);
+        }
     }
 
     // ── Filters (our own menus, never a native select) ──────────────────────
@@ -678,10 +733,13 @@
     }
 
     async function loadSide() {
-        N.api.summary(S.peerId).then((sum) => {
+        // First the bars and the settings links (what shows at once, next to the threats' own load);
+        // the four list counts are the least urgent and follow one after another, so the page
+        // opens with three requests, not seven.
+        const first = [N.api.summary(S.peerId).then((sum) => {
             counts = sum.counts || null;
             renderBars();
-        }).catch(() => renderBars());
+        }).catch(() => renderBars()),
         N.api.settings(S.peerId).then((doc) => {
             const s = doc.settings || {};
             const rules = s.rules || {};
@@ -696,10 +754,14 @@
             const days = (s.events || {}).retention_days;
             setV('ids-v-recording', days ? `${days} ${days === 1 ? 'day' : 'days'}` : '');
             setV('ids-v-rules', String((doc.rule_overrides || []).length));
-        }).catch(() => { /* the links still open */ });
-        [['muted', 'ids-v-muted'], ['excluded', 'ids-v-excluded'], ['watchlists', 'ids-v-watchlists'], ['custom-rules', 'ids-v-custom']].forEach(([name, id]) => {
-            N.api.list(S.peerId, name).then((d) => setV(id, String((d.items || []).length))).catch(() => {});
-        });
+        }).catch(() => { /* the links still open */ })];
+        await Promise.all(first);
+        for (const [name, id] of [['muted', 'ids-v-muted'], ['excluded', 'ids-v-excluded'], ['watchlists', 'ids-v-watchlists'], ['custom-rules', 'ids-v-custom']]) {
+            try {
+                const d = await N.api.list(S.peerId, name);
+                setV(id, String((d.items || []).length));
+            } catch (e) { /* the link still opens */ }
+        }
     }
 
     // ── Clear ───────────────────────────────────────────────────────────────

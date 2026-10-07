@@ -183,7 +183,7 @@
             return fs.nwarn ? warnHtml(fs.nwarn) : '<div class="ids-ww-hint">Shown on its threats. Empty uses the alias name.</div>';
         }
 
-        function formHtml(fs, withAdd) {
+        function formHtml(fs) {
             const inCls = (fs.err ? ' ids-ww-bad' : fs.warn ? ' ids-ww-warnb' : '') + (isAlias(fs) ? ' ids-ww-inalias' : '');
             const ph = 'Banned sites';
             return `<div data-form="${fs.mode}">` +
@@ -197,7 +197,6 @@
                 '<span class="ids-ww-lbl">Name</span>' +
                 `<input class="ids-ww-inp${fs.nwarn ? ' ids-ww-warnb' : ''}" data-f="name" value="${esc(fs.name)}" placeholder="Like Known bad servers" maxlength="${NAME_MAX}" autocomplete="off">` +
                 `<div data-live="nmsg">${nmsgHtml(fs)}</div>` +
-                (withAdd ? '<div class="ids-ww-addbar"><button type="button" class="ids-btn ids-btn-primary" data-x="add">' + IdsIcon('plus') + 'Add</button></div>' : '') +
                 '</div>';
         }
 
@@ -272,7 +271,7 @@
             if (!ova) ova = mountOv();
             ova.innerHTML = '<div class="ids-ww-ovcard" role="dialog" aria-modal="true">' +
                 '<div class="modal-header ids-ww-ovh"><h2>Add watchlist</h2><button type="button" class="modal-close" data-x="addclose" aria-label="Close">&times;</button></div>' +
-                `<div class="ids-ww-ovb">${formHtml(S.add, false)}</div>` +
+                `<div class="ids-ww-ovb">${formHtml(S.add)}</div>` +
                 '<div class="ids-ww-ovf"><button type="button" class="ids-btn" data-x="addclose">Cancel</button>' +
                 `<button type="button" class="ids-btn ids-btn-primary" data-x="add">${IdsIcon('plus')}Add</button></div></div>`;
         }
@@ -378,7 +377,7 @@
             if (!ov) ov = mountOv();
             ov.innerHTML = '<div class="ids-ww-ovcard" role="dialog" aria-modal="true">' +
                 '<div class="modal-header ids-ww-ovh"><h2>Edit watchlist</h2><button type="button" class="modal-close" data-x="ovclose" aria-label="Close">&times;</button></div>' +
-                `<div class="ids-ww-ovb">${formHtml(S.edit.fs, false)}</div>` +
+                `<div class="ids-ww-ovb">${formHtml(S.edit.fs)}</div>` +
                 '<div class="ids-ww-ovf"><button type="button" class="ids-btn" data-x="ovclose">Cancel</button>' +
                 `<button type="button" class="ids-btn ids-btn-primary" data-x="ovsave"${ovDirty() ? '' : ' disabled'}>Update</button></div></div>`;
         }
@@ -397,8 +396,7 @@
             fs.name = it.name === aliasLabel(it.aliasId) ? '' : it.name;
             S.edit = { i, fs, base: fsKey(fs) };
             drawEdit();
-            const f = ov.querySelector('[data-f="value"]');
-            if (f) f.focus();
+            N.focusDialog(ov);
         }
 
         function doEdit() {
@@ -433,8 +431,9 @@
             S.saved = false;
             S.err = '';
             S.add = newForm('add');
-            S.open = false;
-            redraw();
+            redraw();   // the Add window stays open for the next one
+            const inp = ova && ova.querySelector('[data-f="value"]');
+            if (inp) inp.focus();
         }
 
         function discard() {
@@ -631,8 +630,7 @@
             else if (x === 'toggle') {
                 S.open = true;
                 drawAddOv();
-                const inp = ova && ova.querySelector('[data-f="value"]');
-                if (inp) inp.focus();
+                N.focusDialog(ova);
             } else if (x === 'addclose') { S.open = false; drawAddOv(); }
             else if (x === 'ovsave') doEdit();
             else if (x === 'ovclose') { S.edit = null; drawEdit(); }
