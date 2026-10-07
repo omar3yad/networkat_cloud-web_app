@@ -1059,9 +1059,12 @@ const isPeerOnline = window.WEB_FILTER_CONFIG ? window.WEB_FILTER_CONFIG.isOnlin
                 // Handle selecting the alias
                 item.addEventListener('mousedown', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     input.value = `@${list.name || list.slug}`;
                     dropdown.style.display = 'none';
-                    input.dispatchEvent(new Event('input'));
+                    if (inputId === 'ruleSrc') {
+                        updateAddressMultiBtnState('ruleSrc');
+                    }
                     input.dispatchEvent(new Event('change'));
                 });
 

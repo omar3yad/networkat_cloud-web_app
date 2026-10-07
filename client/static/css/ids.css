@@ -35,6 +35,11 @@
 
 /* ── State pill (tone = colour) ─────────────────────────────────────────── */
 
+:root {
+    --sl-notice: #0284c7;
+    --sl-notice-bg: #e0f2fe;
+}
+
 .ids-tone-ok { --tc: var(--sl-notice); --tb: var(--sl-notice-bg); }
 .ids-tone-warn { --tc: var(--sl-warning); --tb: var(--sl-warning-bg); }
 .ids-tone-err { --tc: var(--sl-error); --tb: var(--sl-error-bg); }
@@ -53,6 +58,54 @@
     color: var(--tc);
     background: var(--tb);
     vertical-align: middle;
+}
+
+/* ── Progress pills (Starting P2 & Applying P3) ─────────────────────────── */
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 26px;
+    padding: 0 0.7rem 0 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: var(--sl-notice-bg);
+    color: var(--sl-notice);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    vertical-align: middle;
+}
+
+.pill .sp {
+    display: inline-block;
+    width: 14px;
+    text-align: center;
+}
+
+.pill .sp i,
+.pill .sp .ids-i {
+    display: inline-block;
+}
+
+/* Starting: number chip (P2). The number sits after a thin divider. */
+.pill .num {
+    margin-left: 0.15rem;
+    padding-left: 0.5rem;
+    border-left: 1px solid rgba(2, 132, 199, 0.35);
+    font-weight: 700;
+}
+
+/* Applying: filling pill (P3). --p is detection.progress (0..99). No number in it. */
+.pill.fill {
+    --p: 0;
+    position: relative;
+    overflow: hidden;
+    height: 30px;
+    padding: 0 0.85rem 0 0.7rem;
+    background: linear-gradient(90deg, #b6e0f7 calc(var(--p) * 1%), var(--sl-notice-bg) 0);
+    transition: background 0.25s;
 }
 
 /* Watching (running only): green, with a soft ring pulsing from the whole pill. */

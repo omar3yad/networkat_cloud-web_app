@@ -75,16 +75,19 @@
         const st = S.status || {};
         const d = st.detection || {};
         const rules = st.rules || {};
-        $('ids-pill').innerHTML = N.pillHtml(key);
+        N.updatePill($('ids-pill'), st, key);
 
         let msg = s.text || '';
-        if (key === 'running' || key === 'dropping') msg = rules.updated_at ? `Rules updated ${N.dateTime(rules.updated_at)}` : 'Watching your network';
-        if (key === 'applying') {
+        if (key === 'running' || key === 'dropping') {
+            msg = rules.updated_at ? `Rules updated ${N.dateTime(rules.updated_at)}` : 'Watching your network';
+        } else if (key === 'starting') {
+            msg = 'Getting ready. This can take a few minutes on a slow connection.';
+        } else if (key === 'applying') {
             const gap = st.engine && st.engine.inspection_gap_seconds;
-            msg = gap ? `Inspection pauses ~${gap} s` : 'Applying change…';
+            msg = gap ? `Inspection pauses ~${gap} s` : 'Applying your change. Inspection keeps running while it finishes.';
         }
         const msgEl = $('ids-status-msg');
-        msgEl.textContent = msg;
+        if (msgEl.textContent !== msg) msgEl.textContent = msg;
         msgEl.className = `ids-status-msg${s.tone === 'warn' || s.tone === 'err' ? ` ids-tone-${s.tone} ids-msg-tone` : ''}`;
 
         let bar = '';
@@ -154,11 +157,14 @@
         return S.state;
     }
 
-    // Poll fast while starting/applying, slowly otherwise.
+    // Poll fast (~1s) while starting/applying or progress is moving, slowly otherwise.
     function schedulePoll() {
         clearTimeout(S.statusTimer);
-        const s = N.STATES[S.state] || {};
-        S.statusTimer = setTimeout(refreshStatus, s.busy ? BUSY_MS : STATUS_MS);
+        const d = (S.status && S.status.detection) || {};
+        const hasProgress = typeof d.progress === 'number' && !isNaN(d.progress);
+        const isBusy = hasProgress || d.applying === true || d.starting === true;
+        const delay = isBusy ? 1000 : STATUS_MS;
+        S.statusTimer = setTimeout(refreshStatus, delay);
     }
 
     async function onSwitch() {

@@ -208,6 +208,22 @@
         renderFoot(w);
         try {
             await putSettings(w.ctx.peerId, body);
+            while (true) {
+                let st = null;
+                try {
+                    st = await w.ctx.api.status(w.ctx.peerId);
+                    if (w.ctx.refreshStatus) await w.ctx.refreshStatus();
+                } catch (e) { /* ignore transient error */ }
+                const d = (st && st.detection) || {};
+                if (!d.applying) {
+                    if (d.last_error) {
+                        const why = (w.ctx.N && w.ctx.N.START_ERRORS && w.ctx.N.START_ERRORS[d.last_error]) || d.last_error;
+                        throw new Error(`Could not apply: ${why}`);
+                    }
+                    break;
+                }
+                await new Promise((r) => setTimeout(r, 1000));
+            }
             try {
                 w.spec.init(w, await w.ctx.api.settings(w.ctx.peerId));
             } catch (e) {
@@ -218,8 +234,8 @@
             w.done = true;
             clearTimeout(w.doneTimer);
             w.doneTimer = setTimeout(() => { w.done = false; if (w.root.isConnected) renderFoot(w); }, 2000);
-            w.ctx.refreshSide();
-            w.ctx.refreshStatus();
+            if (w.ctx.refreshSide) w.ctx.refreshSide();
+            if (w.ctx.refreshStatus) w.ctx.refreshStatus();
         } catch (e) {
             w.fail = e.message || 'Couldn\'t save.';
         }

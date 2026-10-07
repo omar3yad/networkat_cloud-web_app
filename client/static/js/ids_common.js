@@ -161,9 +161,9 @@
             if (d.enough_memory === false) return 'memory';
             return d.last_error ? 'error' : 'off';
         }
-        if (d.starting || (!d.running && !d.last_error)) return 'starting';
-        if (!d.running) return 'error';
+        if (d.starting) return 'starting';
         if (d.applying) return 'applying';
+        if (!d.running) return d.last_error ? 'error' : 'starting';
         return d.dropping_packets ? 'dropping' : 'running';
     }
 
@@ -247,10 +247,79 @@
         return IdsIcon(s.icon, { spin: !!s.spin });
     }
 
-    function pillHtml(stateKey) {
+    function pillHtml(stateKey, status) {
+        const d = (status && status.detection) || {};
+        const hasProgress = typeof d.progress === 'number' && !isNaN(d.progress);
+        const progress = hasProgress ? Math.max(0, Math.min(99, Math.round(d.progress))) : null;
+
+        if (!d.last_error && progress !== null) {
+            if (d.starting) {
+                return `<span class="pill"><span class="sp"><i class="fas fa-circle-notch fa-spin"></i></span>Starting<span class="num">${progress}%</span></span>`;
+            } else if (d.applying || d.running) {
+                return `<span class="pill fill" style="--p:${progress}"><span class="sp"><i class="fas fa-gear fa-spin"></i></span>Applying</span>`;
+            }
+        }
+        if (stateKey === 'starting') {
+            return '<span class="pill"><span class="sp"><i class="fas fa-circle-notch fa-spin"></i></span>Starting</span>';
+        }
+        if (stateKey === 'applying') {
+            return '<span class="pill fill" style="--p:0"><span class="sp"><i class="fas fa-gear fa-spin"></i></span>Applying</span>';
+        }
         const s = STATES[stateKey] || STATES.failed;
         const run = stateKey === 'running' ? ' ids-pill-run' : '';
         return `<span class="ids-pill ids-tone-${s.tone}${run}">${stateIcon(s)}${esc(s.pill)}</span>`;
+    }
+
+    // Updates pill in-place without re-rendering to keep the spin animation steady.
+    function updatePill(container, status, stateKey) {
+        if (!container) return;
+        const d = (status && status.detection) || {};
+        const hasProgress = typeof d.progress === 'number' && !isNaN(d.progress);
+        const progress = hasProgress ? Math.max(0, Math.min(99, Math.round(d.progress))) : null;
+
+        let mode = 'standard';
+        if (!d.last_error && progress !== null) {
+            if (d.starting) {
+                mode = 'starting_p2';
+            } else if (d.applying || d.running) {
+                mode = 'applying_p3';
+            }
+        } else if (stateKey === 'starting') {
+            mode = 'starting';
+        } else if (stateKey === 'applying') {
+            mode = 'applying';
+        }
+
+        if (mode === 'starting_p2') {
+            let pill = container.querySelector('.pill:not(.fill)');
+            if (!pill || !pill.querySelector('.num')) {
+                container.innerHTML = `<span class="pill"><span class="sp"><i class="fas fa-circle-notch fa-spin"></i></span>Starting<span class="num">${progress}%</span></span>`;
+            } else {
+                const numEl = pill.querySelector('.num');
+                if (numEl && numEl.textContent !== `${progress}%`) {
+                    numEl.textContent = `${progress}%`;
+                }
+            }
+        } else if (mode === 'applying_p3') {
+            let pill = container.querySelector('.pill.fill');
+            if (!pill) {
+                container.innerHTML = `<span class="pill fill" style="--p:${progress}"><span class="sp"><i class="fas fa-gear fa-spin"></i></span>Applying</span>`;
+            } else {
+                pill.style.setProperty('--p', progress);
+            }
+        } else if (mode === 'starting') {
+            let pill = container.querySelector('.pill:not(.fill)');
+            if (!pill || pill.querySelector('.num')) {
+                container.innerHTML = '<span class="pill"><span class="sp"><i class="fas fa-circle-notch fa-spin"></i></span>Starting</span>';
+            }
+        } else if (mode === 'applying') {
+            let pill = container.querySelector('.pill.fill');
+            if (!pill) {
+                container.innerHTML = '<span class="pill fill" style="--p:0"><span class="sp"><i class="fas fa-gear fa-spin"></i></span>Applying</span>';
+            }
+        } else {
+            container.innerHTML = pillHtml(stateKey);
+        }
     }
 
     // "Update device" link, like system logs: opens the update window on the
@@ -279,9 +348,9 @@
     }
 
     window.NkIds = {
-        SEVERITIES, STATES, stateIcon, ApiError, api, esc, focusDialog,
+        SEVERITIES, STATES, START_ERRORS, stateIcon, ApiError, api, esc, focusDialog,
         stateFromStatus, stateFromError, startError,
         dateTime, fullTime, shortTime, sevLabel, sevClass, placeLabel, deviceLabel, remoteLabel, timesLabel,
-        pillHtml, updateLink,
+        pillHtml, updatePill, updateLink,
     };
 })();

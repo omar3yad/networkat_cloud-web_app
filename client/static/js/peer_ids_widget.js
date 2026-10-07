@@ -31,9 +31,12 @@
         return S.pageUrl + (qs ? `?${qs}` : '');
     }
 
-    function setPill(stateKey) {
+    function setPill(stateKey, status) {
         S.state = stateKey;
-        $('ids-widget-pill').innerHTML = N.pillHtml(stateKey);
+        const pillEl = $('ids-widget-pill');
+        if (pillEl) {
+            N.updatePill(pillEl, status, stateKey);
+        }
     }
 
     function setBox(stateKey, extraTitle, extraText) {
@@ -95,16 +98,27 @@
 
     // ── Loading ──────────────────────────────────────────────────────────────
 
+    function scheduleStatus(status) {
+        clearTimeout(S.statusTimer);
+        const d = (status && status.detection) || {};
+        const hasProgress = typeof d.progress === 'number' && !isNaN(d.progress);
+        const isBusy = hasProgress || d.applying === true || d.starting === true;
+        const delay = isBusy ? 1000 : STATUS_MS;
+        S.statusTimer = setTimeout(refreshStatus, delay);
+    }
+
     async function refreshStatus() {
         try {
             const status = await N.api.status(S.peerId);
             const key = N.stateFromStatus(status);
             const changed = key !== S.state;
-            setPill(key);
+            setPill(key, status);
             if (changed) render(null);
+            scheduleStatus(status);
         } catch (err) {
-            setPill(N.stateFromError(err));
+            setPill(N.stateFromError(err), null);
             render(null);
+            scheduleStatus(null);
         }
     }
 
@@ -118,23 +132,23 @@
 
     async function load() {
         clearTimeout(S.timer);
-        clearInterval(S.statusTimer);
+        clearTimeout(S.statusTimer);
         try {
             const [status, sum, list] = await Promise.all([
                 N.api.status(S.peerId),
                 N.api.summary(S.peerId),
                 N.api.threats(S.peerId, { limit: LIMIT }),
             ]);
-            setPill(N.stateFromStatus(status));
+            setPill(N.stateFromStatus(status), status);
             S.counts = sum.counts || null;
             S.rows = (list.entries || []).slice(0, LIMIT);
             render(null);
             S.ready = true;
-            S.statusTimer = setInterval(refreshStatus, STATUS_MS);
+            scheduleStatus(status);
             startStream();
         } catch (err) {
             const key = N.stateFromError(err);
-            setPill(key);
+            setPill(key, null);
             render(null);
             S.ready = false;
             stopStream();

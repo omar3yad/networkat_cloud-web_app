@@ -13,3 +13,7 @@
 ## 3. Clean Architecture & Security
 - Never expose internal database IDs, stack traces, or raw backend errors to the end user.
 - Keep controllers thin and delegate logic to service/repository layers.
+
+## 4. Backend APIs: FastAPI Only
+- **All new APIs MUST be written in FastAPI** under `/opt/networkat_sdwan/core/web_app/fastapi_app`.
+- **Do NOT create new API endpoints in Flask**. Flask is maintained only for legacy routes and page template rendering.

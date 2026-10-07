@@ -2223,8 +2223,10 @@ async function submitAddressList(e) {
                     if (targetInput) {
                         const curVal = targetInput.value.trim();
                         targetInput.value = curVal ? `${curVal}, @${slug}` : `@${slug}`;
+                        const targetDd = document.getElementById(inlineAliasTargetInputId + '-dropdown');
+                        if (targetDd) targetDd.style.display = 'none';
+                        updateAddressMultiBtnState(inlineAliasTargetInputId);
                         targetInput.dispatchEvent(new Event('change'));
-                        targetInput.dispatchEvent(new Event('input'));
                     }
                     inlineAliasTargetInputId = null;
                 }
@@ -2259,8 +2261,10 @@ async function submitAddressList(e) {
                     if (targetInput) {
                         const curVal = targetInput.value.trim();
                         targetInput.value = curVal ? `${curVal}, @${slug}` : `@${slug}`;
+                        const targetDd = document.getElementById(inlineAliasTargetInputId + '-dropdown');
+                        if (targetDd) targetDd.style.display = 'none';
+                        updateAddressMultiBtnState(inlineAliasTargetInputId);
                         targetInput.dispatchEvent(new Event('change'));
-                        targetInput.dispatchEvent(new Event('input'));
                     }
                     inlineAliasTargetInputId = null;
                 }
@@ -2303,8 +2307,10 @@ async function submitAddressList(e) {
             if (targetInput) {
                 const curVal = targetInput.value.trim();
                 targetInput.value = curVal ? `${curVal}, @${slug}` : `@${slug}`;
+                const targetDd = document.getElementById(inlineAliasTargetInputId + '-dropdown');
+                if (targetDd) targetDd.style.display = 'none';
+                updateAddressMultiBtnState(inlineAliasTargetInputId);
                 targetInput.dispatchEvent(new Event('change'));
-                targetInput.dispatchEvent(new Event('input'));
             }
             inlineAliasTargetInputId = null;
         }
@@ -2582,9 +2588,10 @@ function renderAutocompleteOptions(input, dropdown, forceShow = false) {
 
             item.addEventListener('mousedown', (e) => {
                 e.preventDefault(); // prevent blur
+                e.stopPropagation();
                 input.value = `@${list.name || list.slug}`; // Store as friendly name
                 dropdown.style.display = 'none';
-                input.dispatchEvent(new Event('input'));
+                updateAddressMultiBtnState(input.id);
                 input.dispatchEvent(new Event('change'));
             });
             dropdown.appendChild(item);

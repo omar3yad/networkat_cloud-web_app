@@ -160,6 +160,14 @@ def test_failsafe_alone_reads_unavailable(peer):
     assert out["detection"] == {"state": "unavailable", "locks": [], "source": None}
 
 
+def test_status_preserves_detection_progress(peer):
+    det = {"state": "enabled", "running": False, "starting": True, "applying": True, "progress": 42}
+    out = svc.client_status({"detection": det})
+    assert out["detection"]["progress"] == 42
+    assert out["detection"]["starting"] is True
+    assert out["detection"]["applying"] is True
+
+
 def test_settings_hide_prevention_and_community_id(peer):
     out = svc.get_settings(peer)
     _no_hidden(out)

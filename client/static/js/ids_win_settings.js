@@ -235,11 +235,30 @@
             try {
                 await putSettings(ctx, body);
                 base = JSON.parse(json(S));
+
+                // Wait until applying completes before showing success
+                while (true) {
+                    let st = null;
+                    try {
+                        st = await ctx.api.status(ctx.peerId);
+                        if (ctx.refreshStatus) await ctx.refreshStatus();
+                    } catch (e) { /* ignore transient network error */ }
+                    const d = (st && st.detection) || {};
+                    if (!d.applying) {
+                        if (d.last_error) {
+                            const why = (ctx.N && ctx.N.START_ERRORS && ctx.N.START_ERRORS[d.last_error]) || d.last_error;
+                            throw new Error(`Could not apply: ${why}`);
+                        }
+                        break;
+                    }
+                    await new Promise((r) => setTimeout(r, 1000));
+                }
+
                 done = true;
                 clearTimeout(doneTimer);
                 doneTimer = setTimeout(() => { done = false; if (root.isConnected) store.paint(); }, 2000);
-                ctx.refreshSide();
-                ctx.refreshStatus();
+                if (ctx.refreshSide) ctx.refreshSide();
+                if (ctx.refreshStatus) ctx.refreshStatus();
             } catch (e) {
                 fail = e.message || 'Couldn\'t save.';
             }
