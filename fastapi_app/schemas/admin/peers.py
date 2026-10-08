@@ -42,3 +42,22 @@ class AdminPeersResponse(BaseModel):
     peers: List[PeerSchema] = Field(default_factory=list)
     stats: PeerStatsSchema = Field(default_factory=PeerStatsSchema)
     customers: List[CustomerSummarySchema] = Field(default_factory=list)
+
+
+class AdminPeerDetailResponse(BaseModel):
+    success: bool = True
+    peer: PeerSchema
+    routes: List[dict] = Field(default_factory=list)
+
+
+class AdminPeerActionResponse(BaseModel):
+    success: bool = True
+    message: str = "Operation completed"
+
+
+class AdminPeerReconnectResponse(BaseModel):
+    success: bool = True
+    peer_id: str
+    is_online: bool = False
+    is_reachable: bool = False
+    message: str = "Reconnected"

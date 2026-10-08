@@ -1411,18 +1411,52 @@
     <div class="modal" id="resetModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Reset Password</h3>
+                <h3>Reset password</h3>
                 <button class="close-btn" onclick="hideResetModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>New Password</label>
+                    <label>New password</label>
                     <input type="password" id="newPassword" placeholder="•••••••• (min 6 chars)">
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="hideResetModal()">Cancel</button>
                 <button class="btn-primary" onclick="resetPassword()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Peer Confirmation Modal -->
+    <div class="modal" id="deletePeerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Delete peer</h3>
+                <button class="close-btn" onclick="hideDeletePeerModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="delete-peer-msg" style="color: var(--gray-600); font-size: 0.9rem; line-height: 1.5;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="hideDeletePeerModal()">Cancel</button>
+                <button class="btn-danger" id="confirm-delete-peer-btn" onclick="confirmDeletePeer()" style="background: var(--danger); color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 500; cursor: pointer;">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Action Confirmation Modal -->
+    <div class="modal" id="actionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="actionModalTitle">Confirm action</h3>
+                <button class="close-btn" onclick="hideActionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="actionModalMsg" style="color: var(--gray-600); font-size: 0.9rem; line-height: 1.5;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="hideActionModal()">Cancel</button>
+                <button id="actionModalConfirmBtn" style="padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 500; cursor: pointer;">Confirm</button>
             </div>
         </div>
     </div>
@@ -1618,31 +1652,37 @@
                 const data = await response.json();
                 if (data.success) {
                     hideTokenModal();
-                    showNotification('  Token generated successfully');
-                    setTimeout(() => location.reload(), 2000);
+                    showNotification('Token generated');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification(data.error || 'Token generation failed');
                 }
             } catch (error) {
-                alert('Error generating token');
+                showNotification('Token generation failed');
             }
         }
 
         async function toggleToken(token, currentStatus) {
             try {
                 const response = await fetch(`/customers/{{ customer.id }}/toggle_token/${token}`, { method: 'POST' });
-                if (response.ok) location.reload();
+                if (response.ok) {
+                    showNotification('Token updated');
+                    location.reload();
+                } else {
+                    showNotification('Token update failed');
+                }
             } catch (error) {
-                alert('Error toggling token');
+                showNotification('Token update failed');
             }
         }
 
         function copyToken(token) {
             navigator.clipboard.writeText(token).then(() => {
-                showNotification('  Token copied to clipboard!');
+                showNotification('Token copied');
             });
         }
 
         // --- Portal Users Management ---
-3
         async function loadUsers() {
             try {
                 const response = await fetch('/api/customers/{{ customer.user_id if customer.user_id else customer.id }}/users');
@@ -1665,8 +1705,8 @@
         <td>${user.created_at || 'Unknown'}</td>
         <td>${user.last_login || '-'}</td>
         <td>
-            <button class="action-btn" onclick="showResetModal('${user.id}')" title="Reset Password"><i class="fas fa-key"></i></button>
-            <button class="action-btn" onclick="toggleUser('${user.id}', ${user.active})" title="Toggle Status"><i class="fas fa-toggle-${user.active ? 'on' : 'off'}"></i></button>
+            <button class="action-btn" onclick="showResetModal('${user.id}')" title="Reset password"><i class="fas fa-key"></i></button>
+            <button class="action-btn" onclick="toggleUser('${user.id}', ${user.active})" title="Toggle status"><i class="fas fa-toggle-${user.active ? 'on' : 'off'}"></i></button>
             <button class="action-btn" onclick="deleteUser('${user.id}')" title="Delete"><i class="fas fa-trash"></i></button>
         </td>
     </tr>
@@ -1680,9 +1720,14 @@
             try {
                 const response = await fetch(`/api/users/${userId}/toggle`, { method: 'POST' });
                 const data = await response.json();
-                if (data.success) loadUsers();
+                if (data.success) {
+                    showNotification('Status updated');
+                    loadUsers();
+                } else {
+                    showNotification('Status update failed');
+                }
             } catch (error) {
-                alert('Error toggling user');
+                showNotification('Status update failed');
             }
         }
 
@@ -1699,69 +1744,123 @@
         async function resetPassword() {
             const newPassword = document.getElementById('newPassword').value.trim();
             if (!newPassword || newPassword.length < 6) {
-                alert('Password must be at least 6 characters');
+                showNotification('Password must be at least 6 characters');
                 return;
             }
 
             try {
-                const response = await fetch(`/api/users/${currentUserId}/reset-password`, {
+                const response = await fetch(`/api/v2/admin/customers/${CUSTOMER_ID}/reset-password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: newPassword })
+                    body: JSON.stringify({ password: newPassword, user_id: currentUserId })
                 });
-                if (response.ok) {
+                const data = await response.json();
+                if (response.ok && data.success) {
                     hideResetModal();
-                    showNotification('  Password reset successfully');
+                    showNotification('Password reset successfully');
                 } else {
-                    alert('Error resetting password');
+                    showNotification(data.detail || data.error || 'Password reset failed');
                 }
             } catch (error) {
-                alert('Error resetting password');
+                showNotification('Password reset failed');
             }
         }
 
-        async function deleteUser(userId) {
-            if (!confirm('Are you sure you want to delete this user?')) return;
-            try {
-                const response = await fetch(`/api/users/${userId}/delete`, { method: 'DELETE' });
-                if (response.ok) {
-                    loadUsers();
-                    showNotification('  User deleted');
+        function deleteUser(userId) {
+            openActionModal({
+                title: 'Delete user',
+                message: 'Delete this user account?',
+                confirmText: 'Delete',
+                btnClass: 'btn-danger',
+                onConfirm: async () => {
+                    const response = await fetch(`/api/users/${userId}/delete`, { method: 'DELETE' });
+                    if (response.ok) {
+                        loadUsers();
+                        showNotification('User deleted');
+                    } else {
+                        showNotification('Delete failed');
+                    }
                 }
-            } catch (error) {
-                alert('Error deleting user');
-            }
+            });
         }
 
-        async function deleteCustomer(customerId) {
+        function deleteCustomer(customerId) {
             if (!customerId) {
-                alert('Customer ID is missing.');
+                showNotification('Customer id missing');
                 return;
             }
 
-            if (!confirm('⚠️ Delete this customer? This will delete all edges, tokens, users, and policies.')) return;
-
-            try {
-                const response = await fetch(`/customers/${customerId}/delete`, { method: 'POST' });
-                if (response.ok) {
-                    window.location.href = '/customers';
-                } else {
-                    const data = await response.json();
-                    alert('Error: ' + (data.error || 'Failed to delete customer'));
+            openActionModal({
+                title: 'Delete customer',
+                message: 'Delete customer and all associated network resources?',
+                confirmText: 'Delete',
+                btnClass: 'btn-danger',
+                onConfirm: async () => {
+                    const response = await fetch(`/customers/${customerId}/delete`, { method: 'POST' });
+                    if (response.ok) {
+                        showNotification('Customer deleted');
+                        setTimeout(() => window.location.href = '/customers', 800);
+                    } else {
+                        const data = await response.json();
+                        showNotification(data.error || 'Delete failed');
+                    }
                 }
-            } catch (error) {
-                alert('Error deleting customer');
-            }
+            });
         }
+
+        // --- Action Modal Helper ---
+        function openActionModal({ title, message, confirmText, btnClass, onConfirm }) {
+            const titleEl = document.getElementById('actionModalTitle');
+            const msgEl = document.getElementById('actionModalMsg');
+            const confirmBtn = document.getElementById('actionModalConfirmBtn');
+            const modal = document.getElementById('actionModal');
+
+            if (titleEl) titleEl.textContent = title || 'Confirm action';
+            if (msgEl) msgEl.textContent = message || 'Are you sure?';
+            if (confirmBtn) {
+                confirmBtn.textContent = confirmText || 'Confirm';
+                confirmBtn.className = btnClass || 'btn-primary';
+                if (btnClass === 'btn-danger') {
+                    confirmBtn.style.background = 'var(--danger)';
+                    confirmBtn.style.color = '#fff';
+                    confirmBtn.style.border = 'none';
+                } else {
+                    confirmBtn.style.background = 'var(--primary)';
+                    confirmBtn.style.color = '#fff';
+                    confirmBtn.style.border = 'none';
+                }
+                confirmBtn.onclick = async () => {
+                    confirmBtn.disabled = true;
+                    const origText = confirmBtn.innerHTML;
+                    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing…';
+                    try {
+                        await onConfirm();
+                    } catch (e) {
+                        showNotification('Operation failed');
+                    } finally {
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = origText;
+                        hideActionModal();
+                    }
+                };
+            }
+            if (modal) modal.classList.add('active');
+        }
+
+        function hideActionModal() {
+            const modal = document.getElementById('actionModal');
+            if (modal) modal.classList.remove('active');
+        }
+
         // --- Copy AdGuard Password ---
         function copyAdGuardPassword(password, btn) {
             if (!password) {
-                showNotification('⚠️ No password found');
+                showNotification('No password found');
                 return;
             }
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(password).then(() => {
-                    showNotification('copied');
+                    showNotification('Copied');
                     highlightCopyBtn(btn);
                 }).catch(() => {
                     fallbackCopy(password, btn);
@@ -1780,10 +1879,10 @@
             el.select();
             try {
                 document.execCommand('copy');
-                showNotification('copied');
+                showNotification('Copied');
                 highlightCopyBtn(btn);
             } catch (err) {
-                alert('Password: ' + text);
+                showNotification('Copy failed');
             }
             document.body.removeChild(el);
         }
@@ -1812,32 +1911,58 @@
                 notification.style.display = 'none';
             }, 3000);
         }
-        async function deletePeer(peerId, peerName) {
-            if (!confirm(`⚠️ Are you sure you want to delete peer "${peerName}"?\n\nThis will permanently delete all associated routes first, then delete the peer itself.`)) {
-                return;
+        let pendingDeletePeerId = null;
+
+        function deletePeer(peerId, peerName) {
+            pendingDeletePeerId = peerId;
+            const msgEl = document.getElementById('delete-peer-msg');
+            if (msgEl) {
+                msgEl.textContent = `Are you sure you want to delete "${peerName || peerId}"?`;
+            }
+            const modal = document.getElementById('deletePeerModal');
+            if (modal) modal.classList.add('active');
+        }
+
+        function hideDeletePeerModal() {
+            pendingDeletePeerId = null;
+            const modal = document.getElementById('deletePeerModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        async function confirmDeletePeer() {
+            if (!pendingDeletePeerId) return;
+            const btn = document.getElementById('confirm-delete-peer-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting…';
             }
 
             try {
-                const response = await fetch(`/api/peers/${peerId}`, {
+                const response = await fetch(`/api/v2/admin/peers/${pendingDeletePeerId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                     }
                 });
 
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    showNotification('  Peer and its routes deleted successfully');
-                    // إزالة الصف مباشرة من الصفحة بدون إعادة تحميل بالكامل
-                    const row = document.querySelector(`tr[data-peer-id="${peerId}"]`);
+                    showNotification('Peer deleted');
+                    const row = document.querySelector(`tr[data-peer-id="${pendingDeletePeerId}"]`);
                     if (row) row.remove();
+                    hideDeletePeerModal();
                 } else {
-                    alert('Error deleting peer: ' + (data.error || 'Unknown error'));
+                    showNotification(data.error || data.detail || 'Delete failed');
                 }
             } catch (error) {
-                console.error('Error deleting peer:', error);
-                alert('An error occurred while attempting to delete the peer.');
+                showNotification('Request failed');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Delete';
+                }
             }
         }
 
@@ -1906,15 +2031,15 @@
             const saveBtn = document.getElementById('btn-save-sub');
 
             const origText = saveBtn.innerHTML;
-            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
             saveBtn.disabled = true;
 
             try {
-                const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/update`, {
+                const res = await fetch(`/api/v2/admin/customers/${CUSTOMER_ID}/plan`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        plan_id: planId,
+                        plan_id: parseInt(planId),
                         is_trial: isTrial,
                         billing_cycle: billingCycle,
                         renewal_date: renewalDate,
@@ -1924,86 +2049,84 @@
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    showNotification('✓ Subscription updated');
+                    showNotification('Subscription updated');
                     setTimeout(() => location.reload(), 1000);
                 } else {
-                    showNotification('⚠️ Update failed');
+                    showNotification(data.detail || data.error || 'Update failed');
                 }
             } catch (err) {
-                console.error('Error updating subscription:', err);
-                showNotification('⚠️ Connection error');
+                showNotification('Update failed');
             } finally {
                 saveBtn.innerHTML = origText;
                 saveBtn.disabled = false;
             }
         }
 
-        async function quickActivate() {
-            if (!confirm("Activate this customer's subscription and restore NetBird Mesh connectivity and controller access?")) {
-                return;
-            }
-
-            try {
-                const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/activate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    showNotification('✓ Subscription activated & Mesh restored');
-                    setTimeout(() => location.reload(), 1200);
-                } else {
-                    alert('Error activating subscription: ' + (data.error || 'Unknown error'));
+        function quickActivate() {
+            openActionModal({
+                title: 'Activate subscription',
+                message: 'Restore network connectivity and activate customer subscription?',
+                confirmText: 'Activate',
+                btnClass: 'btn-primary',
+                onConfirm: async () => {
+                    const res = await fetch(`/api/v2/admin/customers/${CUSTOMER_ID}/status`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'active' })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        showNotification('Subscription activated');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification(data.detail || data.error || 'Activation failed');
+                    }
                 }
-            } catch (err) {
-                console.error('Error activating subscription:', err);
-                alert('An error occurred while activating subscription.');
-            }
+            });
         }
 
-        async function quickSuspend() {
-            if (!confirm("⚠️ Suspend this customer's subscription? This will disable the NetBird Mesh policy and disconnect peers from controllers.")) {
-                return;
-            }
-
-            try {
-                const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/suspend`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    showNotification('✓ Customer suspended & Mesh disconnected');
-                    setTimeout(() => location.reload(), 1200);
-                } else {
-                    alert('Error suspending subscription: ' + (data.error || 'Unknown error'));
+        function quickSuspend() {
+            openActionModal({
+                title: 'Suspend subscription',
+                message: 'Suspend customer subscription and disconnect network mesh?',
+                confirmText: 'Suspend',
+                btnClass: 'btn-danger',
+                onConfirm: async () => {
+                    const res = await fetch(`/api/v2/admin/customers/${CUSTOMER_ID}/status`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'inactive' })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        showNotification('Subscription suspended');
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification(data.detail || data.error || 'Suspension failed');
+                    }
                 }
-            } catch (err) {
-                console.error('Error suspending subscription:', err);
-                alert('An error occurred while suspending subscription.');
-            }
+            });
         }
 
-        async function sendRenewalReminderEmail() {
-            if (!confirm('Send a renewal reminder email to the customer now?')) return;
-
-            try {
-                const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/send-reminder`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    showNotification('✓ ' + (data.message || 'Renewal reminder sent successfully'));
-                } else {
-                    alert('Error sending reminder: ' + (data.error || 'Unknown error'));
+        function sendRenewalReminderEmail() {
+            openActionModal({
+                title: 'Send renewal reminder',
+                message: 'Send renewal reminder email to the customer?',
+                confirmText: 'Send',
+                btnClass: 'btn-primary',
+                onConfirm: async () => {
+                    const res = await fetch(`/api/customers/${CUSTOMER_ID}/subscription/send-reminder`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        showNotification('Renewal reminder sent');
+                    } else {
+                        showNotification(data.error || 'Failed to send reminder');
+                    }
                 }
-            } catch (err) {
-                console.error('Error sending reminder email:', err);
-                alert('An error occurred while sending reminder email.');
-            }
+            });
         }
 
         // Phone Number Copy Utility

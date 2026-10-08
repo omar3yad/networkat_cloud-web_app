@@ -555,60 +555,19 @@ def proxy_handshake(peer_id):
         return jsonify({"peer_id": peer_id, "is_reachable": False, "error": str(e)}), 500
 
 @admin_bp.route('/api/peers/<peer_id>', methods=['DELETE'])
+@login_required
 @admin_required
 def delete_peer(peer_id):
-    headers = _get_api_headers()
-    base_url = _get_api_base_url()
-
     try:
-        # الخطوة 0: استدعاء uninstall على جهاز الـ peer نفسه (best-effort، مش هيوقف الحذف لو فشل)
-        try:
-            peer_resp = requests.get(f"{base_url}/api/v2/netbird/peers/{peer_id}", headers=headers, timeout=5)
-            peer_ip = peer_resp.json().get("ip") if peer_resp.ok else None
-        except Exception:
-            peer_ip = None
-
-        if peer_ip:
-            try:
-                agent_resp = requests.post(f"http://{peer_ip}:8765/uninstall", timeout=(1, 3))
-                current_app.logger.info(f"Agent uninstall call to {peer_ip} returned {agent_resp.status_code}")
-            except Exception as agent_err:
-                current_app.logger.info(f"Agent uninstall call skipped/failed for {peer_ip}: {agent_err}")
-
-        # الخطوة 1: جلب كل الـ Routes وفحص المرتبط منها بالـ Peer ده
-        routes_url = f"{base_url}/api/v2/netbird/routes"
-        routes_res = requests.get(routes_url, headers=headers)
-        
-        if routes_res.ok:
-            routes = routes_res.json()
-            # NetBird قد يرجع الـ peer المرتبط بالـ route داخل peer_id أو peer
-            for route in routes:
-                r_peer_id = route.get('peer_id') or route.get('peer')
-                if r_peer_id == peer_id:
-                    route_id = route.get('id')
-                    if route_id:
-                        del_route_url = f"{base_url}/api/v2/netbird/routes/{route_id}"
-                        del_res = requests.delete(del_route_url, headers=headers)
-                        if not del_res.ok:
-                            return jsonify({
-                                'success': False,
-                                'error': f"Failed to delete associated route {route_id}: {del_res.text}"
-                            }), 500
-
-        # الخطوة 2: حذف الـ Peer من NetBird (سيتم إزالته من المجموعات تلقائياً)
-        del_peer_url = f"{base_url}/api/v2/netbird/peers/{peer_id}"
-        peer_del_res = requests.delete(del_peer_url, headers=headers)
-
-        if peer_del_res.ok or peer_del_res.status_code == 204:
-            return jsonify({'success': True, 'message': 'Peer and its associated routes deleted successfully'})
-        else:
-            return jsonify({
-                'success': False,
-                'error': f"Failed to delete peer: {peer_del_res.text}"
-            }), peer_del_res.status_code
-
+        from fastapi_app.services.admin.peers_service import AdminPeersService
+        res = AdminPeersService.delete_peer(db=db.session, peer_id=peer_id)
+        return jsonify(res), 200
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        current_app.logger.error(f"Error deleting peer {peer_id}: {e}")
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', 'Failed to delete peer')
+        return jsonify({'success': False, 'error': detail}), status_code
+
 
 
 # ----------------------------------------------------------------------
@@ -629,148 +588,65 @@ def get_customer_subscription(customer_id):
 @admin_bp.route('/api/customers/<uuid:customer_id>/subscription', methods=['POST', 'PUT'])
 @login_required
 def update_customer_subscription(customer_id):
-    customer = Client.query.get(customer_id)
-    if not customer:
-        return jsonify({'success': False, 'error': 'Customer not found'}), 404
-
+    from fastapi_app.services.admin.customers_service import AdminCustomersService
     data = request.get_json() or {}
-    plan_id = data.get('plan_id')
-    billing_cycle = data.get('billing_cycle')
-    renewal_date_str = data.get('renewal_date')
-    new_status = data.get('status')
-
-    # Update plan
-    old_plan_id = customer.plan_id
-    plan = None
-    if plan_id is not None:
-        try:
-            plan_id = int(plan_id)
-            plan = SubscriptionPlan.query.get(plan_id)
-            if plan:
-                customer.plan_id = plan.id
-                customer.subscription = plan.name
-        except (ValueError, TypeError):
-            pass
-
-    # Update allowed_peers_count (custom exception or plan default)
-    custom_peers = data.get('allowed_peers_count')
-    if custom_peers is not None and str(custom_peers).strip() != "":
-        try:
-            val = int(custom_peers)
-            if val > 0:
-                customer.allowed_peers_count = val
-        except (ValueError, TypeError):
-            pass
-    elif plan and plan.id != old_plan_id:
-        # If plan changed and no custom override provided, adopt new plan's limit
-        customer.allowed_peers_count = plan.allowed_peers_count
-
-    # Update billing cycle
-    if billing_cycle in ('monthly', 'yearly'):
-        customer.billing_cycle = billing_cycle
-
-    # Update renewal date
-    if renewal_date_str:
-        try:
-            clean_date = renewal_date_str.split('T')[0]
-            customer.renewal_date = datetime.strptime(clean_date, '%Y-%m-%d')
-            # Reset renewal notification flag
-            customer.renewal_notified_at = None
-        except Exception as e:
-            current_app.logger.warning(f"Error parsing renewal date: {e}")
-
-    # Update is_trial flag
-    if 'is_trial' in data:
-        trial_val = data.get('is_trial')
-        if isinstance(trial_val, str):
-            customer.is_trial = trial_val.lower() in ('true', '1', 'trial')
-        else:
-            customer.is_trial = bool(trial_val)
-
-    # Commit updated attributes (allowed_peers_count, plan_id, billing_cycle, renewal_date, is_trial)
-    db.session.commit()
-
-    # Handle status transition if changed
-    old_status = customer.subscription_status
-    if new_status and new_status != old_status:
-        if new_status == 'active':
-            subscription_service.restore_active(customer, new_renewal_date=customer.renewal_date)
-        elif new_status == 'grace_period':
-            subscription_service.transition_to_grace_period(customer)
-        elif new_status == 'limit_control':
-            subscription_service.transition_to_limit_control(customer)
-        elif new_status == 'inactive':
-            subscription_service.transition_to_inactive(customer)
-
+    cid = str(customer_id)
     try:
-        db.session.refresh(customer)
-    except Exception:
-        pass
-    sub_info = subscription_service.get_subscription_info(customer)
-    return jsonify({
-        'success': True,
-        'message': 'Subscription updated successfully',
-        'subscription': sub_info
-    })
+        plan_id = data.get('plan_id')
+        if plan_id:
+            AdminCustomersService.update_customer_plan(
+                db=db.session,
+                customer_id=cid,
+                plan_id=int(plan_id),
+                billing_cycle=data.get('billing_cycle'),
+                allowed_peers_count=data.get('allowed_peers_count'),
+                renewal_date=data.get('renewal_date'),
+                is_trial=data.get('is_trial'),
+            )
+        status_val = data.get('status')
+        if status_val:
+            AdminCustomersService.update_customer_status(
+                db=db.session,
+                customer_id=cid,
+                new_status=status_val
+            )
+        detail = AdminCustomersService.get_customer_detail(db=db.session, customer_id=cid)
+        return jsonify({
+            'success': True,
+            'message': 'Subscription updated successfully',
+            'subscription': detail.get('subscription', {})
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error updating subscription for {cid}: {e}")
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', 'Failed to update subscription')
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/customers/<uuid:customer_id>/subscription/activate', methods=['POST'])
 @login_required
 def activate_customer_subscription(customer_id):
-    customer = Client.query.get(customer_id)
-    if not customer:
-        return jsonify({'success': False, 'error': 'Customer not found'}), 404
-
-    data = request.get_json() or {}
-    new_renewal = None
-    if data.get('renewal_date'):
-        try:
-            clean_date = data['renewal_date'].split('T')[0]
-            new_renewal = datetime.strptime(clean_date, '%Y-%m-%d')
-        except Exception:
-            pass
-
-    plan_id = None
-    if data.get('plan_id'):
-        try:
-            plan_id = int(data['plan_id'])
-        except (ValueError, TypeError):
-            pass
-
-    billing_cycle = data.get('billing_cycle')
-
-    success = subscription_service.restore_active(
-        customer,
-        new_renewal_date=new_renewal,
-        plan_id=plan_id,
-        billing_cycle=billing_cycle
-    )
-    if success:
-        sub_info = subscription_service.get_subscription_info(customer)
-        return jsonify({
-            'success': True,
-            'message': f"Customer '{customer.username}' activated successfully and mesh restored.",
-            'subscription': sub_info
-        })
-    return jsonify({'success': False, 'error': 'Failed to activate customer subscription'}), 500
+    from fastapi_app.services.admin.customers_service import AdminCustomersService
+    try:
+        res = AdminCustomersService.update_customer_status(db=db.session, customer_id=str(customer_id), new_status='active')
+        return jsonify(res), 200
+    except Exception as e:
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', 'Failed to activate customer')
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/customers/<uuid:customer_id>/subscription/suspend', methods=['POST'])
 @login_required
 def suspend_customer_subscription(customer_id):
-    customer = Client.query.get(customer_id)
-    if not customer:
-        return jsonify({'success': False, 'error': 'Customer not found'}), 404
-
-    success = subscription_service.transition_to_inactive(customer)
-    if success:
-        sub_info = subscription_service.get_subscription_info(customer)
-        return jsonify({
-            'success': True,
-            'message': f"Customer '{customer.username}' suspended successfully and mesh disconnected.",
-            'subscription': sub_info
-        })
-    return jsonify({'success': False, 'error': 'Failed to suspend customer subscription'}), 500
+    from fastapi_app.services.admin.customers_service import AdminCustomersService
+    try:
+        res = AdminCustomersService.update_customer_status(db=db.session, customer_id=str(customer_id), new_status='inactive')
+        return jsonify(res), 200
+    except Exception as e:
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', 'Failed to suspend customer')
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/customers/<uuid:customer_id>/subscription/send-reminder', methods=['POST'])
@@ -922,275 +798,172 @@ def get_setting(key):
 @admin_bp.route('/staff')
 @admin_required
 def staff():
-    from repositories.user_repository import UserRepository
-    users = UserRepository.get_all_desc()
-    users_data = []
-    for u in users:
-        users_data.append({
-            'id': u.id,
-            'username': u.username,
-            'full_name': u.full_name,
-            'email': u.email,
-            'role': getattr(u, 'role', 'admin') or 'admin',
-            'is_active': bool(u.is_active),
-            'is_2fa_enabled': bool(getattr(u, 'is_2fa_enabled', False)),
-            'last_login': u.last_login.strftime('%Y-%m-%d %H:%M:%S') if getattr(u, 'last_login', None) else None,
-            'created_at': u.created_at.strftime('%Y-%m-%d %H:%M:%S') if getattr(u, 'created_at', None) else None
-        })
-    return render_template('staff.html', staff_members=users_data)
+    from fastapi_app.services.admin.staff_service import AdminStaffService
+    data = AdminStaffService.list_staff(db=db.session)
+    return render_template('staff.html', staff_members=data.get('staff', []))
 
 
 @admin_bp.route('/api/staff/create', methods=['POST'])
 @admin_required
 def create_staff():
-    from repositories.user_repository import UserRepository
+    from fastapi_app.services.admin.staff_service import AdminStaffService
     data = request.get_json() or {}
-    username = (data.get('username') or '').strip()
-    email = (data.get('email') or '').strip()
-    full_name = (data.get('full_name') or '').strip()
-    password = data.get('password') or ''
-    role = (data.get('role') or 'sales').strip().lower()
-
-    if not username or not email or not full_name or not password:
-        return jsonify({'success': False, 'error': 'All fields are required.'}), 400
-
-    if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', username):
-        return jsonify({'success': False, 'error': 'Username must be 3-32 characters (letters, numbers, _ and - only).'}), 400
-
-    if len(password) < 6:
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters.'}), 400
-
-    if role not in ['admin', 'sales', 'support']:
-        role = 'sales'
-
-    if UserRepository.get_by_username(username):
-        return jsonify({'success': False, 'error': f'Username "{username}" is already taken.'}), 400
-
-    if UserRepository.get_by_email(email):
-        return jsonify({'success': False, 'error': f'Email "{email}" is already registered.'}), 400
-
     try:
-        user = UserRepository.create(
-            username=username,
-            email=email,
-            full_name=full_name,
-            raw_password=password,
-            role=role,
-            is_active=True
+        res = AdminStaffService.create_staff(
+            db=db.session,
+            username=(data.get('username') or '').strip(),
+            email=(data.get('email') or '').strip(),
+            full_name=(data.get('full_name') or '').strip(),
+            password=data.get('password') or '',
+            role=(data.get('role') or 'sales').strip().lower()
         )
-        return jsonify({
-            'success': True,
-            'message': 'Staff member created successfully',
-            'staff': {
-                'id': user.id,
-                'username': user.username,
-                'full_name': user.full_name,
-                'email': user.email,
-                'role': user.role,
-                'is_active': user.is_active
-            }
-        }), 201
+        return jsonify(res), 201
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', str(e))
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/staff/<int:user_id>/update', methods=['POST'])
 @admin_required
 def update_staff(user_id):
-    from repositories.user_repository import UserRepository
-    user = UserRepository.get_by_id(user_id)
-    if not user:
-        return jsonify({'success': False, 'error': 'Staff member not found.'}), 404
-
+    from fastapi_app.services.admin.staff_service import AdminStaffService
     data = request.get_json() or {}
-    email = (data.get('email') or '').strip()
-    full_name = (data.get('full_name') or '').strip()
-    role = (data.get('role') or user.role).strip().lower()
-
-    if not email or not full_name:
-        return jsonify({'success': False, 'error': 'Email and Full Name are required.'}), 400
-
-    if role not in ['admin', 'sales', 'support']:
-        role = user.role
-
-    existing = UserRepository.get_by_email(email)
-    if existing and existing.id != user.id:
-        return jsonify({'success': False, 'error': f'Email "{email}" is already in use by another user.'}), 400
-
     try:
-        UserRepository.update(user, email=email, full_name=full_name, role=role)
-        return jsonify({'success': True, 'message': 'Staff info updated successfully'})
+        res = AdminStaffService.update_staff(
+            db=db.session,
+            user_id=user_id,
+            email=(data.get('email') or '').strip(),
+            full_name=(data.get('full_name') or '').strip(),
+            role=(data.get('role') or 'sales').strip().lower()
+        )
+        return jsonify(res), 200
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', str(e))
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/staff/<int:user_id>/password', methods=['POST'])
 @admin_required
 def reset_staff_password(user_id):
-    from repositories.user_repository import UserRepository
-    user = UserRepository.get_by_id(user_id)
-    if not user:
-        return jsonify({'success': False, 'error': 'Staff member not found.'}), 404
-
+    from fastapi_app.services.admin.staff_service import AdminStaffService
     data = request.get_json() or {}
-    password = data.get('password') or ''
-    if len(password) < 6:
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters.'}), 400
-
     try:
-        UserRepository.update_password(user, password)
-        return jsonify({'success': True, 'message': 'Password reset successfully'})
+        res = AdminStaffService.reset_password(
+            db=db.session,
+            user_id=user_id,
+            password=data.get('password') or ''
+        )
+        return jsonify(res), 200
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', str(e))
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/staff/<int:user_id>/toggle', methods=['POST'])
 @admin_required
 def toggle_staff_status(user_id):
-    from repositories.user_repository import UserRepository
-    user = UserRepository.get_by_id(user_id)
-    if not user:
-        return jsonify({'success': False, 'error': 'Staff member not found.'}), 404
-
-    current_admin_id = session.get('admin_user_id')
-    if str(user.id) == str(current_admin_id):
-        return jsonify({'success': False, 'error': 'You cannot deactivate your own account.'}), 400
-
+    from fastapi_app.services.admin.staff_service import AdminStaffService
     try:
-        new_status = UserRepository.toggle_status(user)
-        return jsonify({'success': True, 'is_active': new_status, 'message': 'Status updated'})
+        res = AdminStaffService.toggle_status(
+            db=db.session,
+            user_id=user_id,
+            current_admin_id=session.get('admin_user_id')
+        )
+        return jsonify(res), 200
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', str(e))
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/staff/<int:user_id>/delete', methods=['DELETE', 'POST'])
 @admin_required
 def delete_staff(user_id):
-    from repositories.user_repository import UserRepository
-    user = UserRepository.get_by_id(user_id)
-    if not user:
-        return jsonify({'success': False, 'error': 'Staff member not found.'}), 404
-
-    current_admin_id = session.get('admin_user_id')
-    if str(user.id) == str(current_admin_id):
-        return jsonify({'success': False, 'error': 'You cannot delete your own account.'}), 400
-
+    from fastapi_app.services.admin.staff_service import AdminStaffService
     try:
-        UserRepository.delete(user)
-        return jsonify({'success': True, 'message': 'Staff member deleted successfully'})
+        res = AdminStaffService.delete_staff(
+            db=db.session,
+            user_id=user_id,
+            current_admin_id=session.get('admin_user_id')
+        )
+        return jsonify(res), 200
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', str(e))
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/staff/<int:user_id>/2fa/setup', methods=['POST'])
 @login_required
 def staff_2fa_setup(user_id):
-    current_admin_id = session.get('admin_user_id')
-    current_role = session.get('admin_role')
-    if str(user_id) != str(current_admin_id) and current_role != 'admin':
-        return jsonify({'success': False, 'error': 'Permission denied.'}), 403
-
-    user = UserRepository.get_by_id(user_id)
-    if not user:
-        return jsonify({'success': False, 'error': 'User not found.'}), 404
-
-    secret = generate_totp_secret()
-    session['setup_staff_2fa_secret'] = {
-        'user_id': user.id,
-        'secret': secret
-    }
-
-    uri = get_totp_uri(secret, user.username, issuer="Networkat Management")
-    qr_b64 = generate_qr_base64(uri)
-
-    return jsonify({
-        'success': True,
-        'secret': secret,
-        'qr_code': qr_b64
-    })
+    from fastapi_app.services.admin.staff_service import AdminStaffService
+    try:
+        res = AdminStaffService.setup_2fa(
+            db=db.session,
+            user_id=user_id,
+            current_user_id=session.get('admin_user_id'),
+            current_role=session.get('admin_role', 'admin')
+        )
+        session['setup_staff_2fa_secret'] = {
+            'user_id': user_id,
+            'secret': res['secret']
+        }
+        return jsonify(res), 200
+    except Exception as e:
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', str(e))
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/staff/<int:user_id>/2fa/confirm', methods=['POST'])
 @login_required
 def staff_2fa_confirm(user_id):
-    current_admin_id = session.get('admin_user_id')
-    current_role = session.get('admin_role')
-    if str(user_id) != str(current_admin_id) and current_role != 'admin':
-        return jsonify({'success': False, 'error': 'Permission denied.'}), 403
-
-    user = UserRepository.get_by_id(user_id)
-    if not user:
-        return jsonify({'success': False, 'error': 'User not found.'}), 404
-
+    from fastapi_app.services.admin.staff_service import AdminStaffService
     setup_data = session.get('setup_staff_2fa_secret')
-    if not setup_data or setup_data.get('user_id') != user.id:
-        return jsonify({'success': False, 'error': 'Setup session expired. Please try again.'}), 400
-
-    secret = setup_data.get('secret')
+    secret = setup_data.get('secret') if setup_data and setup_data.get('user_id') == user_id else None
     data = request.get_json(silent=True) or {}
     code = (data.get('code') or request.form.get('code') or '').strip()
-
-    if not verify_totp_code(secret, code):
-        return jsonify({'success': False, 'error': 'Invalid verification code.'}), 400
-
-    recovery_codes = generate_recovery_codes(8)
-    hashed_codes = hash_recovery_codes(recovery_codes)
-
+    if not secret:
+        return jsonify({'success': False, 'error': 'Setup session expired. Please try again.'}), 400
     try:
-        user.totp_secret = secret
-        user.is_2fa_enabled = True
-        user.recovery_codes = hashed_codes
-        user.two_fa_method = 'totp'
-        db.session.commit()
+        res = AdminStaffService.confirm_2fa(
+            db=db.session,
+            user_id=user_id,
+            secret=secret,
+            code=code,
+            current_user_id=session.get('admin_user_id'),
+            current_role=session.get('admin_role', 'admin')
+        )
         session.pop('setup_staff_2fa_secret', None)
-        return jsonify({
-            'success': True,
-            'recovery_codes': recovery_codes,
-            'message': 'Two-factor authentication enabled successfully'
-        })
+        return jsonify(res), 200
     except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', str(e))
+        return jsonify({'success': False, 'error': detail}), status_code
 
 
 @admin_bp.route('/api/staff/<int:user_id>/2fa/disable', methods=['POST'])
 @login_required
 def staff_2fa_disable(user_id):
-    current_admin_id = session.get('admin_user_id')
-    current_role = session.get('admin_role')
-
-    is_self = str(user_id) == str(current_admin_id)
-    is_admin = current_role == 'admin'
-
-    if not (is_self or is_admin):
-        return jsonify({'success': False, 'error': 'Permission denied.'}), 403
-
-    user = UserRepository.get_by_id(user_id)
-    if not user:
-        return jsonify({'success': False, 'error': 'User not found.'}), 404
-
+    from fastapi_app.services.admin.staff_service import AdminStaffService
     data = request.get_json(silent=True) or {}
     password = data.get('password') or ''
-    if is_self and not is_admin:
-        if not password:
-            return jsonify({'success': False, 'error': 'Password is required to disable 2FA.'}), 400
-        user_password = getattr(user, 'password_hashed', getattr(user, 'password_hash', None))
-        if not user_password or not verify_password(password, user_password):
-            return jsonify({'success': False, 'error': 'Incorrect password.'}), 400
-
     try:
-        user.is_2fa_enabled = False
-        user.totp_secret = None
-        user.recovery_codes = None
-        user.two_fa_method = 'totp'
-        db.session.commit()
-        return jsonify({
-            'success': True,
-            'message': 'Two-factor authentication disabled'
-        })
+        res = AdminStaffService.disable_2fa(
+            db=db.session,
+            user_id=user_id,
+            password=password,
+            current_user_id=session.get('admin_user_id'),
+            current_role=session.get('admin_role', 'admin')
+        )
+        return jsonify(res), 200
     except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        status_code = getattr(e, 'status_code', 500)
+        detail = getattr(e, 'detail', str(e))
+        return jsonify({'success': False, 'error': detail}), status_code
 
 # ======================================================================
 # Admin "View As Client" Routes

@@ -1679,10 +1679,10 @@
 
             const btn = document.getElementById('btnSubmitCreate');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
 
             try {
-                const res = await fetch('/api/staff/create', {
+                const res = await fetch('/api/v2/admin/staff', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, full_name, email, password, role })
@@ -1690,10 +1690,10 @@
                 const data = await res.json();
                 if (res.ok && data.success) {
                     hideModal('createStaffModal');
-                    showToast('Staff member created successfully', 'success');
+                    showToast('Staff member created', 'success');
                     setTimeout(() => location.reload(), 600);
                 } else {
-                    showToast(data.error || 'Failed to create staff member', 'error');
+                    showToast(data.detail || data.error || 'Failed to create staff member', 'error');
                 }
             } catch (err) {
                 showToast('Server connection error', 'error');
@@ -1716,21 +1716,21 @@
 
             const btn = document.getElementById('btnSubmitEdit');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
 
             try {
-                const res = await fetch(`/api/staff/${userId}/update`, {
-                    method: 'POST',
+                const res = await fetch(`/api/v2/admin/staff/${userId}`, {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ full_name, email, role })
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
                     hideModal('editStaffModal');
-                    showToast('Staff info updated successfully', 'success');
+                    showToast('Staff info updated', 'success');
                     setTimeout(() => location.reload(), 600);
                 } else {
-                    showToast(data.error || 'Failed to update staff info', 'error');
+                    showToast(data.detail || data.error || 'Failed to update staff info', 'error');
                 }
             } catch (err) {
                 showToast('Server connection error', 'error');
@@ -1757,10 +1757,10 @@
 
             const btn = document.getElementById('btnSubmitReset');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating…';
 
             try {
-                const res = await fetch(`/api/staff/${userId}/password`, {
+                const res = await fetch(`/api/v2/admin/staff/${userId}/password`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: pwd })
@@ -1768,9 +1768,9 @@
                 const data = await res.json();
                 if (res.ok && data.success) {
                     hideModal('resetPasswordModal');
-                    showToast('Password updated successfully', 'success');
+                    showToast('Password updated', 'success');
                 } else {
-                    showToast(data.error || 'Failed to update password', 'error');
+                    showToast(data.detail || data.error || 'Failed to update password', 'error');
                 }
             } catch (err) {
                 showToast('Server connection error', 'error');
@@ -1782,7 +1782,7 @@
 
         async function toggleStaffStatus(userId, username) {
             try {
-                const res = await fetch(`/api/staff/${userId}/toggle`, {
+                const res = await fetch(`/api/v2/admin/staff/${userId}/toggle`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -1791,7 +1791,7 @@
                     showToast(`Status updated for ${username}`, 'success');
                     setTimeout(() => location.reload(), 500);
                 } else {
-                    showToast(data.error || 'Failed to update status', 'error');
+                    showToast(data.detail || data.error || 'Failed to update status', 'error');
                 }
             } catch (err) {
                 showToast('Server connection error', 'error');
@@ -1809,20 +1809,20 @@
             const userId = document.getElementById('deleteStaffUserId').value;
             const btn = document.getElementById('btnConfirmDeleteStaff');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting…';
 
             try {
-                const res = await fetch(`/api/staff/${userId}/delete`, {
+                const res = await fetch(`/api/v2/admin/staff/${userId}`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
                     hideModal('deleteStaffModal');
-                    showToast('Staff member deleted successfully', 'success');
+                    showToast('Staff member deleted', 'success');
                     setTimeout(() => location.reload(), 500);
                 } else {
-                    showToast(data.error || 'Failed to delete staff member', 'error');
+                    showToast(data.detail || data.error || 'Failed to delete staff member', 'error');
                 }
             } catch (err) {
                 showToast('Server connection error', 'error');
@@ -1846,7 +1846,7 @@
 
             showModal('setupStaff2faModal');
 
-            fetch(`/api/staff/${userId}/2fa/setup`, {
+            fetch(`/api/v2/admin/staff/${userId}/2fa/setup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             })
@@ -1860,7 +1860,7 @@
                     document.getElementById('staff-secret-key').textContent = data.secret;
                     document.getElementById('staff-verify-code').focus();
                 } else {
-                    showToast(data.error || 'Failed to start 2FA setup', 'error');
+                    showToast(data.detail || data.error || 'Failed to start 2FA setup', 'error');
                     hideModal('setupStaff2faModal');
                 }
             })
@@ -1886,10 +1886,10 @@
 
             const btn = document.getElementById('btnSubmitStaff2fa');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying…';
 
             try {
-                const res = await fetch(`/api/staff/${userId}/2fa/confirm`, {
+                const res = await fetch(`/api/v2/admin/staff/${userId}/2fa/confirm`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code: code })
@@ -1911,9 +1911,9 @@
 
                     document.getElementById('staff-setup-step-verify').style.display = 'none';
                     document.getElementById('staff-setup-step-recovery').style.display = 'block';
-                    showToast('Two-factor authentication enabled successfully', 'success');
+                    showToast('Two-factor authentication enabled', 'success');
                 } else {
-                    showToast(data.error || 'Invalid verification code', 'error');
+                    showToast(data.detail || data.error || 'Invalid verification code', 'error');
                 }
             } catch (err) {
                 showToast('Server connection error', 'error');
@@ -1939,10 +1939,10 @@
             const userId = document.getElementById('disableStaff2faUserId').value;
             const btn = document.getElementById('btnConfirmDisableStaff2fa');
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Disabling...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Disabling…';
 
             try {
-                const res = await fetch(`/api/staff/${userId}/2fa/disable`, {
+                const res = await fetch(`/api/v2/admin/staff/${userId}/2fa/disable`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -1952,7 +1952,7 @@
                     showToast('Two-factor authentication disabled', 'success');
                     setTimeout(() => location.reload(), 500);
                 } else {
-                    showToast(data.error || 'Failed to disable 2FA', 'error');
+                    showToast(data.detail || data.error || 'Failed to disable 2FA', 'error');
                 }
             } catch (err) {
                 showToast('Server connection error', 'error');

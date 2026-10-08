@@ -1,25 +1,26 @@
 # /opt/networkat_sdwan/core/web_app/fastapi_app/main.py
-
-import logging
 import os
+import logging
 from sqlalchemy.orm import Session
-from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi_app.routes.adguard import dns as adguard_dns
-from fastapi_app.dependencies import get_db, verify_api_key
-from fastapi_app.routes.controller import commands as controller_commands
+from fastapi import Depends, FastAPI, Request
 from fastapi_app.routes import auth as client_auth
-from fastapi_app.routes.client import system_logs as client_system_logs
-from fastapi_app.routes.client import ids_ips as client_ids_ips
-from fastapi_app.routes.client import appearance as client_appearance
-from fastapi_app.services.client.system_logs_service import SystemLogsError
-from fastapi_app.services.client.ids_ips_service import IdsError
 from fastapi_app.routes import plans as plans_routes
+from fastapi_app.routes.adguard import dns as adguard_dns
 from fastapi_app.routes import settings as settings_routes
+from fastapi_app.routes.client import ids_ips as client_ids_ips
+from fastapi_app.services.client.ids_ips_service import IdsError
+from fastapi_app.routes.client import appearance as client_appearance
+from fastapi_app.routes.client import system_logs as client_system_logs
+from fastapi_app.routes.controller import commands as controller_commands
+from fastapi_app.services.client.system_logs_service import SystemLogsError
+from fastapi_app.dependencies import get_db, verify_api_key, require_admin_role
 from fastapi_app.routes.admin import (
     peers as admin_peers,
     plans as admin_plans,
+    customers as admin_customers,
+    staff as admin_staff,
 )
 from fastapi_app.routes.netbird import (
     setup_keys as netbird_setup_keys,
@@ -33,6 +34,8 @@ from fastapi_app.routes.netbird import (
 
 # التبعية الأمنية — تُطبَّق على كل router بشكل صريح (عدا الـ public endpoint)
 _auth = [Depends(verify_api_key)]
+_admin_auth = [Depends(require_admin_role)]
+
 
 app = FastAPI(
     title="Networkat SD-WAN API ",
@@ -89,9 +92,11 @@ async def ids_error_handler(request: Request, exc: IdsError):
 _SCRIPTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts")
 app.mount("/scripts", StaticFiles(directory=_SCRIPTS_DIR), name="scripts")
 
-# ── Protected routers — require Bearer token ──────────────────────────────────
-app.include_router(admin_peers.router,          dependencies=_auth)
-app.include_router(admin_plans.router,          dependencies=_auth)
+# ── Protected routers ─────────────────────────────────────────────────────────
+app.include_router(admin_peers.router,          dependencies=_admin_auth)
+app.include_router(admin_plans.router,          dependencies=_admin_auth)
+app.include_router(admin_customers.router,      dependencies=_admin_auth)
+app.include_router(admin_staff.router)
 app.include_router(settings_routes.router,       dependencies=_auth)
 app.include_router(plans_routes.router,          dependencies=_auth)
 app.include_router(adguard_dns.router,          dependencies=_auth)

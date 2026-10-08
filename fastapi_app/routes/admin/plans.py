@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from fastapi_app.dependencies import get_db
-from fastapi_app.schemas.plans import (
+from fastapi_app.schemas.admin.plans import (
     PlanCreate,
     PlanUpdate,
     PlanListResponse,
@@ -13,7 +13,7 @@ from fastapi_app.schemas.plans import (
     TrialDurationUpdate,
     TrialDurationResponse,
 )
-from fastapi_app.services.plans_service import PlansService
+from fastapi_app.services.admin.plans_service import PlansService
 
 router = APIRouter(
     prefix="/api/v2/admin/plans",
