@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xdg-open /tmp/peer_updates_modal_preview.html)"
+      "Bash(xdg-open /tmp/peer_updates_modal_preview.html)",
+      "Bash(cd /opt/networkat_sdwan && grep -rliE \"fastapi\" --include=*.md . 2>/dev/null | grep -v node_modules | head -30; ls ~/.claude/plans 2>/dev/null)"
     ]
   }
 }
