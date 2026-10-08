@@ -19,23 +19,42 @@ def get_totp_uri(secret: str, username: str, issuer: str = "Networkat") -> str:
     return totp.provisioning_uri(name=username, issuer_name=issuer)
 
 
-def generate_qr_base64(uri: str) -> str:
-    """Generate a Base64 encoded PNG image data URL for a given URI."""
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=8,
-        border=2,
-    )
-    qr.add_data(uri)
-    qr.make(fit=True)
+import qrcode.image.svg
 
-    img = qr.make_image(fill_color="#1e2a41", back_color="white")
-    buffered = io.BytesIO()
-    img.save(buffered, format="PNG")
-    img_bytes = buffered.getvalue()
-    b64_str = base64.b64encode(img_bytes).decode("utf-8")
-    return f"data:image/png;base64,{b64_str}"
+
+def generate_qr_base64(uri: str) -> str:
+    """Generate a Base64 encoded SVG image data URL for a given URI."""
+    try:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=8,
+            border=2,
+            image_factory=qrcode.image.svg.SvgImage,
+        )
+        qr.add_data(uri)
+        qr.make(fit=True)
+        img = qr.make_image()
+        buffered = io.BytesIO()
+        img.save(buffered)
+        img_bytes = buffered.getvalue()
+        b64_str = base64.b64encode(img_bytes).decode("utf-8")
+        return f"data:image/svg+xml;base64,{b64_str}"
+    except Exception:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=8,
+            border=2,
+        )
+        qr.add_data(uri)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#1e2a41", back_color="white")
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        img_bytes = buffered.getvalue()
+        b64_str = base64.b64encode(img_bytes).decode("utf-8")
+        return f"data:image/png;base64,{b64_str}"
 
 
 def verify_totp_code(secret: str, code: str) -> bool:

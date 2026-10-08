@@ -965,6 +965,47 @@ def staff_2fa_disable(user_id):
         detail = getattr(e, 'detail', str(e))
         return jsonify({'success': False, 'error': detail}), status_code
 
+
+@admin_bp.route('/api/v2/admin/<path:subpath>', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+@admin_required
+def proxy_admin_v2(subpath):
+    target_url = f"http://127.0.0.1:8098/api/v2/admin/{subpath}"
+    headers = {
+        'Accept': 'application/json',
+    }
+    if request.content_type:
+        headers['Content-Type'] = request.content_type
+
+    if 'Cookie' in request.headers:
+        headers['Cookie'] = request.headers['Cookie']
+    if 'X-CSRFToken' in request.headers:
+        headers['X-CSRFToken'] = request.headers['X-CSRFToken']
+    if 'X-CSRF-Token' in request.headers:
+        headers['X-CSRF-Token'] = request.headers['X-CSRF-Token']
+
+    internal_key = os.getenv("INTERNAL_API_KEY", "")
+    if internal_key and 'Cookie' not in request.headers:
+        headers['Authorization'] = f"Bearer {internal_key}"
+
+    try:
+        resp = requests.request(
+            method=request.method,
+            url=target_url,
+            params=request.args,
+            data=request.get_data(),
+            headers=headers,
+            timeout=30,
+        )
+        return Response(
+            response=resp.content,
+            status=resp.status_code,
+            content_type=resp.headers.get('Content-Type', 'application/json')
+        )
+    except Exception as e:
+        current_app.logger.error("Admin v2 proxy error for %s: %s", subpath, e)
+        return jsonify({'success': False, 'error': 'API service unavailable'}), 503
+
+
 # ======================================================================
 # Admin "View As Client" Routes
 # ======================================================================
